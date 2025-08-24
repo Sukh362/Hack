@@ -1,174 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ParentGuard • Minimal Admin (Debug)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    html,body{background:#0b1220;color:#e6eefc;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto}
-    .glass{backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08)}
-    .ring{box-shadow:0 0 0 1px #23314f inset}
-  </style>
-  <!-- Firebase compat (Realtime DB) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Roboto',sans-serif;}
+body{background:#0f0f1f;color:#fff;display:flex;height:100vh;overflow:hidden;}
+
+/* Sidebar */
+.sidebar{width:250px;background:#1a1a2e;display:flex;flex-direction:column;transition:0.3s;}
+.sidebar.collapsed{width:70px;}
+.sidebar h2{text-align:center;padding:20px 0;color:#00e0ff;font-size:22px;}
+.sidebar a{display:flex;align-items:center;color:#fff;text-decoration:none;padding:15px 20px;margin:5px 10px;border-radius:8px;transition:0.3s;}
+.sidebar a i{margin-right:15px;}
+.sidebar a:hover{background:#00e0ff33;color:#00e0ff;}
+
+/* Main content */
+.main{flex:1;display:flex;flex-direction:column;}
+.topbar{background:#1f1f2e;padding:15px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.5);}
+.topbar h1{color:#00e0ff;font-size:24px;}
+.toggle-btn{font-size:20px;cursor:pointer;color:#fff;}
+
+.dashboard{padding:20px;overflow-y:auto;flex:1;}
+.cards{display:flex;gap:20px;flex-wrap:wrap;}
+.card{background:linear-gradient(135deg,#1f1f2e,#2c2c44);padding:20px;border-radius:12px;flex:1;min-width:250px;transition:0.3s;box-shadow:0 8px 20px rgba(0,0,0,0.5);position:relative;}
+.card i{position:absolute;top:15px;right:15px;font-size:30px;opacity:0.2;}
+.card h3{font-weight:500;margin-bottom:15px;color:#00e0ff;}
+.card p{font-size:26px;font-weight:700;}
+.bar{width:100%;height:12px;background:#333;border-radius:6px;overflow:hidden;margin-top:10px;}
+.bar-fill{height:100%;background:#00e0ff;width:0%;transition:0.5s;}
+
+#map{width:100%;height:300px;border-radius:12px;margin-top:20px;}
+.chart-container{margin-top:30px;background:#1f1f2e;padding:20px;border-radius:12px;}
+
+.footer{padding:20px;text-align:center;color:#888;font-size:14px;}
+</style>
 </head>
 <body>
-  <div class="max-w-4xl mx-auto p-5 space-y-5">
-    <header class="glass ring rounded-2xl p-4 flex items-center gap-3">
-      <div class="w-9 h-9 rounded-xl bg-sky-500/20 grid place-items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14.59V18h-2v-1.41l-3.3-3.3 1.42-1.42L11 13.17V8h2v5.17l1.88-1.88 1.42 1.42L13 16.59z"/></svg>
-      </div>
-      <div>
-        <h1 class="text-lg font-bold">ParentGuard — Minimal Admin</h1>
-        <p class="text-xs text-slate-300">Battery • Location • Commands — with built‑in Debugger</p>
-      </div>
-      <div class="ml-auto text-xs text-slate-300 flex items-center gap-2"><span id="live" class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"></span> Disconnected</span></div>
-    </header>
 
-    <!-- Config -->
-    <section class="glass ring rounded-2xl p-4 space-y-3">
-      <h2 class="text-base font-semibold">Firebase Config</h2>
-      <div class="grid sm:grid-cols-2 gap-3 text-xs">
-        <label>databaseURL<input id="cfgDbUrl" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="https://hackapp-aff40-default-rtdb.firebaseio.com"/></label>
-        <label>apiKey<input id="cfgApiKey" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="AIzaSyBeNsxHh_EvN-9E7Tp3c96lU7cq0FhZNqg"/></label>
-        <label>authDomain<input id="cfgAuthDomain" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="https://hackapp-aff40.firebaseapp.com/__/auth/handler"/></label>
-        <label>projectId<input id="cfgProjectId" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="hackapp-aff40"/></label>
-        <label>storageBucket<input id="cfgBucket" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="hackapp-aff40.firebasestorage.app"/></label>
-        <label>messagingSenderId<input id="cfgSender" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="1000037921919"/></label>
-        <label>appId<input id="cfgAppId" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="1:1000037921919:android:26df39932d4695def63b4a"/></label>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button id="btnInit" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium">Init / Re‑Init</button>
-        <button id="btnKill" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm">Disconnect</button>
-      </div>
-    </section>
+<div class="sidebar" id="sidebar">
+  <h2>Child Panel</h2>
+  <a href="#"><i class="fas fa-tachometer-alt"></i><span class="text">Dashboard</span></a>
+  <a href="#"><i class="fas fa-battery-half"></i><span class="text">Battery</span></a>
+  <a href="#"><i class="fas fa-map-marker-alt"></i><span class="text">Location</span></a>
+</div>
 
-    <!-- Path + Actions -->
-    <section class="glass ring rounded-2xl p-4 space-y-3">
-      <h2 class="text-base font-semibold">Path & Actions</h2>
-      <div class="grid sm:grid-cols-2 gap-3">
-        <label class="text-xs">Child Path (e.g. <code>ParentGuard/users/child1</code>)
-          <input id="childPath" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="Users/child1"/>
-        </label>
-        <div class="flex items-end gap-2">
-          <button id="btnConnect" class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-sm font-medium">Connect</button>
-          <button id="btnDisconnect" class="px-3 py-2 rounded-xl bg-rose-500/90 hover:bg-rose-500 text-sm">Detach</button>
-        </div>
-      </div>
-
-      <div class="grid sm:grid-cols-3 gap-3 pt-2">
-        <button id="btnTorchOn" class="rounded-xl bg-emerald-600/90 hover:bg-emerald-600 px-3 py-2 text-sm font-semibold">💡 Torch ON</button>
-        <button id="btnTorchOff" class="rounded-xl bg-rose-600/90 hover:bg-rose-600 px-3 py-2 text-sm font-semibold">❌ Torch OFF</button>
-        <button id="btnTakePhoto" class="rounded-xl bg-amber-500/90 hover:bg-amber-500 px-3 py-2 text-sm font-semibold">📷 Take Photo</button>
-      </div>
-
-      <div class="grid sm:grid-cols-3 gap-3 pt-2">
-        <button id="btnWriteTest" class="rounded-xl bg-sky-600/90 hover:bg-sky-600 px-3 py-2 text-sm font-semibold">🧪 Write Test Battery=77</button>
-        <button id="btnReadNow" class="rounded-xl bg-indigo-600/90 hover:bg-indigo-600 px-3 py-2 text-sm font-semibold">🔄 Read Now</button>
-        <button id="btnClearLogs" class="rounded-xl bg-slate-700/90 hover:bg-slate-700 px-3 py-2 text-sm font-semibold">🧹 Clear Camera URL</button>
-      </div>
-    </section>
-
-    <!-- Live Values -->
-    <section class="glass ring rounded-2xl p-4 grid sm:grid-cols-3 gap-3">
-      <div>
-        <div class="text-xs text-slate-300">Battery</div>
-        <div id="statBattery" class="text-4xl font-extrabold tracking-tight">--%</div>
-        <div id="lastUpdate" class="text-xs text-slate-400 mt-1">—</div>
-      </div>
-      <div>
-        <div class="text-xs text-slate-300">Status</div>
-        <div id="statStatus" class="text-4xl font-extrabold tracking-tight">—</div>
-      </div>
-      <div>
-        <div class="text-xs text-slate-300">Camera URL</div>
-        <div class="text-xs break-all" id="camUrl">—</div>
-      </div>
-    </section>
-
-    <!-- Logs / Debug Console -->
-    <section class="glass ring rounded-2xl p-4">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="text-base font-semibold">Debug Console</h2>
-        <button id="btnClearConsole" class="text-xs bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-1">Clear</button>
-      </div>
-      <pre id="console" class="bg-slate-900/70 rounded-xl p-3 text-xs overflow-auto max-h-72"></pre>
-    </section>
+<div class="main">
+  <div class="topbar">
+    <h1>Dashboard</h1>
+    <div class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></div>
   </div>
 
-  <script>
-    // ======= State =======
-    let app = null; let db = null; let base = null;
-    let refBattery = null, refStatus = null, refCam = null;
+  <div class="dashboard">
+    <div class="cards">
+      <div class="card">
+        <i class="fas fa-battery-full"></i>
+        <h3>Battery Level</h3>
+        <p id="batteryValue">Loading...</p>
+        <div class="bar"><div class="bar-fill" id="batteryBar"></div></div>
+      </div>
+      <div class="card">
+        <i class="fas fa-map-marker-alt"></i>
+        <h3>Live Location</h3>
+        <p id="locationValue">Loading...</p>
+      </div>
+    </div>
 
-    // ======= UI helpers =======
-    const $ = (id)=>document.getElementById(id);
-    function log(...args){ const c = $("console"); c.textContent += args.join(' ') + "\n"; c.scrollTop = c.scrollHeight; }
-    function toast(txt){ log('> ', txt); }
-    function setLive(on){ $("live").innerHTML = on? '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> Live' : '<span class="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"></span> Disconnected'; }
+    <div id="map"></div>
 
-    // ======= Firebase init / kill =======
-    function init(){
-      try{ if(firebase.apps?.length){ firebase.apps.forEach(a=>a.delete?.()); } }catch(e){ log('ignore delete error', e?.message); }
-      const cfg = {
-        apiKey: $("cfgApiKey").value.trim(),
-        authDomain: $("cfgAuthDomain").value.trim(),
-        databaseURL: $("cfgDbUrl").value.trim(),
-        projectId: $("cfgProjectId").value.trim(),
-        storageBucket: $("cfgBucket").value.trim(),
-        messagingSenderId: $("cfgSender").value.trim(),
-        appId: $("cfgAppId").value.trim(),
-      };
-      log('Init with', JSON.stringify(cfg));
-      app = firebase.initializeApp(cfg);
-      db = firebase.database();
-      toast('Firebase initialized');
+    <div class="chart-container">
+      <canvas id="batteryChart"></canvas>
+    </div>
+
+    <div class="footer">© 2025 Your Pro Admin Panel</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBeNsxHh_EvN-9E7Tp3c96lU7cq0FhZNqg",
+    authDomain: "https://hackapp-aff40.firebaseapp.com/__/auth/handler",
+    databaseURL: "https://hackapp-aff40-default-rtdb.firebaseio.com",
+    projectId: "hackapp-aff40",
+    storageBucket: "hackapp-aff40.firebasestorage.app",
+    messagingSenderId: "1000037921919",
+    appId: "1:1000037921919:android:26df39932d4695def63b4a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Battery
+const batteryRef = ref(db, "ParentGuard/users/child1/battery");
+const batteryHistory = [];
+const batteryChartCtx = document.getElementById("batteryChart").getContext("2d");
+const batteryChart = new Chart(batteryChartCtx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ label:'Battery %', data:[], backgroundColor:'rgba(0,224,255,0.2)', borderColor:'#00e0ff', borderWidth:2, tension:0.3 }]},
+    options:{scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{labels:{color:'#00e0ff'}}}}
+});
+
+onValue(batteryRef,(snapshot)=>{
+    const batteryVal = snapshot.val();
+    document.getElementById("batteryValue").innerText = batteryVal+"%";
+    document.getElementById("batteryBar").style.width = batteryVal+"%";
+    // Update chart
+    const now = new Date().toLocaleTimeString();
+    batteryHistory.push({time: now, value: batteryVal});
+    if(batteryHistory.length>10) batteryHistory.shift();
+    batteryChart.data.labels = batteryHistory.map(x=>x.time);
+    batteryChart.data.datasets[0].data = batteryHistory.map(x=>x.value);
+    batteryChart.update();
+});
+
+// Location
+const locationRef = ref(db, "ParentGuard/users/child1/location");
+let map, marker;
+function initMap(lat=28.6139,long=77.2090){
+    map = new google.maps.Map(document.getElementById("map"), {center:{lat,lng:long},zoom:14});
+    marker = new google.maps.Marker({position:{lat,lng:long},map});
+}
+
+onValue(locationRef,(snapshot)=>{
+    const loc = snapshot.val();
+    if(loc){
+        document.getElementById("locationValue").innerText = "Lat: "+loc.lat+", Long: "+loc.long;
+        if(marker) marker.setPosition({lat:loc.lat,lng:loc.long});
+        if(map) map.setCenter({lat:loc.lat,lng:loc.long});
+    }else{
+        document.getElementById("locationValue").innerText = "N/A";
     }
+});
 
-    function kill(){ try{ if(firebase.apps?.length){ firebase.apps.forEach(a=>a.delete?.()); } }catch{} app=null; db=null; setLive(false); toast('Disconnected'); }
+// Sidebar toggle
+function toggleSidebar(){ document.getElementById("sidebar").classList.toggle("collapsed"); }
 
-    // ======= Attach / Detach listeners =======
-    function attach(){
-      if(!db){ toast('Init first'); return; }
-      base = $("childPath").value.trim();
-      if(!base){ toast('Set child path'); return; }
-      detach();
-      setLive(true);
-      // Battery
-      refBattery = db.ref(`${base}/Battery`);
-      refBattery.on('value', s=>{ const v=s.val(); $("statBattery").textContent=(v!=null?v:'--')+"%"; $("lastUpdate").textContent='Updated '+new Date().toLocaleTimeString(); log('Battery =>', v); });
-      // Status
-      refStatus = db.ref(`${base}/Status`);
-      refStatus.on('value', s=>{ const v=s.val(); $("statStatus").textContent=v||'—'; log('Status =>', v); });
-      // Camera
-      refCam = db.ref(`${base}/camera_result`);
-      refCam.on('value', s=>{ const v=s.val(); $("camUrl").textContent=v||'—'; log('Camera URL =>', v); });
-      toast('Attached to '+base);
-    }
-
-    function detach(){ if(refBattery) refBattery.off(); if(refStatus) refStatus.off(); if(refCam) refCam.off(); $("statBattery").textContent='--%'; $("statStatus").textContent='—'; $("camUrl").textContent='—'; }
-
-    // ======= Commands & Tests =======
-    function write(path, obj){ if(!db){ toast('Init first'); return; } db.ref(path).update(obj).then(()=>toast('Wrote '+path)).catch(e=>toast('ERR '+e.message)); }
-
-    $("btnWriteTest").onclick = ()=>{ const p=$("childPath").value.trim(); if(!p) return toast('Set child path'); write(`${p}`, { Battery: 77, Status: 'online' }); };
-    $("btnReadNow").onclick   = ()=>{ const p=$("childPath").value.trim(); if(!p) return toast('Set child path'); db.ref(`${p}`).once('value').then(s=>{ log('READ NOW =>', JSON.stringify(s.val(),null,2)); }); };
-    $("btnClearLogs").onclick  = ()=>{ const p=$("childPath").value.trim(); if(!p) return toast('Set child path'); db.ref(`${p}/camera_result`).set(null); };
-
-    $("btnTorchOn").onclick  = ()=>{ const p=$("childPath").value.trim(); write(`${p}/commands`, { torch: true, ts: Date.now() }); };
-    $("btnTorchOff").onclick = ()=>{ const p=$("childPath").value.trim(); write(`${p}/commands`, { torch: false, ts: Date.now() }); };
-    $("btnTakePhoto").onclick = ()=>{ const p=$("childPath").value.trim(); write(`${p}/commands`, { camera: true, ts: Date.now() }); };
-
-    // ======= Bind =======
-    $("btnInit").onclick = init; $("btnKill").onclick = kill;
-    $("btnConnect").onclick = attach; $("btnDisconnect").onclick = detach;
-
-    // Auto init on load using default values
-    window.addEventListener('load', init);
-    $("btnConnect").addEventListener('click', ()=> setTimeout(()=>$("btnReadNow").click(), 400));
-    $("btnClearConsole").onclick = ()=>($("console").textContent='');
-  </script>
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap"></script>
 </body>
 </html>
