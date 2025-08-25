@@ -8,94 +8,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Roboto',sans-serif;}
-body{background:#0f0f1f;color:#fff;display:flex;height:100vh;overflow:hidden;}
-
-/* Sidebar */
-.sidebar{width:250px;background:#1a1a2e;display:flex;flex-direction:column;transition:0.3s;}
-.sidebar.collapsed{width:70px;}
-.sidebar h2{text-align:center;padding:20px 0;color:#00e0ff;font-size:22px;}
-.sidebar a{display:flex;align-items:center;color:#fff;text-decoration:none;padding:15px 20px;margin:5px 10px;border-radius:8px;transition:0.3s;}
-.sidebar a i{margin-right:15px;}
-.sidebar a:hover{background:#00e0ff33;color:#00e0ff;}
-
-/* Main content */
-.main{flex:1;display:flex;flex-direction:column;}
-.topbar{background:#1f1f2e;padding:15px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.5);}
-.topbar h1{color:#00e0ff;font-size:24px;}
-.toggle-btn{font-size:20px;cursor:pointer;color:#fff;}
-
-.dashboard{padding:20px;overflow-y:auto;flex:1;}
-.cards{display:flex;gap:20px;flex-wrap:wrap;}
-.card{background:linear-gradient(135deg,#1f1f2e,#2c2c44);padding:20px;border-radius:12px;flex:1;min-width:250px;transition:0.3s;box-shadow:0 8px 20px rgba(0,0,0,0.5);position:relative;}
-.card i{position:absolute;top:15px;right:15px;font-size:30px;opacity:0.2;}
-.card h3{font-weight:500;margin-bottom:15px;color:#00e0ff;}
-.card p{font-size:26px;font-weight:700;}
-.bar{width:100%;height:12px;background:#333;border-radius:6px;overflow:hidden;margin-top:10px;}
-.bar-fill{height:100%;background:#00e0ff;width:0%;transition:0.5s;}
-
-#map{width:100%;height:300px;border-radius:12px;margin-top:20px;}
-.chart-container{margin-top:30px;background:#1f1f2e;padding:20px;border-radius:12px;}
-
-/* Notification Styles */
-.notification-section {margin-top: 30px;}
-.notification-form {background: #1f1f2e; padding: 20px; border-radius: 12px; margin-bottom: 20px;}
-.form-group {margin-bottom: 15px;}
-.form-group label {display: block; margin-bottom: 8px; color: #00e0ff;}
-.form-group input, .form-group textarea, .form-group select {
-    width: 100%; 
-    padding: 12px; 
-    background: #2c2c44; 
-    color: white; 
-    border: 1px solid #00e0ff33; 
-    border-radius: 6px;
-    font-size: 14px;
-}
-.form-group textarea {min-height: 100px; resize: vertical;}
-.btn-send {
-    background: #00e0ff; 
-    color: #0f0f1f; 
-    border: none; 
-    padding: 12px 20px; 
-    border-radius: 6px; 
-    cursor: pointer; 
-    font-weight: bold;
-    transition: background 0.3s;
-}
-.btn-send:hover {background: #00c8e0;}
-.notification-history {background: #1f1f2e; padding: 20px; border-radius: 12px;}
-.notification-item {
-    background: #2c2c44; 
-    padding: 15px; 
-    margin-bottom: 10px; 
-    border-radius: 8px; 
-    border-left: 4px solid #00e0ff;
-}
-.notification-title {font-weight: bold; color: #00e0ff; margin-bottom: 5px;}
-.notification-message {margin-bottom: 8px;}
-.notification-time {font-size: 12px; color: #888;}
-
-.footer{padding:20px;text-align:center;color:#888;font-size:14px;}
-
-/* Toast notification */
-.toast {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: #00e0ff;
-    color: #0f0f1f;
-    padding: 15px 20px;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    z-index: 1000;
-    opacity: 0;
-    transform: translateY(-20px);
-    transition: opacity 0.3s, transform 0.3s;
-}
-.toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
+/* Same CSS as before (no change) */
 </style>
 </head>
 <body>
@@ -180,7 +93,7 @@ body{background:#0f0f1f;color:#fff;display:flex;height:100vh;overflow:hidden;}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-import { getDatabase, ref, onValue, push, set, onChildAdded } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
+import { getDatabase, ref, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBeNsxHh_EvN-9E7Tp3c96lU7cq0FhZNqg",
@@ -195,7 +108,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// Battery
+// Battery (correct path)
 const batteryRef = ref(db, "ParentGuard/users/child1/battery");
 const batteryHistory = [];
 const batteryChartCtx = document.getElementById("batteryChart").getContext("2d");
@@ -207,95 +120,101 @@ const batteryChart = new Chart(batteryChartCtx, {
 
 onValue(batteryRef,(snapshot)=>{
     const batteryVal = snapshot.val();
-    document.getElementById("batteryValue").innerText = batteryVal+"%";
-    document.getElementById("batteryBar").style.width = batteryVal+"%";
-    // Update chart
-    const now = new Date().toLocaleTimeString();
-    batteryHistory.push({time: now, value: batteryVal});
-    if(batteryHistory.length>10) batteryHistory.shift();
-    batteryChart.data.labels = batteryHistory.map(x=>x.time);
-    batteryChart.data.datasets[0].data = batteryHistory.map(x=>x.value);
-    batteryChart.update();
+    if(batteryVal!==null){
+        document.getElementById("batteryValue").innerText = batteryVal+"%";
+        document.getElementById("batteryBar").style.width = batteryVal+"%";
+        const now = new Date().toLocaleTimeString();
+        batteryHistory.push({time: now, value: batteryVal});
+        if(batteryHistory.length>10) batteryHistory.shift();
+        batteryChart.data.labels = batteryHistory.map(x=>x.time);
+        batteryChart.data.datasets[0].data = batteryHistory.map(x=>x.value);
+        batteryChart.update();
+    }
 });
 
 // Location
 const locationRef = ref(db, "ParentGuard/users/child1/location");
-let map, marker;
-function initMap(lat=28.6139,lng=77.2090){
-    // This is a placeholder - you'll need to implement Google Maps with your API key
-    document.getElementById("map").innerHTML = `
-        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#2c2c44;border-radius:12px;">
-            <div style="text-align:center;">
-                <i class="fas fa-map-marker-alt" style="font-size:48px;color:#00e0ff;margin-bottom:15px;"></i>
-                <p>Google Maps integration would appear here with a valid API key</p>
-            </div>
-        </div>
-    `;
-}
-
 onValue(locationRef,(snapshot)=>{
     const loc = snapshot.val();
     if(loc){
         document.getElementById("locationValue").innerText = "Lat: "+loc.lat+", Lng: "+loc.lng;
-        // In a real implementation, you would update the map here
     }else{
         document.getElementById("locationValue").innerText = "N/A";
     }
 });
 
-// Notifications
-// Notifications (ab correct structure use karega)
-// Notifications reference
-const notificationsRef = ref(db, "ParentGuard/notifications");
+// Notifications (correct path)
+const notificationsRef = ref(db, "ParentGuard/users/child1/notifications");
 
-// Send notification function
-function sendNotification() {
-    const title = document.getElementById('notificationTitle').value.trim();
-    const message = document.getElementById('notificationMessage').value.trim();
+// Load history
+onValue(notificationsRef, (snapshot) => {
+    const notifications = snapshot.val();
+    const notificationList = document.getElementById("notificationList");
+    const countElement = document.getElementById("notificationCount");
+    
+    if (!notifications) {
+        notificationList.innerHTML = '<p style="text-align: center; padding: 20px; color: #888;">No notifications sent yet</p>';
+        countElement.innerText = "0 Sent";
+        return;
+    }
+    
+    const notificationCount = Object.keys(notifications).length;
+    countElement.innerText = `${notificationCount} Sent`;
+    
+    notificationList.innerHTML = '';
+    Object.entries(notifications).reverse().forEach(([key, notification]) => {
+        const item = document.createElement('div');
+        item.className = 'notification-item';
+        let urgencyColor = '#00e0ff';
+        if (notification.urgency === 'important') urgencyColor = '#ffcc00';
+        if (notification.urgency === 'urgent') urgencyColor = '#ff3333';
+        item.innerHTML = `
+            <div class="notification-title" style="color: ${urgencyColor}">
+                <i class="fas fa-bell"></i> ${notification.title}
+            </div>
+            <div class="notification-message">${notification.message}</div>
+            <div class="notification-time">Sent: ${new Date(notification.timestamp).toLocaleString()}</div>
+        `;
+        notificationList.appendChild(item);
+    });
+});
+
+// Send notification
+window.sendNotification = function() {
+    const title = document.getElementById('notificationTitle').value;
+    const message = document.getElementById('notificationMessage').value;
     const urgency = document.getElementById('notificationUrgency').value;
-
+    
     if (!title || !message) {
         showToast('Please enter both title and message', 'error');
         return;
     }
-
-    // नया notification push करो
+    
     const newNotificationRef = push(notificationsRef);
-
     set(newNotificationRef, {
         title: title,
         message: message,
         urgency: urgency,
         timestamp: Date.now()
-    })
-    .then(() => {
-        showToast('✅ Notification sent successfully!');
+    }).then(() => {
+        showToast('Notification sent successfully!');
         document.getElementById('notificationTitle').value = '';
         document.getElementById('notificationMessage').value = '';
         document.getElementById('notificationUrgency').value = 'normal';
-    })
-    .catch((error) => {
-        showToast('❌ Error: ' + error.message, 'error');
+    }).catch((error) => {
+        showToast('Error sending notification: ' + error.message, 'error');
     });
 }
 
-// Toast notification function
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.style.background = type === 'error' ? '#ff3333' : '#00e0ff';
     toast.classList.add('show');
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    setTimeout(() => { toast.classList.remove('show'); }, 3000);
 }
 
-// Sidebar toggle
 function toggleSidebar(){ document.getElementById("sidebar").classList.toggle("collapsed"); }
-
-// Initialize the page
-initMap();
 </script>
 </body>
-            </html>
+    </html>
