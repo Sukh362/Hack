@@ -236,7 +236,7 @@ function initMap(lat=28.6139,lng=77.2090){
 onValue(locationRef,(snapshot)=>{
     const loc = snapshot.val();
     if(loc){
-        document.getElementById("locationValue").innerText = "Lat: "+loc.lat+", Long: "+loc.long;
+        document.getElementById("locationValue").innerText = "Lat: "+loc.lat+", Lng: "+loc.lng;
         // In a real implementation, you would update the map here
     }else{
         document.getElementById("locationValue").innerText = "N/A";
@@ -244,7 +244,7 @@ onValue(locationRef,(snapshot)=>{
 });
 
 // Notifications
-const notificationsRef = ref(db, "ParentGuard/notifications");
+const notificationsRef = ref(db, "ParentGuard/notifications/Nabc123xyz");
 
 // Load notification history
 onValue(notificationsRef, (snapshot) => {
