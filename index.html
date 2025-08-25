@@ -1,220 +1,317 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pro Admin Panel</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Parent Guard – Admin Panel</title>
+
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+
 <style>
-/* Same CSS as before (no change) */
+:root{
+  --bg:#0f1422;
+  --panel:#151c2f;
+  --card:#121a26;
+  --muted:#8ea3c1;
+  --brand:#00e0ff;
+  --brand-d:#0bbbd0;
+  --text:#eaf2ff;
+  --ok:#35e6a6; --warn:#ffcc66; --crit:#ff667a;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  display:flex; min-height:100vh; overflow:hidden;
+}
+
+/* Sidebar */
+.sidebar{
+  width:260px; background:var(--panel); padding:18px; display:flex; flex-direction:column;
+  border-right:1px solid #1f2841;
+}
+.brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px; color:var(--brand); font-size:20px; padding:6px 10px}
+.nav{margin-top:16px; display:flex; flex-direction:column; gap:6px}
+.nav a{display:flex; align-items:center; gap:12px; padding:10px 12px; color:#cfe2ff; text-decoration:none; border-radius:10px}
+.nav a:hover{background:#0f1b32}
+.nav a i{width:18px; text-align:center}
+
+/* Main */
+.main{flex:1; display:flex; flex-direction:column; min-width:0}
+.topbar{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--panel); border-bottom:1px solid #1f2841}
+.topbar h1{font-size:18px; margin:0}
+.container{padding:20px; overflow:auto; flex:1}
+.grid{display:grid; grid-template-columns:repeat(12,1fr); gap:16px}
+.card{
+  background:var(--card); border:1px solid #1e2742; border-radius:14px; padding:16px;
+  box-shadow:0 6px 24px rgba(0,0,0,.25);
+}
+.card h3{margin:0 0 10px; font-size:16px; color:#bcd2ff}
+.big{font-size:36px; font-weight:800}
+.kv{color:var(--muted)}
+.bar{height:10px; background:#223153; border-radius:6px; overflow:hidden}
+.fill{height:100%; background:linear-gradient(90deg,var(--brand),var(--brand-d)); width:0%}
+.badge{display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700}
+.ok{background:#133528; color:var(--ok)} .low{background:#3a2e14;color:var(--warn)} .crit{background:#3a1420;color:var(--crit)}
+
+/* Notification UI */
+.section-title{font-size:18px; font-weight:800; margin:0 0 10px}
+.form{display:grid; grid-template-columns:1fr; gap:12px}
+.label{font-size:13px; color:var(--muted)}
+.input, .select, .textarea{
+  width:100%; padding:12px 12px; background:#0d1527; color:var(--text);
+  border:1px solid #26375e; border-radius:10px; font-size:14px
+}
+.textarea{min-height:110px; resize:vertical}
+.btn{
+  background:linear-gradient(90deg,var(--brand),#38e9ff); color:#00202a;
+  border:0; padding:12px 14px; border-radius:10px; cursor:pointer; font-weight:800
+}
+.btn:active{transform:translateY(1px)}
+.list{display:flex; flex-direction:column; gap:10px}
+.item{
+  background:#0e172a; border:1px solid #213055; border-radius:12px; padding:12px
+}
+.item .title{font-weight:800; margin-bottom:4px}
+.item .time{font-size:12px; color:var(--muted)}
+
+/* Chart container */
+.chart-card{grid-column:span 12}
+@media (min-width:900px){
+  .stat-3{grid-column:span 4}
+  .wide-6{grid-column:span 6}
+  .wide-8{grid-column:span 8}
+  .wide-4{grid-column:span 4}
+}
+.footer{padding:14px; text-align:center; color:var(--muted); font-size:12px}
+.toast{
+  position:fixed; top:16px; right:16px; background:var(--brand);
+  color:#04222a; padding:12px 16px; border-radius:10px; opacity:0; transform:translateY(-10px);
+  transition:.25s ease; z-index:9999; font-weight:800
+}
+.toast.show{opacity:1; transform:translateY(0)}
 </style>
 </head>
 <body>
 
-<div class="sidebar" id="sidebar">
-  <h2>Child Panel</h2>
-  <a href="#"><i class="fas fa-tachometer-alt"></i><span class="text">Dashboard</span></a>
-  <a href="#"><i class="fas fa-battery-half"></i><span class="text">Battery</span></a>
-  <a href="#"><i class="fas fa-map-marker-alt"></i><span class="text">Location</span></a>
-  <a href="#"><i class="fas fa-bell"></i><span class="text">Notifications</span></a>
-</div>
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="brand"><i class="fa-solid fa-shield-halved"></i> Parent Guard</div>
+  <nav class="nav">
+    <a href="#"><i class="fa-solid fa-gauge"></i>Dashboard</a>
+    <a href="#"><i class="fa-solid fa-battery-half"></i>Battery</a>
+    <a href="#"><i class="fa-solid fa-location-dot"></i>Location</a>
+    <a href="#"><i class="fa-solid fa-bell"></i>Notifications</a>
+  </nav>
+</aside>
 
-<div class="main">
+<!-- Main -->
+<main class="main">
   <div class="topbar">
     <h1>Dashboard</h1>
-    <div class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></div>
   </div>
 
-  <div class="dashboard">
-    <div class="cards">
-      <div class="card">
-        <i class="fas fa-battery-full"></i>
-        <h3>Battery Level</h3>
-        <p id="batteryValue">Loading...</p>
-        <div class="bar"><div class="bar-fill" id="batteryBar"></div></div>
-      </div>
-      <div class="card">
-        <i class="fas fa-map-marker-alt"></i>
-        <h3>Live Location</h3>
-        <p id="locationValue">Loading...</p>
-      </div>
-      <div class="card">
-        <i class="fas fa-bell"></i>
-        <h3>Notifications</h3>
-        <p id="notificationCount">0 Sent</p>
-      </div>
+  <div class="container">
+    <div class="grid">
+      <!-- Battery -->
+      <section class="card stat-3">
+        <h3><i class="fa-solid fa-battery-full"></i> Battery</h3>
+        <div class="big" id="batteryVal">--%</div>
+        <div class="kv"><span id="batteryHealth" class="badge">—</span></div>
+        <div class="bar" style="margin-top:10px"><div id="batteryFill" class="fill"></div></div>
+        <div class="kv" style="margin-top:8px">Last update: <span id="batteryTime">—</span></div>
+      </section>
+
+      <!-- Location -->
+      <section class="card stat-3">
+        <h3><i class="fa-solid fa-location-dot"></i> Live Location</h3>
+        <div id="locationText" class="kv">Fetching…</div>
+        <div id="map" style="margin-top:10px;height:180px;border-radius:10px;background:#0d1527;display:flex;align-items:center;justify-content:center;color:#4bb6c8;">
+          Google Map embed (optional)
+        </div>
+      </section>
+
+      <!-- Notification Counter -->
+      <section class="card stat-3">
+        <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
+        <div class="big" id="notifCount">0</div>
+        <div class="kv">Total sent</div>
+      </section>
+
+      <!-- Send Notification -->
+      <section class="card wide-6">
+        <div class="section-title"><i class="fa-solid fa-paper-plane"></i> Send Notification</div>
+        <div class="form">
+          <div>
+            <div class="label">Title</div>
+            <input id="title" class="input" placeholder="Notification Title">
+          </div>
+          <div>
+            <div class="label">Message</div>
+            <textarea id="message" class="textarea" placeholder="Enter your notification message"></textarea>
+          </div>
+          <div>
+            <div class="label">Urgency</div>
+            <select id="urgency" class="select">
+              <option value="normal">Normal</option>
+              <option value="important">Important</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div>
+            <button class="btn" id="sendBtn"><i class="fa-solid fa-paper-plane"></i> Send Notification</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Notification History -->
+      <section class="card wide-6">
+        <div class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Notification History</div>
+        <div id="notifList" class="list">
+          <div class="kv">No notifications yet</div>
+        </div>
+      </section>
+
+      <!-- Battery Chart -->
+      <section class="card chart-card">
+        <canvas id="batteryChart" height="120"></canvas>
+      </section>
     </div>
 
-    <div id="map"></div>
-
-    <div class="notification-section">
-      <div class="notification-form">
-        <h3><i class="fas fa-paper-plane"></i> Send Notification</h3>
-        <div class="form-group">
-          <label for="notificationTitle">Title</label>
-          <input type="text" id="notificationTitle" placeholder="Notification Title">
-        </div>
-        <div class="form-group">
-          <label for="notificationMessage">Message</label>
-          <textarea id="notificationMessage" placeholder="Enter your notification message here"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="notificationUrgency">Urgency</label>
-          <select id="notificationUrgency">
-            <option value="normal">Normal</option>
-            <option value="important">Important</option>
-            <option value="urgent">Urgent</option>
-          </select>
-        </div>
-        <button class="btn-send" onclick="sendNotification()">
-          <i class="fas fa-paper-plane"></i> Send Notification
-        </button>
-      </div>
-
-      <div class="notification-history">
-        <h3><i class="fas fa-history"></i> Notification History</h3>
-        <div id="notificationList">
-          <p style="text-align: center; padding: 20px; color: #888;">No notifications sent yet</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="chart-container">
-      <canvas id="batteryChart"></canvas>
-    </div>
-
-    <div class="footer">© 2025 Your Pro Admin Panel</div>
+    <div class="footer">© 2025 Parent Guard</div>
   </div>
-</div>
+</main>
 
-<div class="toast" id="toast"></div>
+<div id="toast" class="toast"></div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
-import { getDatabase, ref, onValue, push, set } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
-
-const firebaseConfig = {
-    apiKey: "AIzaSyBeNsxHh_EvN-9E7Tp3c96lU7cq0FhZNqg",
-    authDomain: "hackapp-aff40.firebaseapp.com",
-    databaseURL: "https://hackapp-aff40-default-rtdb.firebaseio.com",
-    projectId: "hackapp-aff40",
-    storageBucket: "hackapp-aff40.firebasestorage.app",
-    messagingSenderId: "1000037921919",
-    appId: "1:1000037921919:android:26df39932d4695def63b4a"
+/* ================== SETTINGS (edit these if needed) ================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBeNsxHh_EvN-9E7Tp3c96lU7cq0FhZNqg",
+  authDomain: "hackapp-aff40.firebaseapp.com",
+  databaseURL: "https://hackapp-aff40-default-rtdb.firebaseio.com",
+  projectId: "hackapp-aff40",
+  storageBucket: "hackapp-aff40.appspot.com",
+  messagingSenderId: "1000037921919",
+  appId: "1:1000037921919:web:adminpanel"
 };
+const BASE = "ParentGuard";
+const CHILD_ID = "child1"; // <-- change if your child id differs
+/* ==================================================================== */
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, push, set, onChildAdded, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-// Battery (correct path)
-const batteryRef = ref(db, "ParentGuard/users/child1/battery");
-const batteryHistory = [];
-const batteryChartCtx = document.getElementById("batteryChart").getContext("2d");
-const batteryChart = new Chart(batteryChartCtx, {
-    type: 'line',
-    data: { labels: [], datasets: [{ label:'Battery %', data:[], backgroundColor:'rgba(0,224,255,0.2)', borderColor:'#00e0ff', borderWidth:2, tension:0.3 }]},
-    options:{scales:{y:{beginAtZero:true,max:100}},plugins:{legend:{labels:{color:'#00e0ff'}}}}
+const app = initializeApp(FIREBASE_CONFIG);
+const db  = getDatabase(app);
+
+/* ---------- Refs (paths match your export structure) ---------- */
+const batteryRef  = ref(db, `${BASE}/users/${CHILD_ID}/battery`);
+const locationRef = ref(db, `${BASE}/users/${CHILD_ID}/location`);
+const notifsRoot  = ref(db, `${BASE}/notifications`); // each push makes: ParentGuard/notifications/<autoId>
+
+/* ---------- Battery live UI ---------- */
+const batteryValEl = document.getElementById("batteryVal");
+const batteryFill  = document.getElementById("batteryFill");
+const batteryTime  = document.getElementById("batteryTime");
+const batteryHealth= document.getElementById("batteryHealth");
+
+const chartCtx = document.getElementById("batteryChart");
+const chart = new Chart(chartCtx, {
+  type:'line',
+  data:{ labels:[], datasets:[{ label:'Battery %', data:[], borderWidth:2, fill:true,
+    borderColor:'#00e0ff', backgroundColor:'rgba(0,224,255,.15)', tension:.3, pointRadius:3 }]},
+  options:{ scales:{ y:{ min:0, max:100, ticks:{color:'#9db3d4'}}, x:{ ticks:{color:'#9db3d4'}}},
+    plugins:{ legend:{labels:{color:'#cfe2ff'}}}}
 });
 
-onValue(batteryRef,(snapshot)=>{
-    const batteryVal = snapshot.val();
-    if(batteryVal!==null){
-        document.getElementById("batteryValue").innerText = batteryVal+"%";
-        document.getElementById("batteryBar").style.width = batteryVal+"%";
-        const now = new Date().toLocaleTimeString();
-        batteryHistory.push({time: now, value: batteryVal});
-        if(batteryHistory.length>10) batteryHistory.shift();
-        batteryChart.data.labels = batteryHistory.map(x=>x.time);
-        batteryChart.data.datasets[0].data = batteryHistory.map(x=>x.value);
-        batteryChart.update();
-    }
-});
-
-// Location
-const locationRef = ref(db, "ParentGuard/users/child1/location");
-onValue(locationRef,(snapshot)=>{
-    const loc = snapshot.val();
-    if(loc){
-        document.getElementById("locationValue").innerText = "Lat: "+loc.lat+", Lng: "+loc.lng;
-    }else{
-        document.getElementById("locationValue").innerText = "N/A";
-    }
-});
-
-// Notifications (correct path)
-const notificationsRef = ref(db, "ParentGuard/users/child1/notifications");
-
-// Load history
-onValue(notificationsRef, (snapshot) => {
-    const notifications = snapshot.val();
-    const notificationList = document.getElementById("notificationList");
-    const countElement = document.getElementById("notificationCount");
-    
-    if (!notifications) {
-        notificationList.innerHTML = '<p style="text-align: center; padding: 20px; color: #888;">No notifications sent yet</p>';
-        countElement.innerText = "0 Sent";
-        return;
-    }
-    
-    const notificationCount = Object.keys(notifications).length;
-    countElement.innerText = `${notificationCount} Sent`;
-    
-    notificationList.innerHTML = '';
-    Object.entries(notifications).reverse().forEach(([key, notification]) => {
-        const item = document.createElement('div');
-        item.className = 'notification-item';
-        let urgencyColor = '#00e0ff';
-        if (notification.urgency === 'important') urgencyColor = '#ffcc00';
-        if (notification.urgency === 'urgent') urgencyColor = '#ff3333';
-        item.innerHTML = `
-            <div class="notification-title" style="color: ${urgencyColor}">
-                <i class="fas fa-bell"></i> ${notification.title}
-            </div>
-            <div class="notification-message">${notification.message}</div>
-            <div class="notification-time">Sent: ${new Date(notification.timestamp).toLocaleString()}</div>
-        `;
-        notificationList.appendChild(item);
-    });
-});
-
-// Send notification
-window.sendNotification = function() {
-    const title = document.getElementById('notificationTitle').value;
-    const message = document.getElementById('notificationMessage').value;
-    const urgency = document.getElementById('notificationUrgency').value;
-    
-    if (!title || !message) {
-        showToast('Please enter both title and message', 'error');
-        return;
-    }
-    
-    const newNotificationRef = push(notificationsRef);
-    set(newNotificationRef, {
-        title: title,
-        message: message,
-        urgency: urgency,
-        timestamp: Date.now()
-    }).then(() => {
-        showToast('Notification sent successfully!');
-        document.getElementById('notificationTitle').value = '';
-        document.getElementById('notificationMessage').value = '';
-        document.getElementById('notificationUrgency').value = 'normal';
-    }).catch((error) => {
-        showToast('Error sending notification: ' + error.message, 'error');
-    });
+function healthClass(p){
+  if(p>=80) return {txt:'OK', cls:'badge ok'};
+  if(p>=30) return {txt:'LOW', cls:'badge low'};
+  return {txt:'CRITICAL', cls:'badge crit'};
 }
 
-function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.style.background = type === 'error' ? '#ff3333' : '#00e0ff';
-    toast.classList.add('show');
-    setTimeout(() => { toast.classList.remove('show'); }, 3000);
+onValue(batteryRef, snap=>{
+  const v = Number(snap.val() ?? 0);
+  const now = new Date();
+  batteryValEl.textContent = `${v}%`;
+  batteryFill.style.width = `${Math.max(0,Math.min(100,v))}%`;
+  const hc = healthClass(v);
+  batteryHealth.textContent = hc.txt; batteryHealth.className = hc.cls;
+  batteryTime.textContent = now.toLocaleString();
+
+  // chart
+  chart.data.labels.push(now.toLocaleTimeString());
+  chart.data.datasets[0].data.push(v);
+  if(chart.data.labels.length>20){ chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
+  chart.update();
+});
+
+/* ---------- Location live UI ---------- */
+onValue(locationRef, snap=>{
+  const loc = snap.val();
+  const el = document.getElementById("locationText");
+  if(loc && typeof loc.lat !== "undefined" && typeof loc.lng !== "undefined"){
+    el.textContent = `Lat: ${loc.lat}, Lng: ${loc.lng}`;
+  } else {
+    el.textContent = "N/A";
+  }
+});
+
+/* ---------- Notifications (push & list) ---------- */
+const notifList = document.getElementById("notifList");
+const notifCount = document.getElementById("notifCount");
+
+function addNotifToList(n){
+  const item = document.createElement("div");
+  item.className = "item";
+  const color = n.urgency === "urgent" ? "#ff667a" : (n.urgency === "important" ? "#ffcc66" : "#00e0ff");
+  item.innerHTML = `
+    <div class="title" style="color:${color}"><i class="fa-solid fa-bell"></i> ${n.title || "(no title)"}</div>
+    <div>${n.message || ""}</div>
+    <div class="time">Sent: ${new Date(n.timestamp||Date.now()).toLocaleString()}</div>`;
+  if(notifList.firstElementChild && notifList.firstElementChild.classList.contains('kv')) notifList.innerHTML='';
+  notifList.prepend(item);
 }
 
-function toggleSidebar(){ document.getElementById("sidebar").classList.toggle("collapsed"); }
+async function refreshCount(){
+  const snap = await get(notifsRoot);
+  const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+  notifCount.textContent = count;
+}
+onChildAdded(notifsRoot, (snap)=>{ const n = snap.val(); addNotifToList(n); refreshCount(); });
+refreshCount();
+
+document.getElementById("sendBtn").addEventListener("click", async ()=>{
+  const title = (document.getElementById("title").value || "").trim();
+  const message = (document.getElementById("message").value || "").trim();
+  const urgency = document.getElementById("urgency").value;
+
+  if(!title || !message) return toast("Enter title & message", true);
+
+  const newRef = push(notifsRoot);
+  await set(newRef, { title, message, urgency, timestamp: Date.now() });
+  toast("Notification sent!");
+  document.getElementById("title").value = "";
+  document.getElementById("message").value = "";
+  document.getElementById("urgency").value = "normal";
+});
+
+/* ---------- Toast ---------- */
+function toast(msg, err=false){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.background = err ? "#ff667a" : "var(--brand)";
+  t.classList.add("show");
+  setTimeout(()=> t.classList.remove("show"), 2500);
+}
 </script>
 </body>
-    </html>
+</html>
