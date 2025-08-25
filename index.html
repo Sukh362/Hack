@@ -245,74 +245,39 @@ onValue(locationRef,(snapshot)=>{
 
 // Notifications
 // Notifications (ab correct structure use karega)
+// Notifications reference
 const notificationsRef = ref(db, "ParentGuard/notifications");
 
-// Load notification history
-onValue(notificationsRef, (snapshot) => {
-    const notifications = snapshot.val();
-    const notificationList = document.getElementById("notificationList");
-    const countElement = document.getElementById("notificationCount");
-    
-    if (!notifications) {
-        notificationList.innerHTML = '<p style="text-align: center; padding: 20px; color: #888;">No notifications sent yet</p>';
-        countElement.innerText = "0 Sent";
-        return;
-    }
-    
-    // Count notifications
-    const notificationCount = Object.keys(notifications).length;
-    countElement.innerText = `${notificationCount} Sent`;
-    
-    // Display notifications (newest first)
-    notificationList.innerHTML = '';
-    Object.entries(notifications).reverse().forEach(([key, notification]) => {
-        const item = document.createElement('div');
-        item.className = 'notification-item';
-        
-        // Determine urgency color
-        let urgencyColor = '#00e0ff';
-        if (notification.urgency === 'important') urgencyColor = '#ffcc00';
-        if (notification.urgency === 'urgent') urgencyColor = '#ff3333';
-        
-        item.innerHTML = `
-            <div class="notification-title" style="color: ${urgencyColor}">
-                <i class="fas fa-bell"></i> ${notification.title}
-            </div>
-            <div class="notification-message">${notification.message}</div>
-            <div class="notification-time">Sent: ${new Date(notification.timestamp).toLocaleString()}</div>
-        `;
-        
-        notificationList.appendChild(item);
-    });
-});
-
-// Send notification (ab push karega unique key ke andar)
+// Send notification function
 function sendNotification() {
-    const title = document.getElementById('notificationTitle').value;
-    const message = document.getElementById('notificationMessage').value;
+    const title = document.getElementById('notificationTitle').value.trim();
+    const message = document.getElementById('notificationMessage').value.trim();
     const urgency = document.getElementById('notificationUrgency').value;
-    
+
     if (!title || !message) {
         showToast('Please enter both title and message', 'error');
         return;
     }
-    
+
+    // नया notification push करो
     const newNotificationRef = push(notificationsRef);
+
     set(newNotificationRef, {
         title: title,
         message: message,
         urgency: urgency,
         timestamp: Date.now()
-    }).then(() => {
-        showToast('Notification sent successfully!');
-        
-        // Clear form
+    })
+    .then(() => {
+        showToast('✅ Notification sent successfully!');
         document.getElementById('notificationTitle').value = '';
         document.getElementById('notificationMessage').value = '';
         document.getElementById('notificationUrgency').value = 'normal';
-    }).catch((error) => {
-        showToast('Error sending notification: ' + error.message, 'error');
+    })
+    .catch((error) => {
+        showToast('❌ Error: ' + error.message, 'error');
     });
+}
 
 }
 
