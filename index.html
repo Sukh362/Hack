@@ -244,7 +244,8 @@ onValue(locationRef,(snapshot)=>{
 });
 
 // Notifications
-const notificationsRef = ref(db, "ParentGuard/notifications/Nabc123xyz");
+// Notifications (ab correct structure use karega)
+const notificationsRef = ref(db, "ParentGuard/users/child1/notifications");
 
 // Load notification history
 onValue(notificationsRef, (snapshot) => {
@@ -285,7 +286,7 @@ onValue(notificationsRef, (snapshot) => {
     });
 });
 
-// Send notification
+// Send notification (ab push karega unique key ke andar)
 function sendNotification() {
     const title = document.getElementById('notificationTitle').value;
     const message = document.getElementById('notificationMessage').value;
@@ -296,7 +297,6 @@ function sendNotification() {
         return;
     }
     
-    // Create new notification
     const newNotificationRef = push(notificationsRef);
     set(newNotificationRef, {
         title: title,
@@ -313,6 +313,7 @@ function sendNotification() {
     }).catch((error) => {
         showToast('Error sending notification: ' + error.message, 'error');
     });
+
 }
 
 // Toast notification function
