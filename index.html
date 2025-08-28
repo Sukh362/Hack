@@ -1,317 +1,230 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Parent Guard – Admin Panel</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ParentGuard Panel</title>
 
-<!-- Fonts & Icons -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
-
-<style>
-:root{
-  --bg:#0f1422;
-  --panel:#151c2f;
-  --card:#121a26;
-  --muted:#8ea3c1;
-  --brand:#00e0ff;
-  --brand-d:#0bbbd0;
-  --text:#eaf2ff;
-  --ok:#35e6a6; --warn:#ffcc66; --crit:#ff667a;
-}
-
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; background:var(--bg); color:var(--text);
-  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
-  display:flex; min-height:100vh; overflow:hidden;
-}
-
-/* Sidebar */
-.sidebar{
-  width:260px; background:var(--panel); padding:18px; display:flex; flex-direction:column;
-  border-right:1px solid #1f2841;
-}
-.brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px; color:var(--brand); font-size:20px; padding:6px 10px}
-.nav{margin-top:16px; display:flex; flex-direction:column; gap:6px}
-.nav a{display:flex; align-items:center; gap:12px; padding:10px 12px; color:#cfe2ff; text-decoration:none; border-radius:10px}
-.nav a:hover{background:#0f1b32}
-.nav a i{width:18px; text-align:center}
-
-/* Main */
-.main{flex:1; display:flex; flex-direction:column; min-width:0}
-.topbar{display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--panel); border-bottom:1px solid #1f2841}
-.topbar h1{font-size:18px; margin:0}
-.container{padding:20px; overflow:auto; flex:1}
-.grid{display:grid; grid-template-columns:repeat(12,1fr); gap:16px}
-.card{
-  background:var(--card); border:1px solid #1e2742; border-radius:14px; padding:16px;
-  box-shadow:0 6px 24px rgba(0,0,0,.25);
-}
-.card h3{margin:0 0 10px; font-size:16px; color:#bcd2ff}
-.big{font-size:36px; font-weight:800}
-.kv{color:var(--muted)}
-.bar{height:10px; background:#223153; border-radius:6px; overflow:hidden}
-.fill{height:100%; background:linear-gradient(90deg,var(--brand),var(--brand-d)); width:0%}
-.badge{display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700}
-.ok{background:#133528; color:var(--ok)} .low{background:#3a2e14;color:var(--warn)} .crit{background:#3a1420;color:var(--crit)}
-
-/* Notification UI */
-.section-title{font-size:18px; font-weight:800; margin:0 0 10px}
-.form{display:grid; grid-template-columns:1fr; gap:12px}
-.label{font-size:13px; color:var(--muted)}
-.input, .select, .textarea{
-  width:100%; padding:12px 12px; background:#0d1527; color:var(--text);
-  border:1px solid #26375e; border-radius:10px; font-size:14px
-}
-.textarea{min-height:110px; resize:vertical}
-.btn{
-  background:linear-gradient(90deg,var(--brand),#38e9ff); color:#00202a;
-  border:0; padding:12px 14px; border-radius:10px; cursor:pointer; font-weight:800
-}
-.btn:active{transform:translateY(1px)}
-.list{display:flex; flex-direction:column; gap:10px}
-.item{
-  background:#0e172a; border:1px solid #213055; border-radius:12px; padding:12px
-}
-.item .title{font-weight:800; margin-bottom:4px}
-.item .time{font-size:12px; color:var(--muted)}
-
-/* Chart container */
-.chart-card{grid-column:span 12}
-@media (min-width:900px){
-  .stat-3{grid-column:span 4}
-  .wide-6{grid-column:span 6}
-  .wide-8{grid-column:span 8}
-  .wide-4{grid-column:span 4}
-}
-.footer{padding:14px; text-align:center; color:var(--muted); font-size:12px}
-.toast{
-  position:fixed; top:16px; right:16px; background:var(--brand);
-  color:#04222a; padding:12px 16px; border-radius:10px; opacity:0; transform:translateY(-10px);
-  transition:.25s ease; z-index:9999; font-weight:800
-}
-.toast.show{opacity:1; transform:translateY(0)}
-</style>
+  <!-- Leaflet (map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-sA+4gXv6tGv3gkV7xQzX+3Zkq4Qv3m5tY7f6k6o0b+8=" crossorigin=""/>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin:0; padding:0; background:#f6f8fa; }
+    header { background:#0b5ed7; color:#fff; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+    header h1 { font-size:18px; margin:0; }
+    .container { display:flex; gap:16px; padding:16px; }
+    .left { width:380px; background:#fff; border-radius:8px; padding:12px; box-shadow:0 2px 6px rgba(0,0,0,0.08); height:80vh; overflow:auto; }
+    .right { flex:1; background:#fff; border-radius:8px; padding:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); height:80vh; }
+    .device { border-bottom:1px solid #eee; padding:8px 4px; display:flex; gap:8px; align-items:center; }
+    .dev-info { flex:1; }
+    .dev-id { font-weight:700; font-size:13px; }
+    .small { color:#666; font-size:12px; }
+    button { background:#0b5ed7; color:#fff; border:0; padding:6px 8px; border-radius:6px; cursor:pointer; }
+    button.ghost { background:#eee; color:#333; }
+    #map { height:100%; min-height:520px; border-radius:6px; }
+    .top-controls { display:flex; gap:8px; align-items:center; }
+    .status { font-size:13px; padding:4px 8px; border-radius:6px; background:#eef6ff; color:#0b5ed7; }
+    .footer { padding:8px 16px; color:#777; font-size:13px; }
+  </style>
 </head>
 <body>
 
-<!-- Sidebar -->
-<aside class="sidebar">
-  <div class="brand"><i class="fa-solid fa-shield-halved"></i> Parent Guard</div>
-  <nav class="nav">
-    <a href="#"><i class="fa-solid fa-gauge"></i>Dashboard</a>
-    <a href="#"><i class="fa-solid fa-battery-half"></i>Battery</a>
-    <a href="#"><i class="fa-solid fa-location-dot"></i>Location</a>
-    <a href="#"><i class="fa-solid fa-bell"></i>Notifications</a>
-  </nav>
-</aside>
-
-<!-- Main -->
-<main class="main">
-  <div class="topbar">
-    <h1>Dashboard</h1>
+<header>
+  <h1>ParentGuard — Panel</h1>
+  <div class="top-controls">
+    <div class="status" id="connStatus">Disconnected</div>
+    <button id="refreshBtn" class="ghost">Refresh</button>
   </div>
+</header>
 
-  <div class="container">
-    <div class="grid">
-      <!-- Battery -->
-      <section class="card stat-3">
-        <h3><i class="fa-solid fa-battery-full"></i> Battery</h3>
-        <div class="big" id="batteryVal">--%</div>
-        <div class="kv"><span id="batteryHealth" class="badge">—</span></div>
-        <div class="bar" style="margin-top:10px"><div id="batteryFill" class="fill"></div></div>
-        <div class="kv" style="margin-top:8px">Last update: <span id="batteryTime">—</span></div>
-      </section>
-
-      <!-- Location -->
-      <section class="card stat-3">
-        <h3><i class="fa-solid fa-location-dot"></i> Live Location</h3>
-        <div id="locationText" class="kv">Fetching…</div>
-        <div id="map" style="margin-top:10px;height:180px;border-radius:10px;background:#0d1527;display:flex;align-items:center;justify-content:center;color:#4bb6c8;">
-          Google Map embed (optional)
-        </div>
-      </section>
-
-      <!-- Notification Counter -->
-      <section class="card stat-3">
-        <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
-        <div class="big" id="notifCount">0</div>
-        <div class="kv">Total sent</div>
-      </section>
-
-      <!-- Send Notification -->
-      <section class="card wide-6">
-        <div class="section-title"><i class="fa-solid fa-paper-plane"></i> Send Notification</div>
-        <div class="form">
-          <div>
-            <div class="label">Title</div>
-            <input id="title" class="input" placeholder="Notification Title">
-          </div>
-          <div>
-            <div class="label">Message</div>
-            <textarea id="message" class="textarea" placeholder="Enter your notification message"></textarea>
-          </div>
-          <div>
-            <div class="label">Urgency</div>
-            <select id="urgency" class="select">
-              <option value="normal">Normal</option>
-              <option value="important">Important</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div>
-            <button class="btn" id="sendBtn"><i class="fa-solid fa-paper-plane"></i> Send Notification</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Notification History -->
-      <section class="card wide-6">
-        <div class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Notification History</div>
-        <div id="notifList" class="list">
-          <div class="kv">No notifications yet</div>
-        </div>
-      </section>
-
-      <!-- Battery Chart -->
-      <section class="card chart-card">
-        <canvas id="batteryChart" height="120"></canvas>
-      </section>
+<div class="container">
+  <div class="left">
+    <div style="margin-bottom:8px;">
+      <strong>Devices</strong>
+      <div class="small">Showing realtime devices under <code>/devices</code></div>
     </div>
-
-    <div class="footer">© 2025 Parent Guard</div>
+    <div id="devicesList">
+      <!-- devices will be injected here -->
+    </div>
   </div>
-</main>
 
-<div id="toast" class="toast"></div>
+  <div class="right">
+    <div id="map"></div>
+  </div>
+</div>
 
-<script type="module">
-/* ================== SETTINGS (edit these if needed) ================== */
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBeNsxHh_EvN-9E7Tp3c96lU7cq0FhZNqg",
-  authDomain: "hackapp-aff40.firebaseapp.com",
-  databaseURL: "https://hackapp-aff40-default-rtdb.firebaseio.com",
-  projectId: "hackapp-aff40",
-  storageBucket: "hackapp-aff40.appspot.com",
-  messagingSenderId: "1000037921919",
-  appId: "1:1000037921919:web:adminpanel"
+<div class="footer">Tip: Use browser console for debug logs. Make sure this page is served over HTTP(S) (eg. `python -m http.server`).</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-o9N1j7gRk7lB8sS6n0bNyKQx3vKq9c3bV4Jd2x0vX2Q=" crossorigin=""></script>
+
+<!-- Firebase JS (compat - simple API) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+/* ============================
+   1) CONFIGURE FIREBASE
+   ============================
+   Replace the firebaseConfig object below with your Web app config which you get from:
+   Firebase Console → Project Settings → SDK setup and configuration → "Config" (for Web)
+   Example form:
+   const firebaseConfig = {
+     apiKey: "AAAA...X",
+     authDomain: "project-id.firebaseapp.com",
+     databaseURL: "https://project-id-default-rtdb.firebaseio.com",
+     projectId: "project-id",
+     storageBucket: "project-id.appspot.com",
+     messagingSenderId: "1234567890",
+     appId: "1:1234567890:web:abcdef"
+   };
+*/
+const firebaseConfig = {
+  // <-- PASTE YOUR WEB CONFIG HERE
 };
-const BASE = "ParentGuard";
-const CHILD_ID = "child1"; // <-- change if your child id differs
-/* ==================================================================== */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, push, set, onChildAdded, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+/* If you only have google-services.json (android) you can still:
+   - open google-services.json and copy project_info.project_id and database url if present,
+   - but easiest: open Firebase Console -> Project Settings -> Add Web App -> copy config.
+*/
 
-const app = initializeApp(FIREBASE_CONFIG);
-const db  = getDatabase(app);
+// init firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-/* ---------- Refs (paths match your export structure) ---------- */
-const batteryRef  = ref(db, `${BASE}/users/${CHILD_ID}/battery`);
-const locationRef = ref(db, `${BASE}/users/${CHILD_ID}/location`);
-const notifsRoot  = ref(db, `${BASE}/notifications`); // each push makes: ParentGuard/notifications/<autoId>
+/* ============================
+   2) MAP (Leaflet)
+   ============================ */
+const map = L.map('map').setView([20.5937, 78.9629], 5); // India default
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '© OpenStreetMap'
+}).addTo(map);
 
-/* ---------- Battery live UI ---------- */
-const batteryValEl = document.getElementById("batteryVal");
-const batteryFill  = document.getElementById("batteryFill");
-const batteryTime  = document.getElementById("batteryTime");
-const batteryHealth= document.getElementById("batteryHealth");
+const markers = {}; // deviceId -> marker
 
-const chartCtx = document.getElementById("batteryChart");
-const chart = new Chart(chartCtx, {
-  type:'line',
-  data:{ labels:[], datasets:[{ label:'Battery %', data:[], borderWidth:2, fill:true,
-    borderColor:'#00e0ff', backgroundColor:'rgba(0,224,255,.15)', tension:.3, pointRadius:3 }]},
-  options:{ scales:{ y:{ min:0, max:100, ticks:{color:'#9db3d4'}}, x:{ ticks:{color:'#9db3d4'}}},
-    plugins:{ legend:{labels:{color:'#cfe2ff'}}}}
-});
+/* ============================
+   3) UI helpers
+   ============================ */
+const connStatus = document.getElementById('connStatus');
+const devicesList = document.getElementById('devicesList');
+const refreshBtn = document.getElementById('refreshBtn');
 
-function healthClass(p){
-  if(p>=80) return {txt:'OK', cls:'badge ok'};
-  if(p>=30) return {txt:'LOW', cls:'badge low'};
-  return {txt:'CRITICAL', cls:'badge crit'};
+function setStatus(text, ok=true) {
+  connStatus.textContent = text;
+  connStatus.style.background = ok ? '#eef6ff' : '#ffeef0';
+  connStatus.style.color = ok ? '#0b5ed7' : '#c00';
 }
 
-onValue(batteryRef, snap=>{
-  const v = Number(snap.val() ?? 0);
-  const now = new Date();
-  batteryValEl.textContent = `${v}%`;
-  batteryFill.style.width = `${Math.max(0,Math.min(100,v))}%`;
-  const hc = healthClass(v);
-  batteryHealth.textContent = hc.txt; batteryHealth.className = hc.cls;
-  batteryTime.textContent = now.toLocaleString();
+function formatTs(ts) {
+  try {
+    const d = new Date(ts);
+    return d.toLocaleString();
+  } catch (_) { return ts; }
+}
 
-  // chart
-  chart.data.labels.push(now.toLocaleTimeString());
-  chart.data.datasets[0].data.push(v);
-  if(chart.data.labels.length>20){ chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
-  chart.update();
-});
-
-/* ---------- Location live UI ---------- */
-onValue(locationRef, snap=>{
-  const loc = snap.val();
-  const el = document.getElementById("locationText");
-  if(loc && typeof loc.lat !== "undefined" && typeof loc.lng !== "undefined"){
-    el.textContent = `Lat: ${loc.lat}, Lng: ${loc.lng}`;
-  } else {
-    el.textContent = "N/A";
+/* ============================
+   4) Render device entry
+   ============================ */
+function renderDevices(devicesObj) {
+  devicesList.innerHTML = '';
+  if (!devicesObj) {
+    devicesList.innerHTML = '<div class="small">No devices found under /devices</div>';
+    return;
   }
+  const keys = Object.keys(devicesObj).sort();
+  keys.forEach(deviceId => {
+    const dev = devicesObj[deviceId] || {};
+    const loc = dev.location || {};
+    const battery = dev.battery || {};
+    const lastTs = loc.ts || battery.ts || dev.ts || null;
+    const lat = loc.lat, lng = loc.lng;
+    // device card
+    const div = document.createElement('div');
+    div.className = 'device';
+    div.innerHTML = `
+      <div class="dev-info">
+        <div class="dev-id">${deviceId}</div>
+        <div class="small">Lat: ${lat ?? '-'} &nbsp; Lng: ${lng ?? '-'} &nbsp; • Battery: ${battery.level ?? '-'}%</div>
+        <div class="small">Updated: ${ lastTs ? formatTs(lastTs) : '-' }</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <button onclick="focusDevice('${deviceId}')">Show on map</button>
+        <button onclick="requestLocation('${deviceId}')" class="ghost">Request location</button>
+      </div>
+    `;
+    devicesList.appendChild(div);
+
+    // map marker
+    if (lat != null && lng != null) {
+      const latN = parseFloat(lat), lngN = parseFloat(lng);
+      if (!isNaN(latN) && !isNaN(lngN)) {
+        if (markers[deviceId]) {
+          markers[deviceId].setLatLng([latN, lngN]);
+        } else {
+          const m = L.marker([latN, lngN]).addTo(map).bindPopup(`<b>${deviceId}</b><br>${formatTs(lastTs)}`);
+          markers[deviceId] = m;
+        }
+      }
+    }
+  });
+}
+
+/* ============================
+   5) Realtime listener
+   ============================ */
+function startRealtime() {
+  setStatus('Connecting...');
+  const ref = db.ref('devices');
+  ref.on('value', snapshot => {
+    const val = snapshot.val();
+    renderDevices(val);
+    setStatus('Connected', true);
+  }, err => {
+    console.error('Firebase listen error', err);
+    setStatus('Error', false);
+  });
+}
+
+refreshBtn.addEventListener('click', () => {
+  // simple manual refresh: fetch once
+  db.ref('devices').once('value').then(snap => {
+    renderDevices(snap.val());
+  });
 });
 
-/* ---------- Notifications (push & list) ---------- */
-const notifList = document.getElementById("notifList");
-const notifCount = document.getElementById("notifCount");
-
-function addNotifToList(n){
-  const item = document.createElement("div");
-  item.className = "item";
-  const color = n.urgency === "urgent" ? "#ff667a" : (n.urgency === "important" ? "#ffcc66" : "#00e0ff");
-  item.innerHTML = `
-    <div class="title" style="color:${color}"><i class="fa-solid fa-bell"></i> ${n.title || "(no title)"}</div>
-    <div>${n.message || ""}</div>
-    <div class="time">Sent: ${new Date(n.timestamp||Date.now()).toLocaleString()}</div>`;
-  if(notifList.firstElementChild && notifList.firstElementChild.classList.contains('kv')) notifList.innerHTML='';
-  notifList.prepend(item);
+/* ============================
+   6) Commands: write a command node for a device
+   ============================ */
+function requestLocation(deviceId) {
+  if (!confirm('Send location request to device: ' + deviceId + ' ?')) return;
+  // write a command under devices/{deviceId}/commands/get_location = true
+  const cmdRef = db.ref(`devices/${deviceId}/commands/get_location`);
+  // set true with a timestamp (child app should watch this path and reset it)
+  cmdRef.set({ value: true, ts: Date.now() })
+    .then(() => alert('Request sent'))
+    .catch(err => alert('Failed to send: ' + err));
 }
 
-async function refreshCount(){
-  const snap = await get(notifsRoot);
-  const count = snap.exists() ? Object.keys(snap.val()).length : 0;
-  notifCount.textContent = count;
-}
-onChildAdded(notifsRoot, (snap)=>{ const n = snap.val(); addNotifToList(n); refreshCount(); });
-refreshCount();
+/* ============================
+   7) Start
+   ============================ */
+startRealtime();
+setStatus('Connecting...', true);
 
-document.getElementById("sendBtn").addEventListener("click", async ()=>{
-  const title = (document.getElementById("title").value || "").trim();
-  const message = (document.getElementById("message").value || "").trim();
-  const urgency = document.getElementById("urgency").value;
-
-  if(!title || !message) return toast("Enter title & message", true);
-
-  const newRef = push(notifsRoot);
-  await set(newRef, { title, message, urgency, timestamp: Date.now() });
-  toast("Notification sent!");
-  document.getElementById("title").value = "";
-  document.getElementById("message").value = "";
-  document.getElementById("urgency").value = "normal";
-});
-
-/* ---------- Toast ---------- */
-function toast(msg, err=false){
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.style.background = err ? "#ff667a" : "var(--brand)";
-  t.classList.add("show");
-  setTimeout(()=> t.classList.remove("show"), 2500);
-}
+// Expose some helpers to window for inline onclick
+window.focusDevice = function(deviceId) {
+  const devNode = document.querySelectorAll('.dev-id');
+  const marker = markers[deviceId];
+  if (marker) {
+    map.setView(marker.getLatLng(), 16);
+    marker.openPopup();
+  } else {
+    alert('No location available for ' + deviceId);
+  }
+};
+window.requestLocation = requestLocation;
 </script>
 </body>
 </html>
