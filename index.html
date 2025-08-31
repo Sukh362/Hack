@@ -1,227 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Video Saver — Legal Use Only</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Video Saver — Playlist Organizer (YouTube Data)</title>
   <style>
-    :root{
-      --bg1:#0f1020; --bg2:#090a12; --pri:#6ee7ff; --acc:#8b5cf6; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --glass:rgba(255,255,255,.08);
-    }
+    :root{--bg1:#0f1020; --pri:#6ee7ff; --acc:#8b5cf6}
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:#e5e7eb;
-      background: radial-gradient(1200px 800px at 10% 10%, #0b1738, transparent 60%),
-                  radial-gradient(1000px 700px at 90% 20%, #1a0b3a, transparent 60%),
-                  radial-gradient(1200px 800px at 50% 120%, #112, transparent 60%),
-                  linear-gradient(120deg, var(--bg1), var(--bg2));
-      overflow-x:hidden;
-    }
-    /* Floating blobs */
-    .blob{position:fixed; filter: blur(60px); opacity:.35; pointer-events:none; mix-blend-mode:screen}
-    .b1{width:360px; height:360px; background:conic-gradient(from 90deg at 50% 50%, #00e7ff, #7c3aed, #00e7ff); top:-80px; left:-80px; animation:float1 12s ease-in-out infinite}
-    .b2{width:420px; height:420px; background:conic-gradient(from -30deg, #7c3aed, #22d3ee, #7c3aed); bottom:-120px; right:-80px; animation:float2 16s ease-in-out infinite}
-    @keyframes float1{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(28px) rotate(20deg)}}
-    @keyframes float2{0%,100%{transform:translate(0) rotate(0)}50%{transform:translate(-24px, -18px) rotate(-16deg)}}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;background:linear-gradient(180deg,#081129,#070814);min-height:100vh}
+    header{display:flex;align-items:center;justify-content:space-between;padding:20px 28px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .orb{width:40px;height:40px;border-radius:999px;background:radial-gradient(circle at 30% 30%,#fff,#93c5fd 30%,#7c3aed 60%)}
+    h1{font-size:20px;margin:0}
+    main{padding:18px;max-width:1100px;margin:0 auto}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02));border:1px solid #ffffff10;border-radius:16px;padding:16px;margin-bottom:18px}
 
-    header{
-      display:flex; align-items:center; justify-content:space-between; gap:12px; padding:24px clamp(20px, 4vw, 48px);
-    }
-    .logo{display:flex; align-items:center; gap:12px}
-    .orb{width:34px; height:34px; border-radius:999px; background:radial-gradient(circle at 30% 30%, #fff, #93c5fd 30%, #7c3aed 60%, #0ea5e9 100%); box-shadow:0 0 30px #7dd3fc55, inset 0 0 20px #a78bfa55}
-    .brand{font-weight:800; letter-spacing:.3px; font-size:20px}
+    .form{display:grid;grid-template-columns:1fr auto;gap:12px}
+    .inputs{display:flex;gap:12px;flex:1}
+    input,button,select{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1020;color:#e5e7eb;outline:none}
+    button{cursor:pointer}
 
-    .badge{border:1px solid #ffffff22; padding:6px 10px; border-radius:999px; font-size:12px; opacity:.85; backdrop-filter:blur(6px); background:var(--glass)}
+    .note{font-size:13px;color:#cbd5e1;margin-top:8px}
 
-    main{display:grid; place-items:center; padding:16px}
+    .controls{display:flex;gap:8px;align-items:center}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
+    .tile{background:#071020;border-radius:12px;padding:8px;border:1px solid #1f2a36}
+    .thumb{width:100%;height:130px;object-fit:cover;border-radius:8px}
+    .title{font-size:14px;margin:8px 0 6px}
+    .meta{font-size:12px;color:#9ca3af}
 
-    .card{
-      width:min(980px, 92vw); margin:18px auto; background:linear-gradient(180deg, #ffffff10, #ffffff06);
-      border:1px solid #ffffff18; border-radius:24px; padding:18px; box-shadow:0 10px 50px #00000070; backdrop-filter:blur(10px);
-      position:relative; overflow:hidden;
-    }
-    .card:before{content:""; position:absolute; inset:-2px; padding:1px; border-radius:24px; background:linear-gradient(135deg, #7dd3fc55, #a78bfa55, transparent 60%); -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .small{padding:8px 10px;font-size:13px}
 
-    h1{margin:6px 0 2px; font-size: clamp(26px, 4vw, 40px); line-height:1.05}
-    p.sub{margin:4px 0 14px; color:#cbd5e1; opacity:.9}
+    .footer{font-size:13px;color:#9ca3af;text-align:center;margin-top:18px}
 
-    .row{display:grid; grid-template-columns: 1fr; gap:12px; margin:12px 0}
-    @media (min-width: 840px){ .row{ grid-template-columns: 1.6fr .4fr .6fr; } }
-
-    .field{display:flex; flex-direction:column; gap:8px}
-    label{font-size:12px; color:#cbd5e1; letter-spacing:.3px}
-    input[type="url"], textarea, select{
-      width:100%; border:1px solid #334155; background:#0b1020; color:#e5e7eb; padding:14px 14px; border-radius:14px; outline:none; transition:.2s;
-    }
-    input[type="url"]:focus, textarea:focus, select:focus{border-color:#60a5fa; box-shadow:0 0 0 4px #60a5fa22}
-
-    .actions{display:flex; gap:10px; flex-wrap:wrap}
-    .btn{
-      border:1px solid #ffffff22; background:linear-gradient(135deg, #60a5fa40, #a78bfa30); color:white; padding:12px 16px; border-radius:14px; cursor:pointer; transition:.15s; font-weight:600;
-    }
-    .btn:hover{transform:translateY(-1px); box-shadow:0 10px 30px #0006}
-    .btn.secondary{background:transparent}
-
-    .note{display:flex; gap:10px; align-items:flex-start; background:#111827; border:1px dashed #374151; border-radius:14px; padding:12px 14px; margin-top:10px}
-    .note strong{color:#93c5fd}
-
-    .grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; margin-top:14px}
-    .tile{background:#0a0f1f; border:1px solid #263046; border-radius:18px; padding:14px; position:relative}
-    .chip{position:absolute; top:10px; right:10px; font-size:10px; padding:4px 8px; border-radius:999px; background:#111827; border:1px solid #384055}
-    .url{font-size:12px; word-break:break-all; color:#cbd5e1}
-    .status{margin-top:8px; font-size:12px}
-    .ok{color:var(--ok)}
-    .err{color:var(--err)}
-
-    footer{opacity:.7; font-size:12px; text-align:center; padding:30px 14px}
-    a{color:#93c5fd; text-decoration:none}
+    @media(max-width:640px){.form{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <div class="blob b1"></div>
-  <div class="blob b2"></div>
   <header>
-    <div class="logo">
-      <div class="orb"></div>
-      <div class="brand">Video Saver</div>
-    </div>
-    <div class="badge">Legal Use Only</div>
+    <div class="brand"><div class="orb"></div><div>
+      <h1>Video Saver — Playlist Organizer</h1>
+      <div style="font-size:12px;color:#9ca3af">Uses YouTube Data API v3 to fetch metadata only (no downloads)</div>
+    </div></div>
+    <div class="badge" style="font-size:13px;color:#93c5fd">Legal • Read-only</div>
   </header>
 
   <main>
     <section class="card">
-      <h1>Download videos you <em>own</em> the rights to</h1>
-      <p class="sub">Paste a direct media URL (e.g., your own MP4 on cloud storage). This tool intentionally <strong>blocks YouTube links</strong> to respect their Terms of Service.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="note">यह टूल केवल playlist के <strong>metadata</strong> (title, thumbnails, video URL) दिखाता है — कोई वीडियो डाउनलोड नहीं करेगा।</div>
 
-      <div class="row">
-        <div class="field">
-          <label for="url">Video URL</label>
-          <input id="url" type="url" placeholder="https://your-storage.example.com/my-video.mp4" />
-        </div>
-        <div class="field">
-          <label for="quality">Quality label</label>
-          <select id="quality">
-            <option value="best">Best Available</option>
-            <option>4K</option>
-            <option>1080p</option>
-            <option>720p</option>
-            <option>480p</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>&nbsp;</label>
-          <div class="actions">
-            <button class="btn" id="add">Add to List</button>
-            <button class="btn secondary" id="clear">Clear</button>
+        <div class="form">
+          <div class="inputs">
+            <input id="apiKey" placeholder="Paste your Google API Key (YouTube Data API v3)" />
+            <input id="playlist" placeholder="Paste YouTube Playlist URL or ID (e.g. PL... )" />
+          </div>
+          <div class="controls">
+            <button id="fetch" class="small">Fetch Playlist</button>
+            <button id="clear" class="small">Clear</button>
           </div>
         </div>
-      </div>
 
-      <div class="note">
-        <div>⚠️</div>
-        <div>
-          <strong>Respect creators.</strong> Downloading from sites like YouTube may violate their Terms and local laws. This UI will not create download links for <code>youtube.com</code>, <code>youtu.be</code>, or similar domains.
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          <button id="exportJson" class="small">Export JSON</button>
+          <button id="copyLinks" class="small">Copy All Video Links</button>
+          <div style="margin-left:auto;font-size:13px;color:#9ca3af">Fetched: <span id="count">0</span> videos</div>
         </div>
-      </div>
 
-      <div class="grid" id="list"></div>
+        <div class="note">यदि तुम्हारे पास API Key नहीं है — तुम्हें Google Cloud Console में नया प्रोजेक्ट बनाकर YouTube Data API enabled करके API key लेना होगा.</div>
+      </div>
     </section>
 
     <section class="card">
-      <h2 style="margin:0 0 8px">Playlist helper (non‑YouTube)</h2>
-      <p class="sub">Paste multiple <em>direct</em> media URLs (one per line). We'll stage them for download if the domain is allowed.</p>
-      <div class="field">
-        <textarea id="bulk" rows="6" placeholder="https://example.com/clip1.mp4\nhttps://media.mysite.com/clip2.webm"></textarea>
-      </div>
-      <div class="actions">
-        <button class="btn" id="bulkAdd">Add All</button>
-        <button class="btn secondary" id="bulkClear">Clear</button>
-      </div>
+      <div id="grid" class="grid"></div>
     </section>
 
-    <footer>
-      Built for educational purposes. If you need offline viewing from YouTube, consider their official Premium offline feature. Stay kind, stay legal. 💙
-    </footer>
+    <div class="footer">Want more features? (search, bulk export CSV, open in new tab) — बोलो और मैं जोड़ दूंगा।</div>
   </main>
 
   <script>
-    const listEl = document.getElementById('list');
-    const urlEl = document.getElementById('url');
-    const qualityEl = document.getElementById('quality');
-    const addBtn = document.getElementById('add');
+    // Utility: extract playlist ID from URL or raw id
+    function extractPlaylistId(input){
+      if(!input) return '';
+      try{ const u = new URL(input); if(u.searchParams.get('list')) return u.searchParams.get('list'); }
+      catch(e){}
+      // if it looks like PL... or UU... or OL... return as is
+      const v = input.trim(); if(/^[A-Za-z0-9_-]{10,}$/.test(v)) return v; return '';
+    }
+
+    const fetchBtn = document.getElementById('fetch');
+    const apiKeyEl = document.getElementById('apiKey');
+    const playlistEl = document.getElementById('playlist');
+    const grid = document.getElementById('grid');
+    const countEl = document.getElementById('count');
+    const exportJson = document.getElementById('exportJson');
+    const copyLinks = document.getElementById('copyLinks');
     const clearBtn = document.getElementById('clear');
-    const bulkEl = document.getElementById('bulk');
-    const bulkAddBtn = document.getElementById('bulkAdd');
-    const bulkClearBtn = document.getElementById('bulkClear');
 
-    const blockedHosts = [
-      'youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be','yewtu.be','piped.video','invidious.io','invidio.us','yt.be'
-    ];
+    let allVideos = [];
 
-    const items = [];
+    async function fetchPlaylist(apiKey, playlistId){
+      allVideos = [];
+      grid.innerHTML = '';
+      countEl.textContent = '0';
 
-    function isBlocked(u){
+      if(!apiKey || !playlistId){ alert('API Key और Playlist ID दोनों चाहिए'); return; }
+
+      let pageToken = '';
       try{
-        const {hostname} = new URL(u);
-        return blockedHosts.some(h => hostname.endsWith(h));
-      }catch(e){return true}
-    }
+        do{
+          const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
+          url.searchParams.set('part','snippet,contentDetails');
+          url.searchParams.set('maxResults','50');
+          url.searchParams.set('playlistId', playlistId);
+          url.searchParams.set('key', apiKey);
+          if(pageToken) url.searchParams.set('pageToken', pageToken);
 
-    function makeTile(item){
-      const card = document.createElement('div');
-      card.className = 'tile';
-      const chip = document.createElement('div'); chip.className = 'chip'; chip.textContent = item.quality || 'best';
-      const url = document.createElement('div'); url.className = 'url'; url.textContent = item.url;
-      const status = document.createElement('div'); status.className = 'status';
+          const res = await fetch(url.toString());
+          if(!res.ok){
+            const txt = await res.text();
+            throw new Error('API Error: '+res.status+' '+txt);
+          }
+          const data = await res.json();
 
-      const actions = document.createElement('div'); actions.className = 'actions'; actions.style.marginTop = '10px';
+          for(const item of data.items || []){
+            const sn = item.snippet || {}; const cd = item.contentDetails || {};
+            const videoId = (sn.resourceId && sn.resourceId.videoId) || cd.videoId || (cd.videoId);
+            const title = sn.title || 'Untitled';
+            const thumb = (sn.thumbnails && (sn.thumbnails.maxres || sn.thumbnails.high || sn.thumbnails.medium || sn.thumbnails.default)) || null;
+            const videoUrl = videoId ? ('https://www.youtube.com/watch?v='+videoId) : null;
+            const publishedAt = sn.publishedAt || '';
+            const channelTitle = sn.videoOwnerChannelTitle || sn.channelTitle || '';
 
-      if(isBlocked(item.url)){
-        status.innerHTML = '<span class="err">Blocked</span> · YouTube and similar domains are not allowed here.';
-      } else {
-        status.innerHTML = '<span class="ok">Ready</span> · Direct link detected.';
-        const a = document.createElement('a');
-        a.className = 'btn'; a.textContent = 'Download';
-        a.href = item.url;
-        a.download = '';
-        actions.appendChild(a);
+            allVideos.push({videoId,title,thumb:thumb?thumb.url:null,videoUrl,publishedAt,channelTitle});
+          }
+
+          pageToken = data.nextPageToken || '';
+        } while(pageToken);
+
+        renderGrid();
+      }catch(err){
+        alert('Error fetching playlist: '+err.message);
+        console.error(err);
       }
-
-      const copyBtn = document.createElement('button'); copyBtn.className='btn secondary'; copyBtn.textContent = 'Copy URL';
-      copyBtn.onclick = async ()=>{
-        await navigator.clipboard.writeText(item.url);
-        copyBtn.textContent = 'Copied!'; setTimeout(()=>copyBtn.textContent='Copy URL',1200);
-      };
-
-      actions.appendChild(copyBtn);
-
-      card.appendChild(chip); card.appendChild(url); card.appendChild(status); card.appendChild(actions);
-      return card;
     }
 
-    function render(){
-      listEl.innerHTML = '';
-      items.forEach(it => listEl.appendChild(makeTile(it)));
+    function renderGrid(){
+      grid.innerHTML = '';
+      for(const v of allVideos){
+        const tile = document.createElement('div'); tile.className='tile';
+        const img = document.createElement('img'); img.className='thumb'; img.src = v.thumb || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="225"><rect width="100%" height="100%" fill="#081126"/></svg>';
+        const title = document.createElement('div'); title.className='title'; title.textContent = v.title;
+        const meta = document.createElement('div'); meta.className='meta'; meta.textContent = (v.channelTitle? v.channelTitle+' · ' : '') + (v.publishedAt? new Date(v.publishedAt).toLocaleDateString() : '');
+
+        const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.className='actions';
+        const open = document.createElement('a'); open.className='small'; open.textContent='Open'; open.href=v.videoUrl; open.target='_blank'; open.rel='noopener';
+        const copy = document.createElement('button'); copy.className='small'; copy.textContent='Copy Link'; copy.onclick = async ()=>{ await navigator.clipboard.writeText(v.videoUrl); copy.textContent='Copied'; setTimeout(()=>copy.textContent='Copy Link',1200);} ;
+
+        actions.appendChild(open); actions.appendChild(copy);
+
+        tile.appendChild(img); tile.appendChild(title); tile.appendChild(meta); tile.appendChild(actions);
+        grid.appendChild(tile);
+      }
+      countEl.textContent = String(allVideos.length);
     }
 
-    addBtn.onclick = ()=>{
-      const u = urlEl.value.trim();
-      if(!u) return;
-      items.unshift({url:u, quality:qualityEl.value});
-      urlEl.value = '';
-      render();
+    fetchBtn.onclick = ()=>{
+      const apiKey = apiKeyEl.value.trim();
+      const raw = playlistEl.value.trim();
+      const pid = extractPlaylistId(raw);
+      if(!pid){ alert('Valid playlist URL or ID डालें'); return; }
+      fetchPlaylist(apiKey,pid);
     };
 
-    clearBtn.onclick = ()=>{ urlEl.value=''; };
+    clearBtn.onclick = ()=>{ apiKeyEl.value=''; playlistEl.value=''; grid.innerHTML=''; allVideos=[]; countEl.textContent='0'; };
 
-    bulkAddBtn.onclick = ()=>{
-      const lines = bulkEl.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-      for(const u of lines){ items.push({url:u, quality:'best'}); }
-      render();
+    exportJson.onclick = ()=>{
+      if(!allVideos.length){ alert('No videos to export'); return; }
+      const blob = new Blob([JSON.stringify(allVideos,null,2)],{type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='playlist.json'; a.click(); URL.revokeObjectURL(a.href);
     };
 
-    bulkClearBtn.onclick = ()=>{ bulkEl.value=''; };
+    copyLinks.onclick = async ()=>{
+      if(!allVideos.length){ alert('No links to copy'); return; }
+      const text = allVideos.map(v=>v.videoUrl).join('
+');
+      await navigator.clipboard.writeText(text); alert('Copied '+allVideos.length+' links');
+    };
+
   </script>
 </body>
 </html>
