@@ -1,240 +1,227 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ParentGuard Panel</title>
-
-  <!-- Leaflet (map) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-sA+4gXv6tGv3gkV7xQzX+3Zkq4Qv3m5tY7f6k6o0b+8=" crossorigin=""/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Saver — Legal Use Only</title>
   <style>
-    body { font-family: Arial, Helvetica, sans-serif; margin:0; padding:0; background:#f6f8fa; }
-    header { background:#0b5ed7; color:#fff; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
-    header h1 { font-size:18px; margin:0; }
-    .container { display:flex; gap:16px; padding:16px; }
-    .left { width:380px; background:#fff; border-radius:8px; padding:12px; box-shadow:0 2px 6px rgba(0,0,0,0.08); height:80vh; overflow:auto; }
-    .right { flex:1; background:#fff; border-radius:8px; padding:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); height:80vh; }
-    .device { border-bottom:1px solid #eee; padding:8px 4px; display:flex; gap:8px; align-items:center; }
-    .dev-info { flex:1; }
-    .dev-id { font-weight:700; font-size:13px; }
-    .small { color:#666; font-size:12px; }
-    button { background:#0b5ed7; color:#fff; border:0; padding:6px 8px; border-radius:6px; cursor:pointer; }
-    button.ghost { background:#eee; color:#333; }
-    #map { height:100%; min-height:520px; border-radius:6px; }
-    .top-controls { display:flex; gap:8px; align-items:center; }
-    .status { font-size:13px; padding:4px 8px; border-radius:6px; background:#eef6ff; color:#0b5ed7; }
-    .footer { padding:8px 16px; color:#777; font-size:13px; }
+    :root{
+      --bg1:#0f1020; --bg2:#090a12; --pri:#6ee7ff; --acc:#8b5cf6; --ok:#22c55e; --warn:#f59e0b; --err:#ef4444; --glass:rgba(255,255,255,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:#e5e7eb;
+      background: radial-gradient(1200px 800px at 10% 10%, #0b1738, transparent 60%),
+                  radial-gradient(1000px 700px at 90% 20%, #1a0b3a, transparent 60%),
+                  radial-gradient(1200px 800px at 50% 120%, #112, transparent 60%),
+                  linear-gradient(120deg, var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+    /* Floating blobs */
+    .blob{position:fixed; filter: blur(60px); opacity:.35; pointer-events:none; mix-blend-mode:screen}
+    .b1{width:360px; height:360px; background:conic-gradient(from 90deg at 50% 50%, #00e7ff, #7c3aed, #00e7ff); top:-80px; left:-80px; animation:float1 12s ease-in-out infinite}
+    .b2{width:420px; height:420px; background:conic-gradient(from -30deg, #7c3aed, #22d3ee, #7c3aed); bottom:-120px; right:-80px; animation:float2 16s ease-in-out infinite}
+    @keyframes float1{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(28px) rotate(20deg)}}
+    @keyframes float2{0%,100%{transform:translate(0) rotate(0)}50%{transform:translate(-24px, -18px) rotate(-16deg)}}
+
+    header{
+      display:flex; align-items:center; justify-content:space-between; gap:12px; padding:24px clamp(20px, 4vw, 48px);
+    }
+    .logo{display:flex; align-items:center; gap:12px}
+    .orb{width:34px; height:34px; border-radius:999px; background:radial-gradient(circle at 30% 30%, #fff, #93c5fd 30%, #7c3aed 60%, #0ea5e9 100%); box-shadow:0 0 30px #7dd3fc55, inset 0 0 20px #a78bfa55}
+    .brand{font-weight:800; letter-spacing:.3px; font-size:20px}
+
+    .badge{border:1px solid #ffffff22; padding:6px 10px; border-radius:999px; font-size:12px; opacity:.85; backdrop-filter:blur(6px); background:var(--glass)}
+
+    main{display:grid; place-items:center; padding:16px}
+
+    .card{
+      width:min(980px, 92vw); margin:18px auto; background:linear-gradient(180deg, #ffffff10, #ffffff06);
+      border:1px solid #ffffff18; border-radius:24px; padding:18px; box-shadow:0 10px 50px #00000070; backdrop-filter:blur(10px);
+      position:relative; overflow:hidden;
+    }
+    .card:before{content:""; position:absolute; inset:-2px; padding:1px; border-radius:24px; background:linear-gradient(135deg, #7dd3fc55, #a78bfa55, transparent 60%); -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;}
+
+    h1{margin:6px 0 2px; font-size: clamp(26px, 4vw, 40px); line-height:1.05}
+    p.sub{margin:4px 0 14px; color:#cbd5e1; opacity:.9}
+
+    .row{display:grid; grid-template-columns: 1fr; gap:12px; margin:12px 0}
+    @media (min-width: 840px){ .row{ grid-template-columns: 1.6fr .4fr .6fr; } }
+
+    .field{display:flex; flex-direction:column; gap:8px}
+    label{font-size:12px; color:#cbd5e1; letter-spacing:.3px}
+    input[type="url"], textarea, select{
+      width:100%; border:1px solid #334155; background:#0b1020; color:#e5e7eb; padding:14px 14px; border-radius:14px; outline:none; transition:.2s;
+    }
+    input[type="url"]:focus, textarea:focus, select:focus{border-color:#60a5fa; box-shadow:0 0 0 4px #60a5fa22}
+
+    .actions{display:flex; gap:10px; flex-wrap:wrap}
+    .btn{
+      border:1px solid #ffffff22; background:linear-gradient(135deg, #60a5fa40, #a78bfa30); color:white; padding:12px 16px; border-radius:14px; cursor:pointer; transition:.15s; font-weight:600;
+    }
+    .btn:hover{transform:translateY(-1px); box-shadow:0 10px 30px #0006}
+    .btn.secondary{background:transparent}
+
+    .note{display:flex; gap:10px; align-items:flex-start; background:#111827; border:1px dashed #374151; border-radius:14px; padding:12px 14px; margin-top:10px}
+    .note strong{color:#93c5fd}
+
+    .grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; margin-top:14px}
+    .tile{background:#0a0f1f; border:1px solid #263046; border-radius:18px; padding:14px; position:relative}
+    .chip{position:absolute; top:10px; right:10px; font-size:10px; padding:4px 8px; border-radius:999px; background:#111827; border:1px solid #384055}
+    .url{font-size:12px; word-break:break-all; color:#cbd5e1}
+    .status{margin-top:8px; font-size:12px}
+    .ok{color:var(--ok)}
+    .err{color:var(--err)}
+
+    footer{opacity:.7; font-size:12px; text-align:center; padding:30px 14px}
+    a{color:#93c5fd; text-decoration:none}
   </style>
 </head>
 <body>
-
-<header>
-  <h1>ParentGuard — Panel</h1>
-  <div class="top-controls">
-    <div class="status" id="connStatus">Disconnected</div>
-    <button id="refreshBtn" class="ghost">Refresh</button>
-  </div>
-</header>
-
-<div class="container">
-  <div class="left">
-    <div style="margin-bottom:8px;">
-      <strong>Devices</strong>
-      <div class="small">Showing realtime devices under <code>/devices</code></div>
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <header>
+    <div class="logo">
+      <div class="orb"></div>
+      <div class="brand">Video Saver</div>
     </div>
-    <div id="devicesList">
-      <!-- devices will be injected here -->
-    </div>
-  </div>
+    <div class="badge">Legal Use Only</div>
+  </header>
 
-  <div class="right">
-    <div id="map"></div>
-  </div>
-</div>
+  <main>
+    <section class="card">
+      <h1>Download videos you <em>own</em> the rights to</h1>
+      <p class="sub">Paste a direct media URL (e.g., your own MP4 on cloud storage). This tool intentionally <strong>blocks YouTube links</strong> to respect their Terms of Service.</p>
 
-<div class="footer">Tip: Use browser console for debug logs. Make sure this page is served over HTTP(S) (eg. `python -m http.server`).</div>
-
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-o9N1j7gRk7lB8sS6n0bNyKQx3vKq9c3bV4Jd2x0vX2Q=" crossorigin=""></script>
-
-<!-- Firebase JS (compat - simple API) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<script>
-/* ============================
-   1) CONFIGURE FIREBASE
-   ============================
-   Replace the firebaseConfig object below with your Web app config which you get from:
-   Firebase Console → Project Settings → SDK setup and configuration → "Config" (for Web)
-   Example form:
-   const firebaseConfig = {
-     apiKey: "AAAA...X",
-     authDomain: "project-id.firebaseapp.com",
-     databaseURL: "https://project-id-default-rtdb.firebaseio.com",
-     projectId: "project-id",
-     storageBucket: "project-id.appspot.com",
-     messagingSenderId: "1234567890",
-     appId: "1:1234567890:web:abcdef"
-   };
-*/
-const firebaseConfig = {
-  const firebaseConfig = {
-  apiKey: "AIzaSyCVamCBUqnA65pbw2kh7pbaWrSItTX_ZhY",
-  authDomain: "parentguard-b5550.firebaseapp.com",
-  databaseURL: "https://parentguard-b5550-default-rtdb.firebaseio.com",
-  projectId: "parentguard-b5550",
-  storageBucket: "parentguard-b5550.firebasestorage.app",
-  messagingSenderId: "859373916396",
-  appId: "1:859373916396:web:d4da1a71b5ee4be204d5c9"
-};
-
-  // <-- PASTE YOUR WEB CONFIG HERE
-};
-
-/* If you only have google-services.json (android) you can still:
-   - open google-services.json and copy project_info.project_id and database url if present,
-   - but easiest: open Firebase Console -> Project Settings -> Add Web App -> copy config.
-*/
-
-// init firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-/* ============================
-   2) MAP (Leaflet)
-   ============================ */
-const map = L.map('map').setView([20.5937, 78.9629], 5); // India default
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap'
-}).addTo(map);
-
-const markers = {}; // deviceId -> marker
-
-/* ============================
-   3) UI helpers
-   ============================ */
-const connStatus = document.getElementById('connStatus');
-const devicesList = document.getElementById('devicesList');
-const refreshBtn = document.getElementById('refreshBtn');
-
-function setStatus(text, ok=true) {
-  connStatus.textContent = text;
-  connStatus.style.background = ok ? '#eef6ff' : '#ffeef0';
-  connStatus.style.color = ok ? '#0b5ed7' : '#c00';
-}
-
-function formatTs(ts) {
-  try {
-    const d = new Date(ts);
-    return d.toLocaleString();
-  } catch (_) { return ts; }
-}
-
-/* ============================
-   4) Render device entry
-   ============================ */
-function renderDevices(devicesObj) {
-  devicesList.innerHTML = '';
-  if (!devicesObj) {
-    devicesList.innerHTML = '<div class="small">No devices found under /devices</div>';
-    return;
-  }
-  const keys = Object.keys(devicesObj).sort();
-  keys.forEach(deviceId => {
-    const dev = devicesObj[deviceId] || {};
-    const loc = dev.location || {};
-    const battery = dev.battery || {};
-    const lastTs = loc.ts || battery.ts || dev.ts || null;
-    const lat = loc.lat, lng = loc.lng;
-    // device card
-    const div = document.createElement('div');
-    div.className = 'device';
-    div.innerHTML = `
-      <div class="dev-info">
-        <div class="dev-id">${deviceId}</div>
-        <div class="small">Lat: ${lat ?? '-'} &nbsp; Lng: ${lng ?? '-'} &nbsp; • Battery: ${battery.level ?? '-'}%</div>
-        <div class="small">Updated: ${ lastTs ? formatTs(lastTs) : '-' }</div>
+      <div class="row">
+        <div class="field">
+          <label for="url">Video URL</label>
+          <input id="url" type="url" placeholder="https://your-storage.example.com/my-video.mp4" />
+        </div>
+        <div class="field">
+          <label for="quality">Quality label</label>
+          <select id="quality">
+            <option value="best">Best Available</option>
+            <option>4K</option>
+            <option>1080p</option>
+            <option>720p</option>
+            <option>480p</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="actions">
+            <button class="btn" id="add">Add to List</button>
+            <button class="btn secondary" id="clear">Clear</button>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <button onclick="focusDevice('${deviceId}')">Show on map</button>
-        <button onclick="requestLocation('${deviceId}')" class="ghost">Request location</button>
-      </div>
-    `;
-    devicesList.appendChild(div);
 
-    // map marker
-    if (lat != null && lng != null) {
-      const latN = parseFloat(lat), lngN = parseFloat(lng);
-      if (!isNaN(latN) && !isNaN(lngN)) {
-        if (markers[deviceId]) {
-          markers[deviceId].setLatLng([latN, lngN]);
-        } else {
-          const m = L.marker([latN, lngN]).addTo(map).bindPopup(`<b>${deviceId}</b><br>${formatTs(lastTs)}`);
-          markers[deviceId] = m;
-        }
-      }
+      <div class="note">
+        <div>⚠️</div>
+        <div>
+          <strong>Respect creators.</strong> Downloading from sites like YouTube may violate their Terms and local laws. This UI will not create download links for <code>youtube.com</code>, <code>youtu.be</code>, or similar domains.
+        </div>
+      </div>
+
+      <div class="grid" id="list"></div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin:0 0 8px">Playlist helper (non‑YouTube)</h2>
+      <p class="sub">Paste multiple <em>direct</em> media URLs (one per line). We'll stage them for download if the domain is allowed.</p>
+      <div class="field">
+        <textarea id="bulk" rows="6" placeholder="https://example.com/clip1.mp4\nhttps://media.mysite.com/clip2.webm"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn" id="bulkAdd">Add All</button>
+        <button class="btn secondary" id="bulkClear">Clear</button>
+      </div>
+    </section>
+
+    <footer>
+      Built for educational purposes. If you need offline viewing from YouTube, consider their official Premium offline feature. Stay kind, stay legal. 💙
+    </footer>
+  </main>
+
+  <script>
+    const listEl = document.getElementById('list');
+    const urlEl = document.getElementById('url');
+    const qualityEl = document.getElementById('quality');
+    const addBtn = document.getElementById('add');
+    const clearBtn = document.getElementById('clear');
+    const bulkEl = document.getElementById('bulk');
+    const bulkAddBtn = document.getElementById('bulkAdd');
+    const bulkClearBtn = document.getElementById('bulkClear');
+
+    const blockedHosts = [
+      'youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','youtu.be','yewtu.be','piped.video','invidious.io','invidio.us','yt.be'
+    ];
+
+    const items = [];
+
+    function isBlocked(u){
+      try{
+        const {hostname} = new URL(u);
+        return blockedHosts.some(h => hostname.endsWith(h));
+      }catch(e){return true}
     }
-  });
-}
 
-/* ============================
-   5) Realtime listener
-   ============================ */
-function startRealtime() {
-  setStatus('Connecting...');
-  const ref = db.ref('devices');
-  ref.on('value', snapshot => {
-    const val = snapshot.val();
-    renderDevices(val);
-    setStatus('Connected', true);
-  }, err => {
-    console.error('Firebase listen error', err);
-    setStatus('Error', false);
-  });
-}
+    function makeTile(item){
+      const card = document.createElement('div');
+      card.className = 'tile';
+      const chip = document.createElement('div'); chip.className = 'chip'; chip.textContent = item.quality || 'best';
+      const url = document.createElement('div'); url.className = 'url'; url.textContent = item.url;
+      const status = document.createElement('div'); status.className = 'status';
 
-refreshBtn.addEventListener('click', () => {
-  // simple manual refresh: fetch once
-  db.ref('devices').once('value').then(snap => {
-    renderDevices(snap.val());
-  });
-});
+      const actions = document.createElement('div'); actions.className = 'actions'; actions.style.marginTop = '10px';
 
-/* ============================
-   6) Commands: write a command node for a device
-   ============================ */
-function requestLocation(deviceId) {
-  if (!confirm('Send location request to device: ' + deviceId + ' ?')) return;
-  // write a command under devices/{deviceId}/commands/get_location = true
-  const cmdRef = db.ref(`devices/${deviceId}/commands/get_location`);
-  // set true with a timestamp (child app should watch this path and reset it)
-  cmdRef.set({ value: true, ts: Date.now() })
-    .then(() => alert('Request sent'))
-    .catch(err => alert('Failed to send: ' + err));
-}
+      if(isBlocked(item.url)){
+        status.innerHTML = '<span class="err">Blocked</span> · YouTube and similar domains are not allowed here.';
+      } else {
+        status.innerHTML = '<span class="ok">Ready</span> · Direct link detected.';
+        const a = document.createElement('a');
+        a.className = 'btn'; a.textContent = 'Download';
+        a.href = item.url;
+        a.download = '';
+        actions.appendChild(a);
+      }
 
-/* ============================
-   7) Start
-   ============================ */
-startRealtime();
-setStatus('Connecting...', true);
+      const copyBtn = document.createElement('button'); copyBtn.className='btn secondary'; copyBtn.textContent = 'Copy URL';
+      copyBtn.onclick = async ()=>{
+        await navigator.clipboard.writeText(item.url);
+        copyBtn.textContent = 'Copied!'; setTimeout(()=>copyBtn.textContent='Copy URL',1200);
+      };
 
-// Expose some helpers to window for inline onclick
-window.focusDevice = function(deviceId) {
-  const devNode = document.querySelectorAll('.dev-id');
-  const marker = markers[deviceId];
-  if (marker) {
-    map.setView(marker.getLatLng(), 16);
-    marker.openPopup();
-  } else {
-    alert('No location available for ' + deviceId);
-  }
-};
-window.requestLocation = requestLocation;
-</script>
+      actions.appendChild(copyBtn);
+
+      card.appendChild(chip); card.appendChild(url); card.appendChild(status); card.appendChild(actions);
+      return card;
+    }
+
+    function render(){
+      listEl.innerHTML = '';
+      items.forEach(it => listEl.appendChild(makeTile(it)));
+    }
+
+    addBtn.onclick = ()=>{
+      const u = urlEl.value.trim();
+      if(!u) return;
+      items.unshift({url:u, quality:qualityEl.value});
+      urlEl.value = '';
+      render();
+    };
+
+    clearBtn.onclick = ()=>{ urlEl.value=''; };
+
+    bulkAddBtn.onclick = ()=>{
+      const lines = bulkEl.value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      for(const u of lines){ items.push({url:u, quality:'best'}); }
+      render();
+    };
+
+    bulkClearBtn.onclick = ()=>{ bulkEl.value=''; };
+  </script>
 </body>
 </html>
