@@ -1,194 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Video Saver — Playlist Organizer (YouTube Data)</title>
-  <style>
-    :root{--bg1:#0f1020; --pri:#6ee7ff; --acc:#8b5cf6}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;background:linear-gradient(180deg,#081129,#070814);min-height:100vh}
-    header{display:flex;align-items:center;justify-content:space-between;padding:20px 28px}
-    .brand{display:flex;gap:12px;align-items:center}
-    .orb{width:40px;height:40px;border-radius:999px;background:radial-gradient(circle at 30% 30%,#fff,#93c5fd 30%,#7c3aed 60%)}
-    h1{font-size:20px;margin:0}
-    main{padding:18px;max-width:1100px;margin:0 auto}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02));border:1px solid #ffffff10;border-radius:16px;padding:16px;margin-bottom:18px}
-
-    .form{display:grid;grid-template-columns:1fr auto;gap:12px}
-    .inputs{display:flex;gap:12px;flex:1}
-    input,button,select{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1020;color:#e5e7eb;outline:none}
-    button{cursor:pointer}
-
-    .note{font-size:13px;color:#cbd5e1;margin-top:8px}
-
-    .controls{display:flex;gap:8px;align-items:center}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
-    .tile{background:#071020;border-radius:12px;padding:8px;border:1px solid #1f2a36}
-    .thumb{width:100%;height:130px;object-fit:cover;border-radius:8px}
-    .title{font-size:14px;margin:8px 0 6px}
-    .meta{font-size:12px;color:#9ca3af}
-
-    .actions{display:flex;gap:8px;flex-wrap:wrap}
-    .small{padding:8px 10px;font-size:13px}
-
-    .footer{font-size:13px;color:#9ca3af;text-align:center;margin-top:18px}
-
-    @media(max-width:640px){.form{grid-template-columns:1fr}}
-  </style>
+  <title>ParentGuard - Battery Monitor</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
-  <header>
-    <div class="brand"><div class="orb"></div><div>
-      <h1>Video Saver — Playlist Organizer</h1>
-      <div style="font-size:12px;color:#9ca3af">Uses YouTube Data API v3 to fetch metadata only (no downloads)</div>
-    </div></div>
-    <div class="badge" style="font-size:13px;color:#93c5fd">Legal • Read-only</div>
-  </header>
-
-  <main>
-    <section class="card">
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="note">यह टूल केवल playlist के <strong>metadata</strong> (title, thumbnails, video URL) दिखाता है — कोई वीडियो डाउनलोड नहीं करेगा।</div>
-
-        <div class="form">
-          <div class="inputs">
-            <input id="apiKey" placeholder="Paste your Google API Key (YouTube Data API v3)" />
-            <input id="playlist" placeholder="Paste YouTube Playlist URL or ID (e.g. PL... )" />
-          </div>
-          <div class="controls">
-            <button id="fetch" class="small">Fetch Playlist</button>
-            <button id="clear" class="small">Clear</button>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-          <button id="exportJson" class="small">Export JSON</button>
-          <button id="copyLinks" class="small">Copy All Video Links</button>
-          <div style="margin-left:auto;font-size:13px;color:#9ca3af">Fetched: <span id="count">0</span> videos</div>
-        </div>
-
-        <div class="note">यदि तुम्हारे पास API Key नहीं है — तुम्हें Google Cloud Console में नया प्रोजेक्ट बनाकर YouTube Data API enabled करके API key लेना होगा.</div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div id="grid" class="grid"></div>
-    </section>
-
-    <div class="footer">Want more features? (search, bulk export CSV, open in new tab) — बोलो और मैं जोड़ दूंगा।</div>
-  </main>
+  <h2>Battery Status</h2>
+  <div id="battery">Loading...</div>
+  <div id="time"></div>
 
   <script>
-    // Utility: extract playlist ID from URL or raw id
-    function extractPlaylistId(input){
-      if(!input) return '';
-      try{ const u = new URL(input); if(u.searchParams.get('list')) return u.searchParams.get('list'); }
-      catch(e){}
-      // if it looks like PL... or UU... or OL... return as is
-      const v = input.trim(); if(/^[A-Za-z0-9_-]{10,}$/.test(v)) return v; return '';
-    }
+    // Firebase Config
+    var firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "XXXX",
+      appId: "1:XXXX:web:XXXX"
+    };
+    firebase.initializeApp(firebaseConfig);
 
-    const fetchBtn = document.getElementById('fetch');
-    const apiKeyEl = document.getElementById('apiKey');
-    const playlistEl = document.getElementById('playlist');
-    const grid = document.getElementById('grid');
-    const countEl = document.getElementById('count');
-    const exportJson = document.getElementById('exportJson');
-    const copyLinks = document.getElementById('copyLinks');
-    const clearBtn = document.getElementById('clear');
+    var deviceId = "DEVICE_MODEL"; // e.g., "Galaxy_F15"
+    var ref = firebase.database().ref("devices/" + deviceId);
 
-    let allVideos = [];
-
-    async function fetchPlaylist(apiKey, playlistId){
-      allVideos = [];
-      grid.innerHTML = '';
-      countEl.textContent = '0';
-
-      if(!apiKey || !playlistId){ alert('API Key और Playlist ID दोनों चाहिए'); return; }
-
-      let pageToken = '';
-      try{
-        do{
-          const url = new URL('https://www.googleapis.com/youtube/v3/playlistItems');
-          url.searchParams.set('part','snippet,contentDetails');
-          url.searchParams.set('maxResults','50');
-          url.searchParams.set('playlistId', playlistId);
-          url.searchParams.set('key', apiKey);
-          if(pageToken) url.searchParams.set('pageToken', pageToken);
-
-          const res = await fetch(url.toString());
-          if(!res.ok){
-            const txt = await res.text();
-            throw new Error('API Error: '+res.status+' '+txt);
-          }
-          const data = await res.json();
-
-          for(const item of data.items || []){
-            const sn = item.snippet || {}; const cd = item.contentDetails || {};
-            const videoId = (sn.resourceId && sn.resourceId.videoId) || cd.videoId || (cd.videoId);
-            const title = sn.title || 'Untitled';
-            const thumb = (sn.thumbnails && (sn.thumbnails.maxres || sn.thumbnails.high || sn.thumbnails.medium || sn.thumbnails.default)) || null;
-            const videoUrl = videoId ? ('https://www.youtube.com/watch?v='+videoId) : null;
-            const publishedAt = sn.publishedAt || '';
-            const channelTitle = sn.videoOwnerChannelTitle || sn.channelTitle || '';
-
-            allVideos.push({videoId,title,thumb:thumb?thumb.url:null,videoUrl,publishedAt,channelTitle});
-          }
-
-          pageToken = data.nextPageToken || '';
-        } while(pageToken);
-
-        renderGrid();
-      }catch(err){
-        alert('Error fetching playlist: '+err.message);
-        console.error(err);
+    ref.on("value", function(snapshot) {
+      var data = snapshot.val();
+      if (data) {
+        document.getElementById("battery").innerText = "Battery: " + data.battery + "%";
+        var time = new Date(data.timestamp);
+        document.getElementById("time").innerText = "Updated: " + time.toLocaleString();
       }
-    }
-
-    function renderGrid(){
-      grid.innerHTML = '';
-      for(const v of allVideos){
-        const tile = document.createElement('div'); tile.className='tile';
-        const img = document.createElement('img'); img.className='thumb'; img.src = v.thumb || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="225"><rect width="100%" height="100%" fill="#081126"/></svg>';
-        const title = document.createElement('div'); title.className='title'; title.textContent = v.title;
-        const meta = document.createElement('div'); meta.className='meta'; meta.textContent = (v.channelTitle? v.channelTitle+' · ' : '') + (v.publishedAt? new Date(v.publishedAt).toLocaleDateString() : '');
-
-        const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.className='actions';
-        const open = document.createElement('a'); open.className='small'; open.textContent='Open'; open.href=v.videoUrl; open.target='_blank'; open.rel='noopener';
-        const copy = document.createElement('button'); copy.className='small'; copy.textContent='Copy Link'; copy.onclick = async ()=>{ await navigator.clipboard.writeText(v.videoUrl); copy.textContent='Copied'; setTimeout(()=>copy.textContent='Copy Link',1200);} ;
-
-        actions.appendChild(open); actions.appendChild(copy);
-
-        tile.appendChild(img); tile.appendChild(title); tile.appendChild(meta); tile.appendChild(actions);
-        grid.appendChild(tile);
-      }
-      countEl.textContent = String(allVideos.length);
-    }
-
-    fetchBtn.onclick = ()=>{
-      const apiKey = apiKeyEl.value.trim();
-      const raw = playlistEl.value.trim();
-      const pid = extractPlaylistId(raw);
-      if(!pid){ alert('Valid playlist URL or ID डालें'); return; }
-      fetchPlaylist(apiKey,pid);
-    };
-
-    clearBtn.onclick = ()=>{ apiKeyEl.value=''; playlistEl.value=''; grid.innerHTML=''; allVideos=[]; countEl.textContent='0'; };
-
-    exportJson.onclick = ()=>{
-      if(!allVideos.length){ alert('No videos to export'); return; }
-      const blob = new Blob([JSON.stringify(allVideos,null,2)],{type:'application/json'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='playlist.json'; a.click(); URL.revokeObjectURL(a.href);
-    };
-
-    copyLinks.onclick = async ()=>{
-      if(!allVideos.length){ alert('No links to copy'); return; }
-      const text = allVideos.map(v=>v.videoUrl).join('
-');
-      await navigator.clipboard.writeText(text); alert('Copied '+allVideos.length+' links');
-    };
-
+    });
   </script>
 </body>
 </html>
