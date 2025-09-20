@@ -1,41 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ParentGuard - Battery Monitor</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <meta charset="UTF-8">
+  <title>ParentGuard - Web Panel</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body>
-  <h2>Battery Status</h2>
-  <div id="battery">Loading...</div>
-  <div id="time"></div>
+<body style="font-family: Arial; text-align: center; margin-top: 50px;">
+
+  <h1>📊 ParentGuard Dashboard</h1>
+  <h2>🔋 Battery Level: <span id="battery">Loading...</span>%</h2>
 
   <script>
-    // Firebase Config
+    // Firebase Config (from google-services.json)
     const firebaseConfig = {
-    apiKey: "AIzaSyCECp8FJ0JEWEyhHdv619GtX7_F6UNH_nk",
-    authDomain: "parent-guard-53b4a.firebaseapp.com",
-    databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com",
-    projectId: "parent-guard-53b4a",
-    storageBucket: "parent-guard-53b4a.firebasestorage.app",
-    messagingSenderId: "946864326298",
-    appId: "1:946864326298:web:350261cf30992c159b8123",
-    measurementId: "G-WXV4QKKR7Z"
-  };
+      apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
+      authDomain: "parent-guard-53b4a.firebaseapp.com",
+      databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com",
+      projectId: "parent-guard-53b4a",
+      storageBucket: "parent-guard-53b4a.firebasestorage.app",
+      messagingSenderId: "946864326298",
+      appId: "1:946864326298:android:755a9d8982a19a5a9b8123"
+    };
 
+    // Init Firebase
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    var deviceId = "DEVICE_MODEL"; // e.g., "Galaxy_F15"
-    var ref = firebase.database().ref("devices/" + deviceId);
-
-    ref.on("value", function(snapshot) {
-      var data = snapshot.val();
-      if (data) {
-        document.getElementById("battery").innerText = "Battery: " + data.battery + "%";
-        var time = new Date(data.timestamp);
-        document.getElementById("time").innerText = "Updated: " + time.toLocaleString();
-      }
+    // Realtime listener
+    db.ref("ParentGuard/battery").on("value", function(snapshot) {
+      document.getElementById("battery").innerText = snapshot.val();
     });
   </script>
+
 </body>
 </html>
