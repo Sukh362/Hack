@@ -1,37 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>ParentGuard - Web Panel</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <title>ParentGuard Web Panel</title>
+    <style>
+        body { font-family: Arial; background: #1b1b1b; color: #fff; text-align: center; padding: 50px;}
+        h1 { color: #4CAF50; }
+        #battery { font-size: 48px; margin-top: 20px; }
+    </style>
 </head>
-<body style="font-family: Arial; text-align: center; margin-top: 50px;">
+<body>
+    <h1>ParentGuard - Child Battery Status</h1>
+    <div id="battery">Loading...</div>
 
-  <h1>📊 ParentGuard Dashboard</h1>
-  <h2>🔋 Battery Level: <span id="battery">Loading...</span>%</h2>
+    <script>
+        const firebaseUrl = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/child_battery.json";
 
-  <script>
-    // Firebase Config (from google-services.json)
-    const firebaseConfig = {
-      apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
-      authDomain: "parent-guard-53b4a.firebaseapp.com",
-      databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com",
-      projectId: "parent-guard-53b4a",
-      storageBucket: "parent-guard-53b4a.firebasestorage.app",
-      messagingSenderId: "946864326298",
-      appId: "1:946864326298:android:755a9d8982a19a5a9b8123"
-    };
+        async function fetchBattery() {
+            try {
+                const response = await fetch(firebaseUrl);
+                const data = await response.json();
+                document.getElementById('battery').innerText = data.battery + "%";
+            } catch (e) {
+                document.getElementById('battery').innerText = "Error fetching data";
+            }
+        }
 
-    // Init Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // Realtime listener
-    db.ref("ParentGuard/battery").on("value", function(snapshot) {
-      document.getElementById("battery").innerText = snapshot.val();
-    });
-  </script>
-
+        // Fetch every 5 seconds
+        fetchBattery();
+        setInterval(fetchBattery, 5000);
+    </script>
 </body>
 </html>
