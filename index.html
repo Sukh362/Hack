@@ -68,6 +68,24 @@
             margin-top: 10px;
             color: #0ff;
         }
+        #photo-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+        #photo-container img {
+            max-width: 300px;
+            border: 2px solid #0ff;
+            border-radius: 5px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 15px;
+            background: #0ff;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -90,10 +108,20 @@
             <div><span class="label">Device Location:</span></div>
             <div id="map"></div>
         </div>
+        <div class="box" id="photo-container">
+            <button onclick="takePhoto()">Take Front Photo</button>
+            <div>
+                <span class="label">Front Camera Photo:</span><br>
+                <img id="photo" src="" />
+            </div>
+        </div>
     </div>
 
     <script>
-        const firebaseUrl = "https://guard-7ac92-default-rtdb.firebaseio.com/guard_data/live.json";
+        const firebaseDataUrl = "https://guard-7ac92-default-rtdb.firebaseio.com/guard_data/live.json";
+        const firebasePhotoUrl = "https://guard-7ac92-default-rtdb.firebaseio.com/guard_data/photo.json";
+        const firebaseCommandUrl = "https://guard-7ac92-default-rtdb.firebaseio.com/commands/take_photo.json";
+
         let map, marker;
 
         function initMap(lat=0, lng=0){
@@ -110,7 +138,7 @@
 
         async function fetchData(){
             try {
-                const response = await fetch(firebaseUrl);
+                const response = await fetch(firebaseDataUrl);
                 const data = await response.json();
 
                 // Battery
@@ -137,15 +165,29 @@
                     initMap(lat, lng);
                 }
 
+                // Photo
+                const resPhoto = await fetch(firebasePhotoUrl);
+                const photoData = await resPhoto.json();
+                if(photoData && photoData.photo){
+                    document.getElementById('photo').src = "data:image/jpeg;base64," + photoData.photo;
+                }
+
             } catch(err){
                 console.log("Fetch error: ", err);
             }
         }
 
+        // Send command to child app to take photo
+        function takePhoto(){
+            fetch(firebaseCommandUrl, {
+                method: "PUT",
+                body: "true"
+            }).then(res => console.log("Take photo command sent"));
+        }
+
         // Initial fetch
         fetchData();
-
-        // Refresh every 2 sec
+        // Refresh every 2 seconds
         setInterval(fetchData, 2000);
     </script>
 
