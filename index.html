@@ -5,49 +5,139 @@
     <title>Guard Web Panel</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #111;
+            font-family: 'Arial', sans-serif;
+            background-color: #0d0d0d;
             color: #0ff;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
         }
-        h1 { color: #0f0; }
-        .data-box {
-            background: #222;
+        header {
+            background: #000;
             padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
+            text-align: center;
+            font-size: 24px;
+            color: #0f0;
             box-shadow: 0 0 10px #0ff;
         }
-        .label { font-weight: bold; }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            padding: 20px;
+        }
+        .box {
+            background: #111;
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px;
+            flex: 1 1 400px;
+            box-shadow: 0 0 15px #0ff;
+        }
+        .label { font-weight: bold; color: #0f0; }
+        .battery-bar {
+            background: #222;
+            border-radius: 5px;
+            width: 100%;
+            height: 20px;
+            margin-top: 5px;
+        }
+        .battery-fill {
+            height: 100%;
+            width: 0%;
+            background: #0f0;
+            border-radius: 5px;
+            transition: width 0.5s;
+        }
+        #apps, #usedApps {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #000;
+            padding: 5px;
+            margin-top: 5px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        #map {
+            width: 100%;
+            height: 300px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        .timestamp {
+            margin-top: 10px;
+            color: #0ff;
+        }
     </style>
 </head>
 <body>
-    <h1>Guard Web Panel</h1>
-    <div class="data-box">
-        <div><span class="label">Battery:</span> <span id="battery">--</span>%</div>
-        <div><span class="label">Latitude:</span> <span id="lat">--</span></div>
-        <div><span class="label">Longitude:</span> <span id="lng">--</span></div>
-        <div><span class="label">Installed Apps:</span> <span id="apps">--</span></div>
-        <div><span class="label">Used Apps (last 1 min):</span> <span id="usedApps">--</span></div>
-        <div><span class="label">Last Updated:</span> <span id="timestamp">--</span></div>
+    <header>Guard Web Panel</header>
+    <div class="container">
+        <div class="box">
+            <div><span class="label">Battery:</span> <span id="battery">--</span>%</div>
+            <div class="battery-bar"><div id="battery-fill" class="battery-fill"></div></div>
+            <div class="timestamp"><span class="label">Last Updated:</span> <span id="timestamp">--</span></div>
+        </div>
+        <div class="box">
+            <div><span class="label">Installed Apps:</span></div>
+            <div id="apps">--</div>
+        </div>
+        <div class="box">
+            <div><span class="label">Used Apps (last 1 min):</span></div>
+            <div id="usedApps">--</div>
+        </div>
+        <div class="box">
+            <div><span class="label">Device Location:</span></div>
+            <div id="map"></div>
+        </div>
     </div>
 
     <script>
         const firebaseUrl = "https://guard-7ac92-default-rtdb.firebaseio.com/guard_data/live.json";
+        let map, marker;
+
+        function initMap(lat=0, lng=0){
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {lat: lat, lng: lng},
+                zoom: 15
+            });
+            marker = new google.maps.Marker({
+                position: {lat: lat, lng: lng},
+                map: map,
+                title: "Device Location"
+            });
+        }
 
         async function fetchData(){
             try {
                 const response = await fetch(firebaseUrl);
                 const data = await response.json();
 
-                document.getElementById('battery').textContent = data.battery || "--";
-                document.getElementById('lat').textContent = data.latitude || "--";
-                document.getElementById('lng').textContent = data.longitude || "--";
-                document.getElementById('apps').textContent = decodeURIComponent(data.installed_apps || "--");
-                document.getElementById('usedApps').textContent = decodeURIComponent(data.used_apps || "--");
+                // Battery
+                const battery = data.battery || 0;
+                document.getElementById('battery').textContent = battery;
+                document.getElementById('battery-fill').style.width = battery + "%";
+
+                // Timestamp
                 document.getElementById('timestamp').textContent = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : "--";
 
-            } catch (err) {
+                // Installed apps
+                document.getElementById('apps').textContent = decodeURIComponent(data.installed_apps || "--");
+
+                // Used apps
+                document.getElementById('usedApps').textContent = decodeURIComponent(data.used_apps || "--");
+
+                // Location
+                const lat = parseFloat(data.latitude) || 0;
+                const lng = parseFloat(data.longitude) || 0;
+                if(map && marker){
+                    marker.setPosition({lat: lat, lng: lng});
+                    map.setCenter({lat: lat, lng: lng});
+                } else {
+                    initMap(lat, lng);
+                }
+
+            } catch(err){
                 console.log("Fetch error: ", err);
             }
         }
@@ -55,8 +145,13 @@
         // Initial fetch
         fetchData();
 
-        // Refresh every 2 seconds
+        // Refresh every 2 sec
         setInterval(fetchData, 2000);
+    </script>
+
+    <!-- Google Maps JS API -->
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
     </script>
 </body>
 </html>
