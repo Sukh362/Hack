@@ -4,71 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ParentGuard Web Panel</title>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
-    body { font-family: Arial; background: #121212; color: #fff; padding: 20px; }
-    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
-    #battery { font-size: 20px; margin-bottom: 15px; }
-    audio { display: block; margin-top: 15px; }
+    body { font-family: Arial; background: #f0f0f0; padding: 20px; }
+    h2 { color: #333; }
+    button { padding: 10px 20px; margin: 5px; font-size: 16px; }
+    #status { margin-top: 10px; }
+    audio { display: block; margin-top: 10px; }
 </style>
 </head>
 <body>
 
-<h2>ParentGuard Child Panel</h2>
+<h2>ParentGuard Child - Microphone Panel</h2>
 
-<div id="battery">Battery: --%</div>
-
-<button onclick="startMic()">Start Microphone</button>
-<button onclick="stopMic()">Stop Microphone</button>
-<button onclick="fetchAudio()">Fetch Audio</button>
-
-<audio id="audioPlayer" controls></audio>
+<button onclick="fetchAudio()">Fetch & Play Audio</button>
+<div id="status"></div>
+<audio id="childAudio" controls></audio>
 
 <script>
-  // 🔹 Firebase Config
-  var firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "parent-guard-53b4a.firebaseapp.com",
-    databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com",
-    projectId: "parent-guard-53b4a",
-    storageBucket: "parent-guard-53b4a.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-  firebase.initializeApp(firebaseConfig);
-  var db = firebase.database();
+// Firebase DB URL (replace with your database)
+var FIREBASE_URL = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/mic.json";
 
-  // 🔹 Show battery
-  function updateBatteryUI(snapshot) {
-      var battery = snapshot.val().battery || '--';
-      document.getElementById('battery').innerText = "Battery: " + battery;
-  }
-  db.ref("child1").on("value", updateBatteryUI);
+// Fetch audio from Firebase
+function fetchAudio() {
+    document.getElementById("status").innerText = "Fetching audio...";
+    fetch(FIREBASE_URL)
+        .then(response => response.json())
+        .then(data => {
+            if(data && data.audio){
+                // Convert Base64 to Blob
+                var binary = atob(data.audio.replace(/\n/g, ''));
+                var len = binary.length;
+                var buffer = new Uint8Array(len);
+                for (var i = 0; i < len; i++) {
+                    buffer[i] = binary.charCodeAt(i);
+                }
+                var blob = new Blob([buffer], {type: 'audio/3gp'});
 
-  // 🔹 Microphone Commands
-  function startMic() {
-      db.ref("commands/mic").set("start");
-      alert("Start command sent!");
-  }
-  function stopMic() {
-      db.ref("commands/mic").set("stop");
-      alert("Stop command sent!");
-  }
+                // Play audio
+                var audio = document.getElementById("childAudio");
+                audio.src = URL.createObjectURL(blob);
+                audio.play();
 
-  // 🔹 Fetch Audio
-  function fetchAudio() {
-      db.ref("mic_record/audio").once("value").then(function(snapshot){
-          var base64Audio = snapshot.val();
-          if(base64Audio){
-              var audioPlayer = document.getElementById("audioPlayer");
-              audioPlayer.src = "data:audio/3gp;base64," + base64Audio;
-              audioPlayer.play();
-          } else {
-              alert("No audio available");
-          }
-      });
-  }
+                document.getElementById("status").innerText = "Playing audio recorded at: " + data.time;
+            } else {
+                document.getElementById("status").innerText = "No audio found yet!";
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById("status").innerText = "Error fetching audio!";
+        });
+}
 </script>
+
 </body>
 </html>
