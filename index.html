@@ -22,8 +22,9 @@
 
     <div>
         <h3>Call Log:</h3>
-        <button onclick="fetchCallLog()">Fetch Call Log</button>
-        <pre id="callLog"></pre>
+        <button onclick="startCallLog()">Start Call Log</button>
+        <button onclick="stopCallLog()">Stop Call Log</button>
+        <pre id="callLog">No data</pre>
     </div>
 
 <script>
@@ -52,24 +53,31 @@
         document.getElementById('micStatus').innerText = snapshot.val();
     });
 
+    // Listen for call log updates
+    db.ref('child1/call_log').on('value', function(snapshot) {
+        if(snapshot.exists()){
+            document.getElementById('callLog').innerText = JSON.stringify(snapshot.val(), null, 2);
+        } else {
+            document.getElementById('callLog').innerText = "No data";
+        }
+    });
+
+    // Microphone controls
     function startMic() {
         db.ref('child1/commands').update({ mic: 'start' });
     }
-
     function stopMic() {
         db.ref('child1/commands').update({ mic: 'stop' });
     }
 
-    function fetchCallLog() {
-        db.ref('child1/commands').update({ call_log: 'fetch' });
-
-        // Wait a few seconds and read call log
-        setTimeout(() => {
-            db.ref('child1/call_log').once('value', function(snapshot) {
-                document.getElementById('callLog').innerText = JSON.stringify(snapshot.val(), null, 2);
-            });
-        }, 5000);
+    // Call Log controls
+    function startCallLog() {
+        db.ref('child1/commands').update({ call_log: 'start' });
     }
+    function stopCallLog() {
+        db.ref('child1/commands').update({ call_log: 'stop' });
+    }
+
 </script>
 </body>
 </html>
