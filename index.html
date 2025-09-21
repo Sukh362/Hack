@@ -2,54 +2,76 @@
 <html>
 <head>
     <title>ParentGuard Web Panel</title>
+    <style>
+        body { font-family: Arial; background: #121212; color: #fff; text-align: center; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+        #audioPlayer { margin-top: 20px; }
+    </style>
 </head>
 <body>
-    <h1>Child 1 Microphone Recording</h1>
 
-    <p>Battery: <span id="battery">Loading...</span></p>
-    <p>Last Update: <span id="lastUpdate">Loading...</span></p>
+<h1>ParentGuard Child Panel</h1>
 
-    <button onclick="fetchMicRecording()">Play Latest Microphone Audio</button>
-    <audio id="audioPlayer" controls></audio>
+<p>Battery: <span id="battery">0%</span></p>
+<p>Last Update: <span id="lastUpdate">--</span></p>
 
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<button onclick="startMic()">Start Mic</button>
+<button onclick="stopMic()">Stop Mic</button>
 
-    <script>
-        var firebaseConfig = {
-            apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
-            authDomain: "parent-guard-53b4a.firebaseapp.com",
-            databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com/",
-            projectId: "parent-guard-53b4a",
-            storageBucket: "parent-guard-53b4a.appspot.com",
-            messagingSenderId: "946864326298",
-            appId: "1:946864326298:android:755a9d8982a19a5a9b8123"
-        };
+<div id="audioPlayer">
+    <audio id="player" controls></audio>
+</div>
 
-        firebase.initializeApp(firebaseConfig);
-        var dbRef = firebase.database().ref('child1');
+<script>
+    const FIREBASE_URL = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/child1.json";
 
-        // Update battery & lastUpdate
-        dbRef.on('value', function(snapshot) {
-            var data = snapshot.val();
-            if(data){
-                document.getElementById('battery').innerText = data.battery || '';
-                document.getElementById('lastUpdate').innerText = data.lastUpdate || '';
-            }
-        });
+    function fetchData() {
+        fetch(FIREBASE_URL)
+            .then(res => res.json())
+            .then(data => {
+                if (!data) return;
+                document.getElementById("battery").innerText = data.battery;
+                document.getElementById("lastUpdate").innerText = data.lastUpdate;
 
-        function fetchMicRecording() {
-            dbRef.child('mic_record').once('value', function(snapshot){
-                var micData = snapshot.val();
-                if(micData && micData.url){
-                    var audio = document.getElementById('audioPlayer');
-                    audio.src = micData.url;
-                    audio.play();
-                } else {
-                    alert('No audio recorded yet');
+                if (data.mic_record && data.mic_record.audio) {
+                    const audioBase64 = data.mic_record.audio;
+                    const audioBlob = base64ToBlob(audioBase64, 'audio/3gp');
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const player = document.getElementById("player");
+                    player.src = audioUrl;
                 }
-            });
+            })
+            .catch(err => console.log(err));
+    }
+
+    function startMic() {
+        fetch(FIREBASE_URL + "/commands.json", {
+            method: "PUT",
+            body: JSON.stringify({ mic: "start" }),
+            headers: { "Content-Type": "application/json" }
+        });
+    }
+
+    function stopMic() {
+        fetch(FIREBASE_URL + "/commands.json", {
+            method: "PUT",
+            body: JSON.stringify({ mic: "stop" }),
+            headers: { "Content-Type": "application/json" }
+        });
+    }
+
+    function base64ToBlob(base64, type) {
+        const binary = atob(base64);
+        const array = [];
+        for (let i = 0; i < binary.length; i++) {
+            array.push(binary.charCodeAt(i));
         }
-    </script>
+        return new Blob([new Uint8Array(array)], { type: type });
+    }
+
+    // Auto-refresh data every 2 seconds
+    setInterval(fetchData, 2000);
+</script>
+
 </body>
 </html>
