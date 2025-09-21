@@ -22,11 +22,11 @@
 
   // ✅ Start/Stop Mic
   window.startMic = () => {
-    set(ref(db, "child1/commands/mic"), "start");
+    set(ref(db, "/commands/mic"), "start");
   }
 
   window.stopMic = () => {
-    set(ref(db, "child1/commands/mic"), "stop");
+    set(ref(db, "/commands/mic"), "stop");
   }
 
   // ✅ Listen battery + mic_record
