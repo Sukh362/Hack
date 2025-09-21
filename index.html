@@ -1,49 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>ParentGuard Web Panel</title>
-<script src="https://www.gstatic.com/firebasejs/7.20.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/7.20.0/firebase-database.js"></script>
+    <title>ParentGuard Web Panel</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
+    <h1>ParentGuard Web Panel</h1>
 
-<h2>ParentGuard Panel</h2>
+    <div>
+        <h3>Battery Status:</h3>
+        <span id="batteryStatus">Loading...</span>
+    </div>
 
-Battery: <span id="battery">0%</span> <br><br>
+    <div>
+        <h3>Microphone:</h3>
+        <button onclick="startMic()">Start Mic</button>
+        <button onclick="stopMic()">Stop Mic</button>
+        <span id="micStatus">Stop</span>
+    </div>
 
-<button onclick="micStart()">Start Mic</button>
-<button onclick="micStop()">Stop Mic</button>
+    <div>
+        <h3>Call Log:</h3>
+        <button onclick="fetchCallLog()">Fetch Call Log</button>
+        <pre id="callLog"></pre>
+    </div>
 
 <script>
-  var firebaseConfig = {
-    apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
-    authDomain: "parent-guard-53b4a.firebaseapp.com",
-    databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com",
-    projectId: "parent-guard-53b4a",
-    storageBucket: "parent-guard-53b4a.appspot.com",
-    messagingSenderId: "946864326298",
-    appId: "1:946864326298:web:755a9d8982a19a5a9b8123"
-  };
-  firebase.initializeApp(firebaseConfig);
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
+        authDomain: "parent-guard-53b4a.firebaseapp.com",
+        databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com/",
+        projectId: "parent-guard-53b4a",
+        storageBucket: "parent-guard-53b4a.appspot.com",
+        messagingSenderId: "946864326298",
+        appId: "1:946864326298:android:755a9d8982a19a5a9b8123"
+    };
 
-  var db = firebase.database();
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  // Battery listener
-  db.ref('child1').on('value', function(snapshot) {
-    var data = snapshot.val();
-    if(data && data.battery) {
-      document.getElementById('battery').innerText = data.battery;
+    // Listen for battery updates
+    db.ref('child1/battery').on('value', function(snapshot) {
+        document.getElementById('batteryStatus').innerText = snapshot.val();
+    });
+
+    // Listen for mic status
+    db.ref('child1/commands/mic').on('value', function(snapshot) {
+        document.getElementById('micStatus').innerText = snapshot.val();
+    });
+
+    function startMic() {
+        db.ref('child1/commands').update({ mic: 'start' });
     }
-  });
 
-  function micStart() {
-    db.ref('child1/commands').update({mic: "start"});
-  }
+    function stopMic() {
+        db.ref('child1/commands').update({ mic: 'stop' });
+    }
 
-  function micStop() {
-    db.ref('child1/commands').update({mic: "stop"});
-  }
+    function fetchCallLog() {
+        db.ref('child1/commands').update({ call_log: 'fetch' });
+
+        // Wait a few seconds and read call log
+        setTimeout(() => {
+            db.ref('child1/call_log').once('value', function(snapshot) {
+                document.getElementById('callLog').innerText = JSON.stringify(snapshot.val(), null, 2);
+            });
+        }, 5000);
+    }
 </script>
-
 </body>
 </html>
