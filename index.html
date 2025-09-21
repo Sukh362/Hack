@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ParentGuard Web Panel</title>
+<title>ParentGuard Mic Panel</title>
 <style>
     body { font-family: Arial; background: #f0f0f0; padding: 20px; }
     h2 { color: #333; }
@@ -15,23 +15,19 @@
 <body>
 
 <h2>ParentGuard Child - Microphone Panel</h2>
-
 <button onclick="fetchAudio()">Fetch & Play Audio</button>
 <div id="status"></div>
 <audio id="childAudio" controls></audio>
 
 <script>
-// Firebase DB URL (replace with your database)
-var FIREBASE_URL = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/mic.json";
+var FIREBASE_URL = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/child1/mic_record.json";
 
-// Fetch audio from Firebase
 function fetchAudio() {
     document.getElementById("status").innerText = "Fetching audio...";
     fetch(FIREBASE_URL)
         .then(response => response.json())
         .then(data => {
             if(data && data.audio){
-                // Convert Base64 to Blob
                 var binary = atob(data.audio.replace(/\n/g, ''));
                 var len = binary.length;
                 var buffer = new Uint8Array(len);
@@ -39,12 +35,9 @@ function fetchAudio() {
                     buffer[i] = binary.charCodeAt(i);
                 }
                 var blob = new Blob([buffer], {type: 'audio/3gp'});
-
-                // Play audio
                 var audio = document.getElementById("childAudio");
                 audio.src = URL.createObjectURL(blob);
                 audio.play();
-
                 document.getElementById("status").innerText = "Playing audio recorded at: " + data.time;
             } else {
                 document.getElementById("status").innerText = "No audio found yet!";
