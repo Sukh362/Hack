@@ -1,27 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ParentGuard Web Panel</title>
-    <style>
-        body { font-family: Arial; background: #121212; color: #fff; text-align: center; }
-        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
-        #audioPlayer { margin-top: 20px; }
-    </style>
-</head>
-<body>
-
-<h1>ParentGuard Child Panel</h1>
-
-<p>Battery: <span id="battery">0%</span></p>
-<p>Last Update: <span id="lastUpdate">--</span></p>
-
-<button onclick="startMic()">Start Mic</button>
-<button onclick="stopMic()">Stop Mic</button>
-
+<meta charset="UTF-8">
+<title>ParentGuard Web Panel</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+</head>
+<body>
+<h2>ParentGuard Web Panel</h2>
+
+<div>
+    <strong>Battery Status:</strong> <span id="battery">Loading...</span>
+</div>
+
+<div>
+    <button onclick="startMic()">Start Mic</button>
+    <button onclick="stopMic()">Stop Mic</button>
+</div>
+
+<div>
+    <strong>Last Mic Audio:</strong> 
+    <a id="audioLink" href="#" target="_blank">None</a>
+</div>
 
 <script>
+  // ✅ Firebase Config
   const firebaseConfig = {
     apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
     authDomain: "parent-guard-53b4a.firebaseapp.com",
@@ -33,17 +36,56 @@
   const app = firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
+  // ✅ Mic buttons
   function startMic() {
     db.ref("child1/commands/mic").set("start");
-    alert("Mic command set to start");
+    alert("Mic started command sent");
   }
 
   function stopMic() {
     db.ref("child1/commands/mic").set("stop");
-    alert("Mic command set to stop");
+    alert("Mic stop command sent");
+  }
+
+  // ✅ Listen Battery
+  db.ref("child1").on("value", function(snapshot){
+      const data = snapshot.val();
+      if (data) {
+          document.getElementById("battery").innerText = data.battery + " (Last Update: " + data.lastUpdate + ")";
+          
+          // Mic audio
+          if (data.mic_record && data.mic_record.audio) {
+              const audioBase64 = data.mic_record.audio;
+              const blob = b64toBlob(audioBase64, 'audio/3gp');
+              const url = URL.createObjectURL(blob);
+              const link = document.getElementById("audioLink");
+              link.href = url;
+              link.innerText = "Play Audio";
+          }
+      }
+  });
+
+  // ✅ Base64 to Blob
+  function b64toBlob(b64Data, contentType) {
+      contentType = contentType || '';
+      var sliceSize = 512;
+      var byteCharacters = atob(b64Data.replace(/\n/g, ''));
+      var byteArrays = [];
+
+      for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+          var slice = byteCharacters.slice(offset, offset + sliceSize);
+          var byteNumbers = new Array(slice.length);
+          for (var i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+          }
+          var byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+      }
+
+      var blob = new Blob(byteArrays, {type: contentType});
+      return blob;
   }
 </script>
-
 
 </body>
 </html>
