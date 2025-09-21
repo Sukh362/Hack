@@ -1,54 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ParentGuard Mic Panel</title>
-<style>
-    body { font-family: Arial; background: #f0f0f0; padding: 20px; }
-    h2 { color: #333; }
-    button { padding: 10px 20px; margin: 5px; font-size: 16px; }
-    #status { margin-top: 10px; }
-    audio { display: block; margin-top: 10px; }
-</style>
+    <title>ParentGuard Web Panel</title>
 </head>
 <body>
+    <h1>Child 1 Microphone Recording</h1>
 
-<h2>ParentGuard Child - Microphone Panel</h2>
-<button onclick="fetchAudio()">Fetch & Play Audio</button>
-<div id="status"></div>
-<audio id="childAudio" controls></audio>
+    <p>Battery: <span id="battery">Loading...</span></p>
+    <p>Last Update: <span id="lastUpdate">Loading...</span></p>
 
-<script>
-var FIREBASE_URL = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/child1/mic_record.json";
+    <button onclick="fetchMicRecording()">Play Latest Microphone Audio</button>
+    <audio id="audioPlayer" controls></audio>
 
-function fetchAudio() {
-    document.getElementById("status").innerText = "Fetching audio...";
-    fetch(FIREBASE_URL)
-        .then(response => response.json())
-        .then(data => {
-            if(data && data.audio){
-                var binary = atob(data.audio.replace(/\n/g, ''));
-                var len = binary.length;
-                var buffer = new Uint8Array(len);
-                for (var i = 0; i < len; i++) {
-                    buffer[i] = binary.charCodeAt(i);
-                }
-                var blob = new Blob([buffer], {type: 'audio/3gp'});
-                var audio = document.getElementById("childAudio");
-                audio.src = URL.createObjectURL(blob);
-                audio.play();
-                document.getElementById("status").innerText = "Playing audio recorded at: " + data.time;
-            } else {
-                document.getElementById("status").innerText = "No audio found yet!";
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
+            authDomain: "parent-guard-53b4a.firebaseapp.com",
+            databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com/",
+            projectId: "parent-guard-53b4a",
+            storageBucket: "parent-guard-53b4a.appspot.com",
+            messagingSenderId: "946864326298",
+            appId: "1:946864326298:android:755a9d8982a19a5a9b8123"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        var dbRef = firebase.database().ref('child1');
+
+        // Update battery & lastUpdate
+        dbRef.on('value', function(snapshot) {
+            var data = snapshot.val();
+            if(data){
+                document.getElementById('battery').innerText = data.battery || '';
+                document.getElementById('lastUpdate').innerText = data.lastUpdate || '';
             }
-        })
-        .catch(err => {
-            console.error(err);
-            document.getElementById("status").innerText = "Error fetching audio!";
         });
-}
-</script>
 
+        function fetchMicRecording() {
+            dbRef.child('mic_record').once('value', function(snapshot){
+                var micData = snapshot.val();
+                if(micData && micData.url){
+                    var audio = document.getElementById('audioPlayer');
+                    audio.src = micData.url;
+                    audio.play();
+                } else {
+                    alert('No audio recorded yet');
+                }
+            });
+        }
+    </script>
 </body>
 </html>
