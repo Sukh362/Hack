@@ -1,60 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>ParentGuard Web Panel</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #121212;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        h1 {
-            color: #4caf50;
-        }
-        #battery {
-            font-size: 24px;
-            margin: 20px 0;
-        }
-        #lastUpdate {
-            font-size: 18px;
-            color: #aaaaaa;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParentGuard Web Panel</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+    body { font-family: Arial; background: #121212; color: #fff; padding: 20px; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    #battery { font-size: 20px; margin-bottom: 15px; }
+    audio { display: block; margin-top: 15px; }
+</style>
 </head>
 <body>
-    <h1>ParentGuard Web Panel</h1>
-    <div id="battery">Battery: --%</div>
-    <div id="lastUpdate">Last Update: --</div>
 
-    <script>
-        const firebaseURL = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/child1.json";
+<h2>ParentGuard Child Panel</h2>
 
-        async function fetchBattery() {
-            try {
-                const response = await fetch(firebaseURL);
-                const data = await response.json();
+<div id="battery">Battery: --%</div>
 
-                if (data) {
-                    document.getElementById("battery").innerText = "Battery: " + data.battery;
-                    document.getElementById("lastUpdate").innerText = "Last Update: " + data.lastUpdate;
-                } else {
-                    document.getElementById("battery").innerText = "Battery: --%";
-                    document.getElementById("lastUpdate").innerText = "Last Update: --";
-                }
-            } catch (e) {
-                console.log("Error fetching data: ", e);
-            }
-        }
+<button onclick="startMic()">Start Microphone</button>
+<button onclick="stopMic()">Stop Microphone</button>
+<button onclick="fetchAudio()">Fetch Audio</button>
 
-        // ✅ Update every 2 seconds
-        fetchBattery();
-        setInterval(fetchBattery, 2000);
-    </script>
+<audio id="audioPlayer" controls></audio>
+
+<script>
+  // 🔹 Firebase Config
+  var firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "parent-guard-53b4a.firebaseapp.com",
+    databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com",
+    projectId: "parent-guard-53b4a",
+    storageBucket: "parent-guard-53b4a.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.database();
+
+  // 🔹 Show battery
+  function updateBatteryUI(snapshot) {
+      var battery = snapshot.val().battery || '--';
+      document.getElementById('battery').innerText = "Battery: " + battery;
+  }
+  db.ref("child1").on("value", updateBatteryUI);
+
+  // 🔹 Microphone Commands
+  function startMic() {
+      db.ref("commands/mic").set("start");
+      alert("Start command sent!");
+  }
+  function stopMic() {
+      db.ref("commands/mic").set("stop");
+      alert("Stop command sent!");
+  }
+
+  // 🔹 Fetch Audio
+  function fetchAudio() {
+      db.ref("mic_record/audio").once("value").then(function(snapshot){
+          var base64Audio = snapshot.val();
+          if(base64Audio){
+              var audioPlayer = document.getElementById("audioPlayer");
+              audioPlayer.src = "data:audio/3gp;base64," + base64Audio;
+              audioPlayer.play();
+          } else {
+              alert("No audio available");
+          }
+      });
+  }
+</script>
 </body>
 </html>
