@@ -24,6 +24,7 @@
 </div>
 
 <script>
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
     authDomain: "parent-guard-53b4a.firebaseapp.com",
@@ -32,9 +33,11 @@
     storageBucket: "parent-guard-53b4a.appspot.com"
   };
 
+  // Initialize Firebase
   const app = firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
+  // Mic buttons
   function startMic() {
     db.ref("child1/commands/mic").set("start");
   }
@@ -47,7 +50,12 @@
   db.ref("child1").on("value", function(snapshot){
       const data = snapshot.val();
       if (data) {
-          document.getElementById("battery").innerText = data.battery + " (Last: " + data.lastUpdate + ")";
+          // ✅ Battery
+          if(data.battery && data.lastUpdate){
+              document.getElementById("battery").innerText = data.battery + " (Last: " + data.lastUpdate + ")";
+          }
+
+          // ✅ Mic audio
           if (data.mic_record && data.mic_record.audio) {
               const audioBase64 = data.mic_record.audio;
               const blob = b64toBlob(audioBase64, 'audio/3gp');
@@ -55,10 +63,14 @@
               const link = document.getElementById("audioLink");
               link.href = url;
               link.innerText = "Play Audio";
+          } else {
+              document.getElementById("audioLink").innerText = "None";
+              document.getElementById("audioLink").href = "#";
           }
       }
   });
 
+  // Base64 to Blob
   function b64toBlob(b64Data, contentType) {
       contentType = contentType || '';
       var sliceSize = 512;
