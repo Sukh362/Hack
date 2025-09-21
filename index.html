@@ -1,96 +1,49 @@
- <!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="UTF-8">
 <title>ParentGuard Web Panel</title>
-<script type="module">
-  // ✅ Import Firebase modules
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+<script src="https://www.gstatic.com/firebasejs/7.20.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.20.0/firebase-database.js"></script>
+</head>
+<body>
 
-  // ✅ Firebase config
-  const firebaseConfig = {
+<h2>ParentGuard Panel</h2>
+
+Battery: <span id="battery">0%</span> <br><br>
+
+<button onclick="micStart()">Start Mic</button>
+<button onclick="micStop()">Stop Mic</button>
+
+<script>
+  var firebaseConfig = {
     apiKey: "AIzaSyCF7dwVP_r8qRxXiREFKUPl0gZA_5qgW6s",
+    authDomain: "parent-guard-53b4a.firebaseapp.com",
     databaseURL: "https://parent-guard-53b4a-default-rtdb.firebaseio.com",
     projectId: "parent-guard-53b4a",
-    storageBucket: "parent-guard-53b4a.firebasestorage.app"
+    storageBucket: "parent-guard-53b4a.appspot.com",
+    messagingSenderId: "946864326298",
+    appId: "1:946864326298:web:755a9d8982a19a5a9b8123"
   };
+  firebase.initializeApp(firebaseConfig);
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  var db = firebase.database();
 
-  // ✅ Start/Stop Mic
-  window.startMic = () => {
-    set(ref(db, "/commands/mic"), "start");
-  }
-
-  window.stopMic = () => {
-    set(ref(db, "/commands/mic"), "stop");
-  }
-
-  // ✅ Listen battery + mic_record
-  const batterySpan = document.getElementById("battery");
-  const audioLink = document.getElementById("audioLink");
-
-  onValue(ref(db, "child1"), (snapshot) => {
-    const data = snapshot.val();
-    if(data){
-      // Battery
-      if(data.battery && data.lastUpdate){
-        batterySpan.textContent = data.battery + " (Last: " + data.lastUpdate + ")";
-      }
-
-      // Mic audio
-      if(data.mic_record && data.mic_record.audio){
-        const audioBase64 = data.mic_record.audio;
-        const blob = b64toBlob(audioBase64, "audio/3gp");
-        const url = URL.createObjectURL(blob);
-        audioLink.href = url;
-        audioLink.textContent = "Play Audio";
-        audioLink.download = "mic.3gp";
-      } else {
-        audioLink.href = "#";
-        audioLink.textContent = "No Audio";
-      }
+  // Battery listener
+  db.ref('child1').on('value', function(snapshot) {
+    var data = snapshot.val();
+    if(data && data.battery) {
+      document.getElementById('battery').innerText = data.battery;
     }
   });
 
-  // Base64 to Blob helper
-  function b64toBlob(b64Data, contentType){
-    contentType = contentType || '';
-    const sliceSize = 512;
-    const byteCharacters = atob(b64Data.replace(/\n/g,''));
-    const byteArrays = [];
-    for(let offset=0; offset<byteCharacters.length; offset+=sliceSize){
-      const slice = byteCharacters.slice(offset, offset+sliceSize);
-      const byteNumbers = new Array(slice.length);
-      for(let i=0;i<slice.length;i++){
-        byteNumbers[i]=slice.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-    }
-    return new Blob(byteArrays,{type:contentType});
+  function micStart() {
+    db.ref('child1/commands').update({mic: "start"});
   }
 
+  function micStop() {
+    db.ref('child1/commands').update({mic: "stop"});
+  }
 </script>
-</head>
-<body>
-<h2>ParentGuard Web Panel</h2>
-
-<div>
-  <strong>Battery Status:</strong> <span id="battery">Loading...</span>
-</div>
-
-<div>
-  <button onclick="startMic()">Start Mic</button>
-  <button onclick="stopMic()">Stop Mic</button>
-</div>
-
-<div>
-  <strong>Last Mic Audio:</strong> <a id="audioLink" href="#">No Audio</a>
-</div>
 
 </body>
 </html>
