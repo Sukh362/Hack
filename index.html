@@ -1,411 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FamilyGuard - Parental Control</title>
+    <title>Guard Web Panel</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
         body {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            min-height: 100vh;
-            color: #333;
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: #0ff;
             padding: 20px;
         }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-        
-        header {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .app-title {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-        }
-        
-        .app-title h1 {
-            font-size: 32px;
-        }
-        
-        .logo {
-            font-size: 40px;
-        }
-        
-        .app-subtitle {
-            margin-top: 10px;
-            font-size: 18px;
-            opacity: 0.9;
-        }
-        
-        .tab-container {
-            display: flex;
-            background: #f0f0f0;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .tab {
-            padding: 15px 25px;
-            cursor: pointer;
-            font-weight: 500;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-        }
-        
-        .tab.active {
-            border-bottom: 3px solid #2575fc;
-            color: #2575fc;
-            background: white;
-        }
-        
-        .content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 20px;
-        }
-        
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .card h2 {
-            color: #2575fc;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-        
-        .feature-list {
-            list-style-type: none;
-        }
-        
-        .feature-list li {
-            padding: 12px 0;
-            border-bottom: 1px solid #f5f5f5;
-            display: flex;
-            align-items: center;
-        }
-        
-        .feature-list li:before {
-            content: "✓";
-            color: #4CAF50;
-            font-weight: bold;
-            margin-right: 10px;
-            font-size: 18px;
-        }
-        
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .stat-card {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        
-        .stat-card h3 {
-            font-size: 16px;
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-        
-        .stat-card .value {
-            font-size: 32px;
-            font-weight: bold;
-        }
-        
-        .activity-list {
-            list-style-type: none;
-            margin-top: 15px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .activity-list li {
-            padding: 12px;
-            background-color: #f9f9f9;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            border-left: 4px solid #2575fc;
-        }
-        
-        .activity-list li:before {
-            content: "•";
-            color: #2575fc;
-            font-weight: bold;
-            margin-right: 10px;
-            font-size: 20px;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 500;
-            margin-top: 15px;
-            display: inline-block;
-            transition: all 0.3s;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .child-device {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+        h1 { color: #0f0; }
+        .data-box {
+            background: #222;
             padding: 15px;
-            background: #f9f9f9;
+            margin: 10px 0;
             border-radius: 8px;
-            margin-bottom: 15px;
+            box-shadow: 0 0 10px #0ff;
         }
-        
-        .device-icon {
-            font-size: 30px;
-        }
-        
-        .device-info {
-            flex-grow: 1;
-        }
-        
-        .device-name {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .device-status {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        footer {
-            text-align: center;
-            margin-top: 30px;
-            color: #666;
-            padding: 20px;
-            border-top: 1px solid #f0f0f0;
-        }
-        
-        @media (max-width: 768px) {
-            .content {
-                grid-template-columns: 1fr;
-            }
-            
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-            
-            .tab-container {
-                overflow-x: auto;
-            }
-        }
+        .label { font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="app-title">
-                <h1>FamilyGuard</h1>
-                <div class="logo">👨‍👩‍👧‍👦</div>
-            </div>
-            <div class="app-subtitle">Parental Control Dashboard</div>
-        </header>
-        
-        <div class="tab-container">
-            <div class="tab active" data-tab="dashboard">Dashboard</div>
-            <div class="tab" data-tab="devices">Child Devices</div>
-            <div class="tab" data-tab="screentime">Screen Time</div>
-            <div class="tab" data-tab="apps">App Usage</div>
-            <div class="tab" data-tab="settings">Settings</div>
-        </div>
-        
-        <div class="content">
-            <div class="card">
-                <h2>Parental Control Features</h2>
-                <ul class="feature-list">
-                    <li>Real-time location tracking</li>
-                    <li>Screen time management</li>
-                    <li>App usage monitoring</li>
-                    <li>Web content filtering</li>
-                    <li>Geofencing alerts</li>
-                    <li>Remote device locking</li>
-                    <li>Call & SMS monitoring</li>
-                    <li>Activity reports</li>
-                </ul>
-                <button class="btn">Configure Settings</button>
-            </div>
-            
-            <div class="card">
-                <h2>Child Device Status</h2>
-                <div class="dashboard">
-                    <div class="stat-card">
-                        <h3>Connected Devices</h3>
-                        <div class="value" id="connected-devices">2</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Screen Time Today</h3>
-                        <div class="value" id="screen-time">3h 42m</div>
-                    </div>
-                </div>
-                
-                <h2 style="margin-top: 20px;">Recent Activity</h2>
-                <ul class="activity-list" id="activity-list">
-                    <li>Emily's device: Instagram used for 45 minutes</li>
-                    <li>James's device: YouTube used for 1 hour 15 minutes</li>
-                    <li>Emily left school at 3:15 PM</li>
-                    <li>James arrived at soccer practice at 4:30 PM</li>
-                </ul>
-                <button class="btn">View Full Report</button>
-            </div>
-        </div>
-        
-        <div class="content" id="devices-content" style="display: none;">
-            <div class="card">
-                <h2>Connected Devices</h2>
-                
-                <div class="child-device">
-                    <div class="device-icon">📱</div>
-                    <div class="device-info">
-                        <div class="device-name">Emily's Phone</div>
-                        <div class="device-status">Online • Battery: 75%</div>
-                    </div>
-                    <div class="device-status">Active now</div>
-                </div>
-                
-                <div class="child-device">
-                    <div class="device-icon">📱</div>
-                    <div class="device-info">
-                        <div class="device-name">James's Tablet</div>
-                        <div class="device-status">Online • Battery: 42%</div>
-                    </div>
-                    <div class="device-status">Watching YouTube</div>
-                </div>
-                
-                <button class="btn">Add New Device</button>
-            </div>
-            
-            <div class="card">
-                <h2>Device Management</h2>
-                <ul class="feature-list">
-                    <li>Set usage time limits</li>
-                    <li>Block inappropriate apps</li>
-                    <li>Schedule device downtime</li>
-                    <li>Track device location</li>
-                    <li>Remote lock device</li>
-                    <li>View browsing history</li>
-                </ul>
-                
-                <h2 style="margin-top: 20px;">Quick Actions</h2>
-                <button class="btn" style="margin-right: 10px;">Pause All Devices</button>
-                <button class="btn">Set Bedtime Mode</button>
-            </div>
-        </div>
-        
-        <footer>
-            <p>FamilyGuard Parental Control System &copy; 2023</p>
-            <p>No external dependencies required - Pure HTML, CSS & JavaScript</p>
-        </footer>
+    <h1>Guard Web Panel</h1>
+    <div class="data-box">
+        <div><span class="label">Battery:</span> <span id="battery">--</span>%</div>
+        <div><span class="label">Latitude:</span> <span id="lat">--</span></div>
+        <div><span class="label">Longitude:</span> <span id="lng">--</span></div>
+        <div><span class="label">Installed Apps:</span> <span id="apps">--</span></div>
+        <div><span class="label">Used Apps (last 1 min):</span> <span id="usedApps">--</span></div>
+        <div><span class="label">Last Updated:</span> <span id="timestamp">--</span></div>
     </div>
 
     <script>
-        // Tab switching functionality
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                
-                const tabName = tab.getAttribute('data-tab');
-                
-                if (tabName === 'dashboard') {
-                    document.querySelector('.content').style.display = 'grid';
-                    document.getElementById('devices-content').style.display = 'none';
-                } else if (tabName === 'devices') {
-                    document.querySelector('.content').style.display = 'none';
-                    document.getElementById('devices-content').style.display = 'grid';
-                } else {
-                    alert('Loading ' + tab.textContent + ' section...');
-                }
-            });
-        });
-        
-        // Simulate data updates
-        function simulateDataUpdates() {
-            setInterval(() => {
-                // Randomly update the screen time
-                const hours = Math.floor(Math.random() * 2);
-                const minutes = Math.floor(Math.random() * 60);
-                document.getElementById('screen-time').textContent = 
-                    `${hours}h ${minutes}m`;
-                
-                // Add a random activity
-                const activities = [
-                    "Emily started using TikTok",
-                    "James completed homework",
-                    "Emily's device battery low (15%)",
-                    "James visited educational website",
-                    "Screen time limit reached on Emily's device",
-                    "New app installed: Minecraft",
-                    "James's device location updated",
-                    "Emily exceeded social media time limit"
-                ];
-                const newActivity = activities[Math.floor(Math.random() * activities.length)];
-                
-                const activityList = document.getElementById('activity-list');
-                const newItem = document.createElement('li');
-                newItem.textContent = newActivity;
-                activityList.prepend(newItem);
-                
-                // Keep only 6 items in the list
-                if (activityList.children.length > 6) {
-                    activityList.removeChild(activityList.lastChild);
-                }
-            }, 5000);
+        const firebaseUrl = "https://guard-7ac92-default-rtdb.firebaseio.com/guard_data/live.json";
+
+        async function fetchData(){
+            try {
+                const response = await fetch(firebaseUrl);
+                const data = await response.json();
+
+                document.getElementById('battery').textContent = data.battery || "--";
+                document.getElementById('lat').textContent = data.latitude || "--";
+                document.getElementById('lng').textContent = data.longitude || "--";
+                document.getElementById('apps').textContent = decodeURIComponent(data.installed_apps || "--");
+                document.getElementById('usedApps').textContent = decodeURIComponent(data.used_apps || "--");
+                document.getElementById('timestamp').textContent = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : "--";
+
+            } catch (err) {
+                console.log("Fetch error: ", err);
+            }
         }
-        
-        // Button functionality
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                alert('This would open detailed settings or reports in a real application.');
-            });
-        });
-        
-        // Initialize the simulation
-        simulateDataUpdates();
+
+        // Initial fetch
+        fetchData();
+
+        // Refresh every 2 seconds
+        setInterval(fetchData, 2000);
     </script>
 </body>
-    </html>
+</html>
