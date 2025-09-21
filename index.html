@@ -1,33 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>ParentGuard Web Panel</title>
     <style>
-        body { font-family: Arial; background: #1b1b1b; color: #fff; text-align: center; padding: 50px;}
-        h1 { color: #4CAF50; }
-        #battery { font-size: 48px; margin-top: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        h1 {
+            color: #4caf50;
+        }
+        #battery {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        #lastUpdate {
+            font-size: 18px;
+            color: #aaaaaa;
+        }
     </style>
 </head>
 <body>
-    <h1>ParentGuard - Child Battery Status</h1>
-    <div id="battery">Loading...</div>
+    <h1>ParentGuard Web Panel</h1>
+    <div id="battery">Battery: --%</div>
+    <div id="lastUpdate">Last Update: --</div>
 
     <script>
-        const firebaseUrl = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/child_battery.json";
+        const firebaseURL = "https://parent-guard-53b4a-default-rtdb.firebaseio.com/child1.json";
 
         async function fetchBattery() {
             try {
-                const response = await fetch(firebaseUrl);
+                const response = await fetch(firebaseURL);
                 const data = await response.json();
-                document.getElementById('battery').innerText = data.battery + "%";
+
+                if (data) {
+                    document.getElementById("battery").innerText = "Battery: " + data.battery;
+                    document.getElementById("lastUpdate").innerText = "Last Update: " + data.lastUpdate;
+                } else {
+                    document.getElementById("battery").innerText = "Battery: --%";
+                    document.getElementById("lastUpdate").innerText = "Last Update: --";
+                }
             } catch (e) {
-                document.getElementById('battery').innerText = "Error fetching data";
+                console.log("Error fetching data: ", e);
             }
         }
 
-        // Fetch every 5 seconds
+        // ✅ Update every 2 seconds
         fetchBattery();
-        setInterval(fetchBattery, 5000);
+        setInterval(fetchBattery, 2000);
     </script>
 </body>
 </html>
