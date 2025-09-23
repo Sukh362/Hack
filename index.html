@@ -1,1 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Child Panel</title>
+</head>
+<body>
+  <h1>Device Status</h1>
+  <div id="deviceInfo"></div>
+
+  <script>
+    async function fetchDevice() {
+      const res = await fetch('https://fb860aed-28e8-4e49-ab82-56a11db0f4d0-00-2nz4doaull1wn.pike.replit.dev/api/device/12345');
+      const data = await res.json();
+      document.getElementById('deviceInfo').innerText = JSON.stringify(data, null, 2);
+    }
+
+    setInterval(fetchDevice, 2000); // refresh every 2 seconds
+    fetchDevice();
+  </script>
+</body>
+</html>
 
