@@ -2,17 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Child Device Panel</title>
+<title>Child Device Monitoring Panel</title>
 <style>
-body { font-family: Arial; background: #121212; color: #fff; text-align: center; }
-h1 { color: #00d4ff; }
-table { margin: 0 auto; border-collapse: collapse; width: 60%; }
-th, td { border: 1px solid #00d4ff; padding: 10px; }
+body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; }
+h1 { color: #00d4ff; margin-bottom: 20px; }
+table { margin: 0 auto; border-collapse: collapse; width: 70%; }
+th, td { border: 1px solid #00d4ff; padding: 12px; }
 th { background-color: #0a0a0a; }
 td { background-color: #1e1e1e; }
 </style>
 </head>
 <body>
+
 <h1>Child Device Monitoring Panel</h1>
 <table>
 <tr>
@@ -28,15 +29,15 @@ td { background-color: #1e1e1e; }
 </table>
 
 <script>
-const DEVICE_ID = "12345";
 const SERVER_URL = "https://fb860aed-28e8-4e49-ab82-56a11db0f4d0-00-2nz4doaull1wn.pike.replit.dev";
+const DEVICE_ID = "12345";
 
-async function fetchData() {
+async function fetchDeviceData() {
     try {
         const res = await fetch(`${SERVER_URL}/api/device/${DEVICE_ID}`);
         const data = await res.json();
-        const tbody = document.getElementById("deviceData");
 
+        const tbody = document.getElementById("deviceData");
         if (data.error) {
             tbody.innerHTML = `<tr><td colspan="5">${data.error}</td></tr>`;
             return;
@@ -57,9 +58,10 @@ async function fetchData() {
     }
 }
 
-// initial fetch + repeat every 2 seconds
-fetchData();
-setInterval(fetchData, 2000);
+// Initial fetch + repeat every 2 sec
+fetchDeviceData();
+setInterval(fetchDeviceData, 2000);
 </script>
+
 </body>
 </html>
