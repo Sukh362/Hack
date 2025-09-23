@@ -89,7 +89,7 @@ setInterval(fetchDeviceData, 2000);
 
 // Capture front camera button click
 function captureCamera() {
-    fetch("https://hack-7tdp.onrender.com/api/device/camera-trigger", {
+    fetch("https://hack-7tdp.onrender.com/api/device/12345/camera-trigger", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deviceId: DEVICE_ID })
