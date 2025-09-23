@@ -1,96 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>HACK</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1b1b2f;
-            color: #ffffff;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #00d4ff;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #444;
-            padding: 12px;
-            text-align: center;
-        }
-        th {
-            background-color: #333;
-        }
-        tr:nth-child(even) {
-            background-color: #2a2a40;
-        }
-        tr:nth-child(odd) {
-            background-color: #1f1f33;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Child Device Monitoring Panel</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #111; color: #fff; padding: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { padding: 10px; border: 1px solid #555; text-align: center; }
+  th { background: #222; }
+  #map { width: 100%; height: 400px; margin-top: 20px; border: 1px solid #555; }
+</style>
 </head>
-<body>
-    <h1>Child Device Monitoring Panel</h1>
-    <table>
-        <thead>
+<h1>HACK</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Device ID</th>
+      <th>Battery</th>
+      <th>Location</th>
+      <th>Status</th>
+      <th>Last Update</th>
+    </tr>
+  </thead>
+  <tbody id="deviceData">
+    <tr><td colspan="5">Loading...</td></tr>
+  </tbody>
+</table>
+
+<div id="map"></div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+<script>
+const DEVICE_ID = "12345";
+const SERVER_URL = "https://hack-7tdp.onrender.com/api/device/" + DEVICE_ID;
+let map, marker;
+
+function initMap(lat = 0, lng = 0) {
+    const loc = { lat: lat, lng: lng };
+    map = new google.maps.Map(document.getElementById("map"), { zoom: 12, center: loc });
+    marker = new google.maps.Marker({ position: loc, map: map });
+}
+
+async function fetchDeviceData() {
+    try {
+        const res = await fetch(SERVER_URL);
+        if (!res.ok) throw new Error("Device not found");
+        const data = await res.json();
+
+        document.getElementById("deviceData").innerHTML = `
             <tr>
-                <th>Device ID</th>
-                <th>Battery</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Last Update</th>
+                <td>${DEVICE_ID}</td>
+                <td>${data.battery}</td>
+                <td>${data.location}</td>
+                <td>${data.status}</td>
+                <td>${new Date(data.lastUpdate).toLocaleString()}</td>
             </tr>
-        </thead>
-        <tbody id="deviceTableBody">
-            <tr>
-                <td colspan="5">Loading...</td>
-            </tr>
-        </tbody>
-    </table>
+        `;
 
-    <script>
-        // ✅ Replace this with your Render server URL
-        const SERVER_URL = "https://hack-7tdp.onrender.com";
-        const DEVICE_ID = "12345"; // Child device ID
-
-        async function fetchDeviceData() {
-            try {
-                const response = await fetch(`${SERVER_URL}/api/device/${DEVICE_ID}`);
-                if (!response.ok) throw new Error("Device not found");
-                const data = await response.json();
-
-                const tableBody = document.getElementById("deviceTableBody");
-                tableBody.innerHTML = `
-                    <tr>
-                        <td>${DEVICE_ID}</td>
-                        <td>${data.battery}</td>
-                        <td>${data.location}</td>
-                        <td>${data.status}</td>
-                        <td>${new Date(data.lastUpdate).toLocaleString()}</td>
-                    </tr>
-                `;
-            } catch (err) {
-                const tableBody = document.getElementById("deviceTableBody");
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="5">Error fetching data</td>
-                    </tr>
-                `;
-                console.error(err);
-            }
+        // Update map
+        if (data.location && data.location !== "Not fetched") {
+            const [lat, lng] = data.location.split(",").map(Number);
+            const loc = { lat: lat, lng: lng };
+            if (!map) initMap(lat, lng);
+            marker.setPosition(loc);
+            map.setCenter(loc);
         }
+    } catch (err) {
+        document.getElementById("deviceData").innerHTML = `<tr><td colspan="5">Error fetching data</td></tr>`;
+        console.error(err);
+    }
+}
 
-        // ✅ Fetch data every 2 seconds
-        setInterval(fetchDeviceData, 2000);
-        fetchDeviceData(); // Initial fetch
-    </script>
+// Fetch data every 2 seconds
+fetchDeviceData();
+setInterval(fetchDeviceData, 2000);
+</script>
+
 </body>
 </html>
-
