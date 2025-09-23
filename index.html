@@ -5,9 +5,11 @@
 <title>Child Devices Panel</title>
 <style>
 body { font-family: monospace; background: #111; color: #0f0; }
-h2 { text-align: center; }
-table { width: 80%; margin: auto; border-collapse: collapse; }
+h2 { text-align: center; margin-top: 20px; }
+table { width: 80%; margin: 20px auto; border-collapse: collapse; }
 th, td { border: 1px solid #0f0; padding: 8px; text-align: center; }
+th { background: #222; }
+td { background: #000; }
 </style>
 </head>
 <body>
@@ -28,6 +30,7 @@ th, td { border: 1px solid #0f0; padding: 8px; text-align: center; }
 </table>
 
 <script>
+// ✅ Tumhara server URL
 const serverURL = "https://fb860aed-28e8-4e49-ab82-56a11db0f4d0-00-2nz4doaull1wn.pike.replit.dev/api/device/12345";
 
 async function fetchDeviceData() {
@@ -47,10 +50,11 @@ async function fetchDeviceData() {
         `;
     } catch(e) {
         console.error(e);
+        document.querySelector("#deviceTable tbody").innerHTML = `<tr><td colspan="5">Error fetching data</td></tr>`;
     }
 }
 
-// Update every 2 seconds
+// ✅ Update every 2 seconds
 fetchDeviceData();
 setInterval(fetchDeviceData, 2000);
 </script>
