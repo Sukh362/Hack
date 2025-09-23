@@ -1,1 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Child Device Monitoring Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1b1b2f;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #333;
+        }
+        tr:nth-child(even) {
+            background-color: #2a2a40;
+        }
+        tr:nth-child(odd) {
+            background-color: #1f1f33;
+        }
+    </style>
+</head>
+<body>
+    <h1>Child Device Monitoring Panel</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Device ID</th>
+                <th>Battery</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Last Update</th>
+            </tr>
+        </thead>
+        <tbody id="deviceTableBody">
+            <tr>
+                <td colspan="5">Loading...</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <script>
+        // ✅ Replace this with your Render server URL
+        const SERVER_URL = "https://hack-7tdp.onrender.com";
+        const DEVICE_ID = "12345"; // Child device ID
+
+        async function fetchDeviceData() {
+            try {
+                const response = await fetch(`${SERVER_URL}/api/device/${DEVICE_ID}`);
+                if (!response.ok) throw new Error("Device not found");
+                const data = await response.json();
+
+                const tableBody = document.getElementById("deviceTableBody");
+                tableBody.innerHTML = `
+                    <tr>
+                        <td>${DEVICE_ID}</td>
+                        <td>${data.battery}</td>
+                        <td>${data.location}</td>
+                        <td>${data.status}</td>
+                        <td>${new Date(data.lastUpdate).toLocaleString()}</td>
+                    </tr>
+                `;
+            } catch (err) {
+                const tableBody = document.getElementById("deviceTableBody");
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5">Error fetching data</td>
+                    </tr>
+                `;
+                console.error(err);
+            }
+        }
+
+        // ✅ Fetch data every 2 seconds
+        setInterval(fetchDeviceData, 2000);
+        fetchDeviceData(); // Initial fetch
+    </script>
+</body>
+</html>
 
