@@ -1,62 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Child Devices Panel</title>
-<style>
-body { font-family: monospace; background: #111; color: #0f0; }
-h2 { text-align: center; margin-top: 20px; }
-table { width: 80%; margin: 20px auto; border-collapse: collapse; }
-th, td { border: 1px solid #0f0; padding: 8px; text-align: center; }
-th { background: #222; }
-td { background: #000; }
-</style>
+    <meta charset="UTF-8">
+    <title>Child Device Panel</title>
+    <style>
+        body { font-family: Arial; background: #121212; color: #fff; text-align: center; }
+        h1 { color: #00d4ff; }
+        table { margin: 0 auto; border-collapse: collapse; width: 60%; }
+        th, td { border: 1px solid #00d4ff; padding: 10px; }
+        th { background-color: #0a0a0a; }
+        td { background-color: #1e1e1e; }
+    </style>
 </head>
 <body>
-<h2>Child Devices Panel</h2>
-<table id="deviceTable">
-<thead>
-<tr>
-<th>Device ID</th>
-<th>Battery</th>
-<th>Location</th>
-<th>Status</th>
-<th>Last Update</th>
-</tr>
-</thead>
-<tbody>
-<tr><td colspan="5">Loading...</td></tr>
-</tbody>
-</table>
+    <h1>Child Device Monitoring Panel</h1>
+    <table>
+        <tr>
+            <th>Device ID</th>
+            <th>Battery</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Last Update</th>
+        </tr>
+        <tbody id="deviceData">
+            <tr><td colspan="5">Loading data...</td></tr>
+        </tbody>
+    </table>
 
-<script>
-// ✅ Tumhara server URL
-const serverURL = "https://fb860aed-28e8-4e49-ab82-56a11db0f4d0-00-2nz4doaull1wn.pike.replit.dev/api/device/12345";
+    <script>
+        const DEVICE_ID = "12345"; // child app deviceId
+        const SERVER_URL = "https://fb860aed-28e8-4e49-ab82-56a11db0f4d0-00-2nz4doaull1wn.pike.replit.dev";
 
-async function fetchDeviceData() {
-    try {
-        const res = await fetch(serverURL);
-        const data = await res.json();
+        async function fetchData() {
+            try {
+                const res = await fetch(`${SERVER_URL}/api/device/${DEVICE_ID}`);
+                const data = await res.json();
 
-        const tbody = document.querySelector("#deviceTable tbody");
-        tbody.innerHTML = `
-            <tr>
-                <td>12345</td>
-                <td>${data.battery}</td>
-                <td>${data.location}</td>
-                <td>${data.status}</td>
-                <td>${new Date(data.lastUpdate).toLocaleTimeString()}</td>
-            </tr>
-        `;
-    } catch(e) {
-        console.error(e);
-        document.querySelector("#deviceTable tbody").innerHTML = `<tr><td colspan="5">Error fetching data</td></tr>`;
-    }
-}
+                const tbody = document.getElementById("deviceData");
+                if (data.error) {
+                    tbody.innerHTML = `<tr><td colspan="5">${data.error}</td></tr>`;
+                    return;
+                }
 
-// ✅ Update every 2 seconds
-fetchDeviceData();
-setInterval(fetchDeviceData, 2000);
-</script>
+                tbody.innerHTML = `
+                    <tr>
+                        <td>${DEVICE_ID}</td>
+                        <td>${data.battery}</td>
+                        <td>${data.location}</td>
+                        <td>${data.status}</td>
+                        <td>${new Date(data.lastUpdate).toLocaleTimeString()}</td>
+                    </tr>
+                `;
+            } catch (err) {
+                console.error(err);
+                document.getElementById("deviceData").innerHTML = `<tr><td colspan="5">Error fetching data</td></tr>`;
+            }
+        }
+
+        // Fetch every 2 seconds
+        fetchData();
+        setInterval(fetchData, 2000);
+    </script>
 </body>
 </html>
