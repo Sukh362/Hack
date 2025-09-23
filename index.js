@@ -5,25 +5,13 @@ const cors = require("cors");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json({ limit: "10mb" })); // large base64 image
+app.use(bodyParser.json({ limit: "10mb" })); 
 app.use(cors());
 
-// In-memory "database"
+// In-memory DB
 let devices = {};
-/*
-devices = {
-  "12345": {
-      battery: "90%",
-      location: "28.7,77.1",
-      status: "online",
-      lastUpdate: Date.now(),
-      cameraImage: "base64string",
-      captureFrontCamera: false
-  }
-}
-*/
 
-// Update device data (battery, location, status)
+// Update device data
 app.post("/api/device/update", (req, res) => {
     const { deviceId, battery, location, status } = req.body;
     if (!deviceId) return res.status(400).json({ error: "Device ID required" });
@@ -46,25 +34,23 @@ app.get("/api/device/:deviceId", (req, res) => {
     res.json(device);
 });
 
-// Trigger front camera capture via POST
+// Trigger front camera capture (set flag true)
 app.post("/api/device/camera-trigger", (req, res) => {
     const { deviceId } = req.body;
     const device = devices[deviceId];
     if (!device) return res.status(404).json({ error: "Device not found" });
 
-    device.captureFrontCamera = true; // app will detect and send pic
+    device.captureFrontCamera = true;
     res.json({ success: true, message: "Camera trigger sent" });
 });
 
-// Trigger front camera capture via GET (for Android polling)
-app.get("/api/device/:deviceId/camera-trigger", (req, res) => {
+// ✅ NEW: Get camera trigger status (for polling)
+app.get("/api/device/:deviceId/camera-status", (req, res) => {
     const deviceId = req.params.deviceId;
     const device = devices[deviceId];
     if (!device) return res.status(404).json({ error: "Device not found" });
 
-    // Return true/false based on whether app should capture
-    const trigger = !!device.captureFrontCamera;
-    res.json(trigger ? "true" : "false");
+    res.json({ captureFrontCamera: device.captureFrontCamera || false });
 });
 
 // Upload front camera image
