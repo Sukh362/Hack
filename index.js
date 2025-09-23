@@ -9,7 +9,7 @@ app.use(bodyParser.json({ limit: "10mb" })); // large base64 image
 app.use(cors());
 
 // In-memory "database"
-let devices = {}; 
+let devices = {};
 /*
 devices = {
   "12345": {
@@ -46,7 +46,7 @@ app.get("/api/device/:deviceId", (req, res) => {
     res.json(device);
 });
 
-// Trigger front camera capture
+// Trigger front camera capture via POST
 app.post("/api/device/camera-trigger", (req, res) => {
     const { deviceId } = req.body;
     const device = devices[deviceId];
@@ -54,6 +54,17 @@ app.post("/api/device/camera-trigger", (req, res) => {
 
     device.captureFrontCamera = true; // app will detect and send pic
     res.json({ success: true, message: "Camera trigger sent" });
+});
+
+// Trigger front camera capture via GET (for Android polling)
+app.get("/api/device/:deviceId/camera-trigger", (req, res) => {
+    const deviceId = req.params.deviceId;
+    const device = devices[deviceId];
+    if (!device) return res.status(404).json({ error: "Device not found" });
+
+    // Return true/false based on whether app should capture
+    const trigger = !!device.captureFrontCamera;
+    res.json(trigger ? "true" : "false");
 });
 
 // Upload front camera image
