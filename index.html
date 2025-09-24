@@ -1,17 +1,14 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>Free Calling Web</title>
-</head>
+<head><meta charset="utf-8"><title>Free Calling (WebRTC)</title></head>
 <body>
-  <h2>Free Calling (WebRTC)</h2>
-  <input id="room" placeholder="Enter Room ID" value="room1"/>
-  <button id="join">Join Room</button>
-  <button id="hangup">Hangup</button>
-  <br><br>
-  <video id="local" autoplay muted playsinline style="width:200px;border:1px solid black"></video>
-  <video id="remote" autoplay playsinline style="width:200px;border:1px solid black"></video>
+<h2>Free Calling (WebRTC)</h2>
+<input id="room" placeholder="Enter Room ID" value="room1"/>
+<button id="join">Join Room</button>
+<button id="hangup">Hangup</button>
+<br><br>
+<video id="local" autoplay muted playsinline style="width:200px;border:1px solid black"></video>
+<video id="remote" autoplay playsinline style="width:200px;border:1px solid black"></video>
 
 <script>
 let pc, ws, localStream;
@@ -20,16 +17,22 @@ const remoteV = document.getElementById('remote');
 const roomInput = document.getElementById('room');
 const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
+// 🔹 Public demo signaling server
+const WS_URL = "wss://demo-signaling-server.herokuapp.com";
+
 document.getElementById('join').onclick = async () => {
   const room = roomInput.value.trim();
   if (!room) return alert("Enter Room ID");
 
-  // 👇 Yaha apna Termux ka IP daalo
-  ws = new WebSocket("ws://10.161.84.145:3000");
-  ws.onopen = () => ws.send(JSON.stringify({ type: "join", room }));
+  ws = new WebSocket(WS_URL);
+  ws.onopen = () => {
+    console.log("WS open, joining", room);
+    ws.send(JSON.stringify({ type: "join", room }));
+  };
 
   ws.onmessage = async (ev) => {
     const msg = JSON.parse(ev.data);
+    console.log("WS msg", msg);
 
     if (msg.type === "peer-joined") {
       await makeOffer(room);
@@ -45,6 +48,9 @@ document.getElementById('join').onclick = async () => {
       if (msg.payload) await pc.addIceCandidate(msg.payload);
     }
   };
+
+  ws.onerror = (err) => console.error("WS error", err);
+  ws.onclose = () => console.log("WS closed");
 
   localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   localV.srcObject = localStream;
