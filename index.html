@@ -1,82 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Free Calling (WebRTC)</title></head>
-<body>
-<h2>Free Calling (WebRTC)</h2>
-<input id="room" placeholder="Enter Room ID" value="room1"/>
-<button id="join">Join Room</button>
-<button id="hangup">Hangup</button>
-<br><br>
-<video id="local" autoplay muted playsinline style="width:200px;border:1px solid black"></video>
-<video id="remote" autoplay playsinline style="width:200px;border:1px solid black"></video>
-
-<script>
-let pc, ws, localStream;
-const localV = document.getElementById('local');
-const remoteV = document.getElementById('remote');
-const roomInput = document.getElementById('room');
-const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
-// 🔹 Public demo signaling server
-const WS_URL = "wss://demo-signaling-server.herokuapp.com";
-
-document.getElementById('join').onclick = async () => {
-  const room = roomInput.value.trim();
-  if (!room) return alert("Enter Room ID");
-
-  ws = new WebSocket(WS_URL);
-  ws.onopen = () => {
-    console.log("WS open, joining", room);
-    ws.send(JSON.stringify({ type: "join", room }));
-  };
-
-  ws.onmessage = async (ev) => {
-    const msg = JSON.parse(ev.data);
-    console.log("WS msg", msg);
-
-    if (msg.type === "peer-joined") {
-      await makeOffer(room);
-    } else if (msg.type === "offer") {
-      await ensurePC();
-      await pc.setRemoteDescription(msg.payload);
-      const ans = await pc.createAnswer();
-      await pc.setLocalDescription(ans);
-      ws.send(JSON.stringify({ type: "answer", room, payload: pc.localDescription }));
-    } else if (msg.type === "answer") {
-      await pc.setRemoteDescription(msg.payload);
-    } else if (msg.type === "ice") {
-      if (msg.payload) await pc.addIceCandidate(msg.payload);
+<head>
+  <title>Image to Video Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #111;
+      color: white;
     }
-  };
+    #canvas {
+      border: 2px solid #00f0ff;
+      margin-top: 20px;
+    }
+    input {
+      margin: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #00f0ff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0099ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🖼️ Image to Video Generator</h1>
+  <input type="file" id="imageUpload" multiple accept="image/*"><br>
+  <button onclick="generateVideo()">Generate Video</button>
+  <br><br>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <br><br>
+  <a id="downloadLink" style="display:none;" download="output.webm">⬇ Download Video</a>
 
-  ws.onerror = (err) => console.error("WS error", err);
-  ws.onclose = () => console.log("WS closed");
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let images = [];
 
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  localV.srcObject = localStream;
-};
+    document.getElementById("imageUpload").addEventListener("change", (e) => {
+      images = [];
+      for (let file of e.target.files) {
+        let img = new Image();
+        img.src = URL.createObjectURL(file);
+        images.push(img);
+      }
+    });
 
-async function ensurePC() {
-  if (pc) return;
-  pc = new RTCPeerConnection(config);
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  pc.onicecandidate = e => {
-    if (e.candidate) ws.send(JSON.stringify({ type: "ice", room: roomInput.value, payload: e.candidate }));
-  };
-  pc.ontrack = e => { remoteV.srcObject = e.streams[0]; };
-}
+    async function generateVideo() {
+      if (images.length === 0) {
+        alert("Please upload some images first!");
+        return;
+      }
 
-async function makeOffer(room) {
-  await ensurePC();
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  ws.send(JSON.stringify({ type: "offer", room, payload: pc.localDescription }));
-}
+      let stream = canvas.captureStream();
+      let recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+      let chunks = [];
 
-document.getElementById('hangup').onclick = () => {
-  if (pc) pc.close();
-  if (ws) ws.close();
-};
-</script>
+      recorder.ondataavailable = (e) => chunks.push(e.data);
+      recorder.onstop = (e) => {
+        let blob = new Blob(chunks, { type: "video/webm" });
+        let url = URL.createObjectURL(blob);
+        let link = document.getElementById("downloadLink");
+        link.href = url;
+        link.style.display = "inline-block";
+      };
+
+      recorder.start();
+
+      for (let img of images) {
+        await new Promise((resolve) => {
+          img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            setTimeout(resolve, 1000); // 1 second per image
+          };
+          if (img.complete) img.onload();
+        });
+      }
+
+      recorder.stop();
+    }
+  </script>
 </body>
 </html>
