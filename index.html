@@ -1,77 +1,603 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Guard Web Panel</title>
-<style>
-    body { font-family: Arial, sans-serif; background:#111; color:#eee; padding:20px; }
-    h1 { color:#00f; }
-    pre { background:#222; padding:10px; border-radius:8px; overflow-x:auto; }
-    section { margin-bottom:30px; }
-    .folder { margin-left:20px; }
-</style>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guard Web Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6C63FF;
+            --secondary: #4A44C6;
+            --dark: #121212;
+            --darker: #0A0A0A;
+            --light: #F5F5F7;
+            --card-bg: #1E1E2E;
+            --success: #00D4AA;
+            --warning: #FFB74D;
+            --danger: #FF6B6B;
+            --info: #4FC3F7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo i {
+            font-size: 2.5rem;
+            color: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .status-item i {
+            color: var(--success);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .card-title i {
+            color: var(--primary);
+            font-size: 1.4rem;
+        }
+
+        .card-content {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .battery-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .battery-level {
+            height: 25px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .battery-fill {
+            height: 100%;
+            border-radius: 12px;
+            background: linear-gradient(90deg, var(--success), #00FFB3);
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .battery-percent {
+            font-weight: 700;
+            font-size: 1.2rem;
+            min-width: 50px;
+        }
+
+        .location-map {
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .location-map i {
+            font-size: 3rem;
+            color: var(--primary);
+            opacity: 0.7;
+        }
+
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .app-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .app-name {
+            font-size: 0.7rem;
+            text-align: center;
+            max-width: 70px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .files-container {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            transition: background 0.2s ease;
+        }
+
+        .file-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .file-icon {
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .file-size {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .loading i {
+            margin-right: 10px;
+            animation: spin 1.5s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .status-bar {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>Guard Web Panel</h1>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <i class="fas fa-circle pulse"></i>
+                    <span>Live Data</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-wifi"></i>
+                    <span>Connected</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="current-time">Loading...</span>
+                </div>
+            </div>
+        </header>
 
-<h1>Guard Web Panel</h1>
+        <div class="dashboard">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-mobile-alt"></i>
+                        <h2>Device Info</h2>
+                    </div>
+                    <i class="fas fa-ellipsis-h"></i>
+                </div>
+                <div class="card-content">
+                    <div class="loading" id="device-loading">
+                        <i class="fas fa-spinner"></i>
+                        <span>Loading device information...</span>
+                    </div>
+                    <pre id="device" style="display: none;"></pre>
+                </div>
+            </div>
 
-<section>
-<h2>Device Info</h2>
-<pre id="device">Loading...</pre>
-</section>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-battery-half"></i>
+                        <h2>Battery</h2>
+                    </div>
+                    <i class="fas fa-ellipsis-h"></i>
+                </div>
+                <div class="card-content">
+                    <div class="loading" id="battery-loading">
+                        <i class="fas fa-spinner"></i>
+                        <span>Loading battery information...</span>
+                    </div>
+                    <div id="battery-content" style="display: none;">
+                        <div class="battery-container">
+                            <div class="battery-level">
+                                <div class="battery-fill" id="battery-fill"></div>
+                            </div>
+                            <div class="battery-percent" id="battery-percent">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<section>
-<h2>Battery</h2>
-<pre id="battery">Loading...</pre>
-</section>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <h2>Location</h2>
+                    </div>
+                    <i class="fas fa-ellipsis-h"></i>
+                </div>
+                <div class="card-content">
+                    <div class="loading" id="location-loading">
+                        <i class="fas fa-spinner"></i>
+                        <span>Loading location information...</span>
+                    </div>
+                    <div id="location-content" style="display: none;">
+                        <pre id="location"></pre>
+                        <div class="location-map">
+                            <i class="fas fa-map"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<section>
-<h2>Location</h2>
-<pre id="location">Loading...</pre>
-</section>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-th-large"></i>
+                        <h2>Installed Apps</h2>
+                    </div>
+                    <i class="fas fa-ellipsis-h"></i>
+                </div>
+                <div class="card-content">
+                    <div class="loading" id="apps-loading">
+                        <i class="fas fa-spinner"></i>
+                        <span>Loading apps information...</span>
+                    </div>
+                    <div id="apps-content" style="display: none;">
+                        <pre id="apps"></pre>
+                        <div class="apps-grid" id="apps-grid"></div>
+                    </div>
+                </div>
+            </div>
 
-<section>
-<h2>Installed Apps</h2>
-<pre id="apps">Loading...</pre>
-</section>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-folder"></i>
+                        <h2>My Files</h2>
+                    </div>
+                    <i class="fas fa-ellipsis-h"></i>
+                </div>
+                <div class="card-content">
+                    <div class="loading" id="files-loading">
+                        <i class="fas fa-spinner"></i>
+                        <span>Loading files information...</span>
+                    </div>
+                    <div id="files-content" style="display: none;">
+                        <pre id="myfiles"></pre>
+                        <div class="files-container" id="files-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<section>
-<h2>My Files</h2>
-<pre id="myfiles">Loading...</pre>
-</section>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-<script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyBu_kO8o411oUbAz0QiYUTmrOhaxf1gLyM",
-    authDomain: "guard-22007.firebaseapp.com",
-    databaseURL: "https://guard-22007-default-rtdb.firebaseio.com",
-    projectId: "guard-22007",
-    storageBucket: "guard-22007.appspot.com",
-    messagingSenderId: "166908422013",
-    appId: "1:166908422013:android:3f6f845b720257c188ce14"
-  };
+    <script>
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString();
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const dbRef = firebase.database().ref('responses/structured_data');
+        // Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBu_kO8o411oUbAz0QiYUTmrOhaxf1gLyM",
+            authDomain: "guard-22007.firebaseapp.com",
+            databaseURL: "https://guard-22007-default-rtdb.firebaseio.com",
+            projectId: "guard-22007",
+            storageBucket: "guard-22007.appspot.com",
+            messagingSenderId: "166908422013",
+            appId: "1:166908422013:android:3f6f845b720257c188ce14"
+        };
 
-  // Listen for changes in Firebase
-  dbRef.on('value', snapshot => {
-      const data = snapshot.val();
-      if(!data) return;
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const dbRef = firebase.database().ref('responses/structured_data');
 
-      document.getElementById('device').textContent = JSON.stringify(data.Device, null, 2);
-      document.getElementById('battery').textContent = data.Battery + "%";
-      document.getElementById('location').textContent = JSON.stringify(data.Location, null, 2);
-      document.getElementById('apps').textContent = JSON.stringify(data.Apps, null, 2);
-      document.getElementById('myfiles').textContent = JSON.stringify(data.MyFiles, null, 2);
-  });
-</script>
+        // Listen for changes in Firebase
+        dbRef.on('value', snapshot => {
+            const data = snapshot.val();
+            if(!data) return;
 
+            // Hide loading indicators and show content
+            document.getElementById('device-loading').style.display = 'none';
+            document.getElementById('device').style.display = 'block';
+            document.getElementById('battery-loading').style.display = 'none';
+            document.getElementById('battery-content').style.display = 'block';
+            document.getElementById('location-loading').style.display = 'none';
+            document.getElementById('location-content').style.display = 'block';
+            document.getElementById('apps-loading').style.display = 'none';
+            document.getElementById('apps-content').style.display = 'block';
+            document.getElementById('files-loading').style.display = 'none';
+            document.getElementById('files-content').style.display = 'block';
+
+            // Update device info
+            if (data.Device) {
+                document.getElementById('device').textContent = JSON.stringify(data.Device, null, 2);
+            }
+
+            // Update battery info
+            if (data.Battery) {
+                const batteryPercent = data.Battery + "%";
+                document.getElementById('battery-percent').textContent = batteryPercent;
+                document.getElementById('battery-fill').style.width = batteryPercent;
+                
+                // Change color based on battery level
+                if (data.Battery < 20) {
+                    document.getElementById('battery-fill').style.background = "linear-gradient(90deg, var(--danger), #FF8A8A)";
+                } else if (data.Battery < 50) {
+                    document.getElementById('battery-fill').style.background = "linear-gradient(90deg, var(--warning), #FFD180)";
+                }
+            }
+
+            // Update location info
+            if (data.Location) {
+                document.getElementById('location').textContent = JSON.stringify(data.Location, null, 2);
+            }
+
+            // Update apps info
+            if (data.Apps) {
+                document.getElementById('apps').textContent = JSON.stringify(data.Apps, null, 2);
+                
+                // Create app icons for visualization
+                const appsGrid = document.getElementById('apps-grid');
+                appsGrid.innerHTML = '';
+                
+                // Sample app icons (in a real scenario, you would use actual app data)
+                const sampleApps = ['Settings', 'Camera', 'Chrome', 'Maps', 'Photos', 'Messages', 'Phone', 'WhatsApp'];
+                
+                sampleApps.forEach(app => {
+                    const appItem = document.createElement('div');
+                    appItem.className = 'app-item';
+                    
+                    const appIcon = document.createElement('div');
+                    appIcon.className = 'app-icon';
+                    appIcon.innerHTML = `<i class="fas fa-mobile-alt"></i>`;
+                    
+                    const appName = document.createElement('div');
+                    appName.className = 'app-name';
+                    appName.textContent = app;
+                    
+                    appItem.appendChild(appIcon);
+                    appItem.appendChild(appName);
+                    appsGrid.appendChild(appItem);
+                });
+            }
+
+            // Update files info
+            if (data.MyFiles) {
+                document.getElementById('myfiles').textContent = JSON.stringify(data.MyFiles, null, 2);
+                
+                // Create file items for visualization
+                const filesContainer = document.getElementById('files-container');
+                filesContainer.innerHTML = '';
+                
+                // Sample files (in a real scenario, you would use actual file data)
+                const sampleFiles = [
+                    { name: 'document.pdf', size: '2.4 MB', type: 'pdf' },
+                    { name: 'image.jpg', size: '1.8 MB', type: 'image' },
+                    { name: 'video.mp4', size: '15.7 MB', type: 'video' },
+                    { name: 'notes.txt', size: '24 KB', type: 'text' }
+                ];
+                
+                sampleFiles.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    
+                    const fileIcon = document.createElement('div');
+                    fileIcon.className = 'file-icon';
+                    
+                    // Set appropriate icon based on file type
+                    if (file.type === 'pdf') {
+                        fileIcon.innerHTML = '<i class="fas fa-file-pdf"></i>';
+                    } else if (file.type === 'image') {
+                        fileIcon.innerHTML = '<i class="fas fa-file-image"></i>';
+                    } else if (file.type === 'video') {
+                        fileIcon.innerHTML = '<i class="fas fa-file-video"></i>';
+                    } else {
+                        fileIcon.innerHTML = '<i class="fas fa-file-alt"></i>';
+                    }
+                    
+                    const fileInfo = document.createElement('div');
+                    fileInfo.className = 'file-info';
+                    
+                    const fileName = document.createElement('div');
+                    fileName.className = 'file-name';
+                    fileName.textContent = file.name;
+                    
+                    const fileSize = document.createElement('div');
+                    fileSize.className = 'file-size';
+                    fileSize.textContent = file.size;
+                    
+                    fileInfo.appendChild(fileName);
+                    fileInfo.appendChild(fileSize);
+                    
+                    fileItem.appendChild(fileIcon);
+                    fileItem.appendChild(fileInfo);
+                    
+                    filesContainer.appendChild(fileItem);
+                });
+            }
+        });
+    </script>
 </body>
 </html>
