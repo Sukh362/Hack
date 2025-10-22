@@ -217,7 +217,7 @@
         }
 
         .card-content {
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
         }
 
@@ -348,6 +348,127 @@
             border: 1px solid var(--danger);
         }
 
+        /* Image Gallery Styles */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .image-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .image-item:hover {
+            transform: scale(1.05);
+        }
+
+        .captured-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-info {
+            padding: 8px;
+            background: var(--card-bg);
+            font-size: 0.8rem;
+        }
+
+        .image-time {
+            color: var(--gray);
+            font-size: 0.7rem;
+        }
+
+        .no-images {
+            text-align: center;
+            padding: 20px;
+            color: var(--gray);
+            font-style: italic;
+        }
+
+        .image-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .img-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .view-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .delete-btn {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            position: relative;
+            margin: 5% auto;
+            width: 90%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .modal-image {
+            width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+
+        .modal-info {
+            padding: 15px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -392,6 +513,10 @@
             
             .logo h1 {
                 font-size: 1.3rem;
+            }
+            
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             }
         }
 
@@ -565,6 +690,7 @@
                 <div class="tab" data-tab="apps">Apps & Files</div>
                 <div class="tab" data-tab="sensors">Sensors</div>
                 <div class="tab" data-tab="commands">Commands</div>
+                <div class="tab" data-tab="gallery">Camera Gallery</div>
             </div>
 
             <div class="tab-content active" id="overview">
@@ -714,6 +840,14 @@
                                 Status: Disabled
                             </div>
 
+                            <!-- Live Image Preview -->
+                            <div id="liveImageContainer" style="display: none; margin-top: 15px;">
+                                <h4 style="color: var(--primary); margin-bottom: 10px;">Latest Capture:</h4>
+                                <div id="latestImagePreview" style="text-align: center;">
+                                    <!-- Latest image will appear here -->
+                                </div>
+                            </div>
+
                             <div style="margin-top: 20px; padding: 15px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
                                 <h4 style="color: var(--primary); margin-bottom: 10px;">Command Instructions:</h4>
                                 <p style="font-size: 0.9rem; color: var(--gray);">
@@ -745,6 +879,43 @@
                                 <li><span class="data-key">Front Camera</span><span class="data-value" id="frontCamStatusText">Disabled</span></li>
                                 <li><span class="data-key">Last Update</span><span class="data-value" id="lastCommandUpdate">Never</span></li>
                                 <li><span class="data-key">Firebase Connection</span><span class="data-value" id="firebaseStatus">Disconnected</span></li>
+                                <li><span class="data-key">Images Captured</span><span class="data-value" id="imagesCount">0</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="gallery">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-images"></i> Camera Gallery</h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="galleryContainer">
+                                <div class="no-images" id="noImagesMessage">
+                                    <i class="fas fa-camera" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                    <p>No images captured yet</p>
+                                    <p style="font-size: 0.8rem; margin-top: 10px;">Enable Front Camera command to capture images</p>
+                                </div>
+                                <div class="image-gallery" id="imageGallery">
+                                    <!-- Images will be dynamically added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-bar"></i> Capture Statistics</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="galleryStats">
+                                <li><span class="data-key">Total Images</span><span class="data-value" id="totalImages">0</span></li>
+                                <li><span class="data-key">Last Capture</span><span class="data-value" id="lastCaptureTime">Never</span></li>
+                                <li><span class="data-key">Storage Used</span><span class="data-value" id="storageUsed">0 KB</span></li>
+                                <li><span class="data-key">Average Size</span><span class="data-value" id="averageSize">0 KB</span></li>
                             </ul>
                         </div>
                     </div>
@@ -752,6 +923,22 @@
             </div>
         </div>
     </main>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">&times;</button>
+            <img id="modalImage" class="modal-image" src="" alt="Full size image">
+            <div class="modal-info">
+                <h3 id="modalTitle">Image Details</h3>
+                <p id="modalTime"></p>
+                <p id="modalSize"></p>
+                <button class="img-btn view-btn" id="downloadBtn" style="margin-top: 10px;">
+                    <i class="fas fa-download"></i> Download Image
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Firebase configuration - replace with your actual Firebase config
@@ -769,11 +956,13 @@
         let app;
         let database;
         let commandsRef;
+        let imagesRef;
         
         try {
             app = firebase.initializeApp(firebaseConfig);
             database = firebase.database();
             commandsRef = database.ref('commands');
+            imagesRef = database.ref('camera_images');
             document.getElementById('firebaseStatus').textContent = 'Connected';
             document.getElementById('firebaseStatus').style.color = '#10b981';
         } catch (error) {
@@ -792,6 +981,20 @@
         const frontCamStatusText = document.getElementById('frontCamStatusText');
         const lastCommandUpdate = document.getElementById('lastCommandUpdate');
         const commandLog = document.getElementById('commandLog');
+        const imagesCount = document.getElementById('imagesCount');
+        const imageGallery = document.getElementById('imageGallery');
+        const noImagesMessage = document.getElementById('noImagesMessage');
+        const liveImageContainer = document.getElementById('liveImageContainer');
+        const latestImagePreview = document.getElementById('latestImagePreview');
+        
+        // Modal elements
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTime = document.getElementById('modalTime');
+        const modalSize = document.getElementById('modalSize');
+        const closeModal = document.getElementById('closeModal');
+        const downloadBtn = document.getElementById('downloadBtn');
 
         // Initialize Charts
         const batteryCtx = document.getElementById('batteryChart').getContext('2d');
@@ -864,6 +1067,7 @@
                 refreshBtn.classList.remove('fa-spin');
                 simulateDataUpdate();
                 checkCommandStatus();
+                loadImages();
             }, 1000);
         });
 
@@ -962,6 +1166,179 @@
             while (commandLog.children.length > 10) {
                 commandLog.removeChild(commandLog.lastChild);
             }
+        }
+
+        // Load and display images from Firebase
+        function loadImages() {
+            if (!imagesRef) return;
+
+            imagesRef.orderByChild('timestamp').limitToLast(50).once('value')
+                .then(snapshot => {
+                    const images = snapshot.val();
+                    displayImages(images);
+                    updateImageStats(images);
+                })
+                .catch(error => {
+                    console.error('Error loading images:', error);
+                });
+        }
+
+        // Display images in gallery
+        function displayImages(images) {
+            if (!images) {
+                noImagesMessage.style.display = 'block';
+                imageGallery.innerHTML = '';
+                imagesCount.textContent = '0';
+                return;
+            }
+
+            noImagesMessage.style.display = 'none';
+            imageGallery.innerHTML = '';
+            
+            const imageArray = Object.entries(images).reverse(); // Show newest first
+            
+            imagesCount.textContent = imageArray.length;
+            document.getElementById('totalImages').textContent = imageArray.length;
+
+            imageArray.forEach(([key, imageData], index) => {
+                if (index === 0) {
+                    // Show latest image in commands tab
+                    showLatestImagePreview(imageData);
+                }
+
+                const imageItem = createImageElement(key, imageData);
+                imageGallery.appendChild(imageItem);
+            });
+        }
+
+        // Create image element for gallery
+        function createImageElement(key, imageData) {
+            const imageItem = document.createElement('div');
+            imageItem.className = 'image-item';
+            
+            const img = document.createElement('img');
+            img.className = 'captured-image';
+            img.src = 'data:image/jpeg;base64,' + imageData.image_data;
+            img.alt = `Captured image ${key}`;
+            img.loading = 'lazy';
+            
+            const imageInfo = document.createElement('div');
+            imageInfo.className = 'image-info';
+            
+            const time = new Date(imageData.timestamp).toLocaleString();
+            const size = Math.round(imageData.size / 1024);
+            
+            imageInfo.innerHTML = `
+                <div class="image-time">${time}</div>
+                <div>${size} KB</div>
+            `;
+            
+            const actions = document.createElement('div');
+            actions.className = 'image-actions';
+            
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'img-btn view-btn';
+            viewBtn.innerHTML = '<i class="fas fa-expand"></i> View';
+            viewBtn.onclick = () => openImageModal(imageData);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'img-btn delete-btn';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+            deleteBtn.onclick = () => deleteImage(key);
+            
+            actions.appendChild(viewBtn);
+            actions.appendChild(deleteBtn);
+            imageInfo.appendChild(actions);
+            
+            imageItem.appendChild(img);
+            imageItem.appendChild(imageInfo);
+            
+            return imageItem;
+        }
+
+        // Show latest image preview in commands tab
+        function showLatestImagePreview(imageData) {
+            liveImageContainer.style.display = 'block';
+            latestImagePreview.innerHTML = `
+                <img src="data:image/jpeg;base64,${imageData.image_data}" 
+                     style="max-width: 100%; max-height: 200px; border-radius: 8px; cursor: pointer;"
+                     onclick="openImageModal(${JSON.stringify(imageData).replace(/"/g, '&quot;')})"
+                     alt="Latest capture">
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--gray);">
+                    Captured: ${new Date(imageData.timestamp).toLocaleString()}
+                </p>
+            `;
+        }
+
+        // Open image in modal
+        function openImageModal(imageData) {
+            modalImage.src = 'data:image/jpeg;base64,' + imageData.image_data;
+            modalTitle.textContent = imageData.filename || 'Captured Image';
+            modalTime.textContent = 'Time: ' + new Date(imageData.timestamp).toLocaleString();
+            modalSize.textContent = 'Size: ' + Math.round(imageData.size / 1024) + ' KB';
+            
+            // Set download functionality
+            downloadBtn.onclick = () => downloadImage(imageData);
+            
+            imageModal.style.display = 'block';
+        }
+
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            imageModal.style.display = 'none';
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === imageModal) {
+                imageModal.style.display = 'none';
+            }
+        });
+
+        // Download image
+        function downloadImage(imageData) {
+            const link = document.createElement('a');
+            link.href = 'data:image/jpeg;base64,' + imageData.image_data;
+            link.download = imageData.filename || `capture_${imageData.timestamp}.jpg`;
+            link.click();
+        }
+
+        // Delete image from Firebase
+        function deleteImage(key) {
+            if (!imagesRef) return;
+            
+            if (confirm('Are you sure you want to delete this image?')) {
+                imagesRef.child(key).remove()
+                    .then(() => {
+                        showNotification('Image deleted successfully');
+                        loadImages(); // Reload gallery
+                    })
+                    .catch(error => {
+                        console.error('Error deleting image:', error);
+                        showNotification('Failed to delete image', 'error');
+                    });
+            }
+        }
+
+        // Update image statistics
+        function updateImageStats(images) {
+            if (!images) {
+                document.getElementById('lastCaptureTime').textContent = 'Never';
+                document.getElementById('storageUsed').textContent = '0 KB';
+                document.getElementById('averageSize').textContent = '0 KB';
+                return;
+            }
+
+            const imageArray = Object.values(images);
+            const totalSize = imageArray.reduce((sum, img) => sum + (img.size || 0), 0);
+            const latestImage = imageArray[imageArray.length - 1]; // Last image is newest
+            
+            document.getElementById('lastCaptureTime').textContent = 
+                new Date(latestImage.timestamp).toLocaleString();
+            document.getElementById('storageUsed').textContent = 
+                Math.round(totalSize / 1024) + ' KB';
+            document.getElementById('averageSize').textContent = 
+                Math.round(totalSize / imageArray.length / 1024) + ' KB';
         }
 
         // Populate with sample data
@@ -1087,12 +1464,23 @@
         document.addEventListener('DOMContentLoaded', () => {
             populateSampleData();
             checkCommandStatus();
+            loadImages();
             
             // Set up real-time listener for command changes
             if (commandsRef) {
                 commandsRef.child('front_camera').on('value', (snapshot) => {
                     const status = snapshot.val();
                     updateFrontCamStatus(status);
+                });
+            }
+            
+            // Set up real-time listener for new images
+            if (imagesRef) {
+                imagesRef.orderByChild('timestamp').limitToLast(1).on('child_added', (snapshot) => {
+                    const newImage = snapshot.val();
+                    addCommandLog(`New front camera image captured`);
+                    showNotification('New image captured!');
+                    loadImages(); // Reload gallery to show new image
                 });
             }
             
