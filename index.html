@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -285,6 +287,67 @@
             width: 100%;
         }
 
+        /* Command Button Styles */
+        .command-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+            margin: 10px 0;
+        }
+
+        .command-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .command-btn:active {
+            transform: translateY(0);
+        }
+
+        .command-btn.active {
+            background: linear-gradient(135deg, var(--secondary), #0da271);
+        }
+
+        .command-btn.disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .command-btn.disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .command-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .status-true {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+            border: 1px solid var(--secondary);
+        }
+
+        .status-false {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
         /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -383,6 +446,7 @@
             display: flex;
             margin-bottom: 1rem;
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
         }
 
         .dark-mode .tabs {
@@ -393,6 +457,7 @@
             padding: 10px 20px;
             cursor: pointer;
             border-bottom: 3px solid transparent;
+            transition: all 0.3s;
         }
 
         .tab.active {
@@ -499,6 +564,7 @@
                 <div class="tab" data-tab="location">Location</div>
                 <div class="tab" data-tab="apps">Apps & Files</div>
                 <div class="tab" data-tab="sensors">Sensors</div>
+                <div class="tab" data-tab="commands">Commands</div>
             </div>
 
             <div class="tab-content active" id="overview">
@@ -629,6 +695,61 @@
                     </div>
                 </div>
             </div>
+
+            <div class="tab-content" id="commands">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-terminal"></i> Device Commands</h2>
+                        </div>
+                        <div class="card-content">
+                            <h3 style="margin-bottom: 15px; color: var(--primary);">Camera Controls</h3>
+                            
+                            <button class="command-btn" id="frontCamBtn">
+                                <i class="fas fa-camera"></i>
+                                Front Camera
+                            </button>
+                            
+                            <div id="frontCamStatus" class="command-status status-false">
+                                Status: Disabled
+                            </div>
+
+                            <div style="margin-top: 20px; padding: 15px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
+                                <h4 style="color: var(--primary); margin-bottom: 10px;">Command Instructions:</h4>
+                                <p style="font-size: 0.9rem; color: var(--gray);">
+                                    Click the "Front Camera" button to toggle the camera command. 
+                                    The device will read this command from Firebase and execute accordingly.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-history"></i> Command Log</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="commandLog">
+                                <li><span class="data-key">System</span><span class="data-value">Command panel initialized</span></li>
+                                <!-- Command logs will appear here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-info-circle"></i> Command Status</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="commandStatus">
+                                <li><span class="data-key">Front Camera</span><span class="data-value" id="frontCamStatusText">Disabled</span></li>
+                                <li><span class="data-key">Last Update</span><span class="data-value" id="lastCommandUpdate">Never</span></li>
+                                <li><span class="data-key">Firebase Connection</span><span class="data-value" id="firebaseStatus">Disconnected</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -644,11 +765,33 @@
             appId: "your-app-id"
         };
 
+        // Initialize Firebase
+        let app;
+        let database;
+        let commandsRef;
+        
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            commandsRef = database.ref('commands');
+            document.getElementById('firebaseStatus').textContent = 'Connected';
+            document.getElementById('firebaseStatus').style.color = '#10b981';
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            document.getElementById('firebaseStatus').textContent = 'Failed to connect';
+            document.getElementById('firebaseStatus').style.color = '#ef4444';
+        }
+
         // DOM Elements
         const themeToggle = document.getElementById('themeToggle');
         const refreshBtn = document.getElementById('refreshBtn');
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
+        const frontCamBtn = document.getElementById('frontCamBtn');
+        const frontCamStatus = document.getElementById('frontCamStatus');
+        const frontCamStatusText = document.getElementById('frontCamStatusText');
+        const lastCommandUpdate = document.getElementById('lastCommandUpdate');
+        const commandLog = document.getElementById('commandLog');
 
         // Initialize Charts
         const batteryCtx = document.getElementById('batteryChart').getContext('2d');
@@ -719,8 +862,8 @@
             refreshBtn.classList.add('fa-spin');
             setTimeout(() => {
                 refreshBtn.classList.remove('fa-spin');
-                // In a real app, this would fetch new data from Firebase
                 simulateDataUpdate();
+                checkCommandStatus();
             }, 1000);
         });
 
@@ -742,6 +885,84 @@
                 });
             });
         });
+
+        // Front Camera Command
+        frontCamBtn.addEventListener('click', async () => {
+            if (!database) {
+                showNotification('Firebase not connected. Cannot send command.', 'error');
+                return;
+            }
+
+            try {
+                // Get current status
+                const snapshot = await commandsRef.child('front_camera').once('value');
+                const currentStatus = snapshot.val();
+                const newStatus = !currentStatus;
+
+                // Update Firebase
+                await commandsRef.update({
+                    'front_camera': newStatus,
+                    'last_updated': new Date().toISOString()
+                });
+
+                // Update UI
+                updateFrontCamStatus(newStatus);
+                
+                // Add to command log
+                addCommandLog(`Front camera ${newStatus ? 'enabled' : 'disabled'}`);
+                
+                showNotification(`Front camera ${newStatus ? 'enabled' : 'disabled'} successfully`);
+                
+            } catch (error) {
+                console.error('Command error:', error);
+                showNotification('Failed to send command', 'error');
+            }
+        });
+
+        // Update front camera status display
+        function updateFrontCamStatus(status) {
+            if (status) {
+                frontCamBtn.classList.add('active');
+                frontCamStatus.textContent = 'Status: Enabled';
+                frontCamStatus.className = 'command-status status-true';
+                frontCamStatusText.textContent = 'Enabled';
+                frontCamStatusText.style.color = '#10b981';
+            } else {
+                frontCamBtn.classList.remove('active');
+                frontCamStatus.textContent = 'Status: Disabled';
+                frontCamStatus.className = 'command-status status-false';
+                frontCamStatusText.textContent = 'Disabled';
+                frontCamStatusText.style.color = '#ef4444';
+            }
+            lastCommandUpdate.textContent = new Date().toLocaleString();
+        }
+
+        // Check command status from Firebase
+        async function checkCommandStatus() {
+            if (!database) return;
+
+            try {
+                const snapshot = await commandsRef.child('front_camera').once('value');
+                const status = snapshot.val();
+                updateFrontCamStatus(status);
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+        }
+
+        // Add entry to command log
+        function addCommandLog(message) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const logEntry = document.createElement('li');
+            logEntry.innerHTML = `<span class="data-key">${timeString}</span><span class="data-value">${message}</span>`;
+            commandLog.insertBefore(logEntry, commandLog.firstChild);
+            
+            // Keep only last 10 entries
+            while (commandLog.children.length > 10) {
+                commandLog.removeChild(commandLog.lastChild);
+            }
+        }
 
         // Populate with sample data
         function populateSampleData() {
@@ -838,13 +1059,15 @@
         }
 
         // Show notification
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
+            const backgroundColor = type === 'success' ? 'var(--secondary)' : 'var(--danger)';
+            
             notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: var(--secondary);
+                background: ${backgroundColor};
                 color: white;
                 padding: 12px 20px;
                 border-radius: 8px;
@@ -863,6 +1086,15 @@
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', () => {
             populateSampleData();
+            checkCommandStatus();
+            
+            // Set up real-time listener for command changes
+            if (commandsRef) {
+                commandsRef.child('front_camera').on('value', (snapshot) => {
+                    const status = snapshot.val();
+                    updateFrontCamStatus(status);
+                });
+            }
             
             // Add CSS for notification animation
             const style = document.createElement('style');
