@@ -3,353 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guard Web Panel</title>
+    <title>Guard Service Monitor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: #6C63FF;
-            --secondary: #4A44C6;
-            --dark: #121212;
-            --darker: #0A0A0A;
-            --light: #F5F5F7;
-            --card-bg: #1E1E2E;
-            --success: #00D4AA;
-            --warning: #FFB74D;
-            --danger: #FF6B6B;
-            --info: #4FC3F7;
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --gray: #6b7280;
+            --card-bg: #ffffff;
+            --body-bg: #f3f4f6;
+        }
+
+        .dark-mode {
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --secondary: #34d399;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --dark: #f9fafb;
+            --light: #1f2937;
+            --gray: #9ca3af;
+            --card-bg: #374151;
+            --body-bg: #111827;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         body {
-            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
-            color: var(--light);
-            min-height: 100vh;
-            padding: 20px;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--dark);
+            line-height: 1.6;
             overflow-x: hidden;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            animation: fadeIn 0.8s ease-out;
+            padding: 0 20px;
         }
 
+        /* Header Styles */
         header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            flex-wrap: wrap;
-            gap: 20px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 15px;
-            animation: slideInLeft 0.8s ease-out;
+            gap: 10px;
         }
 
         .logo i {
-            font-size: 2.5rem;
-            color: var(--primary);
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: pulse 2s infinite;
+            font-size: 1.8rem;
         }
 
         .logo h1 {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .theme-toggle, .refresh-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .theme-toggle:hover, .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(15deg);
+        }
+
+        /* Main Content */
+        .dashboard {
+            padding: 2rem 0;
         }
 
         .status-bar {
             display: flex;
             gap: 15px;
-            animation: slideInRight 0.8s ease-out;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
         }
 
-        .status-item {
+        .status-card {
+            flex: 1;
+            min-width: 200px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 15px;
-            background: var(--card-bg);
-            border-radius: 20px;
+            gap: 15px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .status-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .status-icon.online {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--secondary);
+        }
+
+        .status-icon.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .status-icon.warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .status-info h3 {
             font-size: 0.9rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            color: var(--gray);
+            margin-bottom: 5px;
         }
 
-        .status-item:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        .status-info p {
+            font-size: 1.5rem;
+            font-weight: 600;
         }
 
-        .status-item i {
-            color: var(--success);
-        }
-
-        .dashboard {
+        /* Dashboard Grid */
+        .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
+            gap: 20px;
+            margin-bottom: 2rem;
         }
 
         .card {
             background: var(--card-bg);
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            animation: fadeInUp 0.6s ease-out;
-            animation-fill-mode: both;
-        }
-
-        .card:nth-child(1) { animation-delay: 0.1s; }
-        .card:nth-child(2) { animation-delay: 0.2s; }
-        .card:nth-child(3) { animation-delay: 0.3s; }
-        .card:nth-child(4) { animation-delay: 0.4s; }
-        .card:nth-child(5) { animation-delay: 0.5s; }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            animation: slideUp 0.5s ease-out;
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
         }
 
-        .card-title {
+        .dark-mode .card-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 1.2rem;
-            font-weight: 600;
         }
 
-        .card-title i {
+        .card-header h2 i {
             color: var(--primary);
-            font-size: 1.4rem;
         }
 
         .card-content {
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        pre {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            overflow-x: auto;
-            font-size: 0.85rem;
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            animation: fadeIn 0.5s ease-out;
         }
 
-        .battery-container {
+        /* Data Lists */
+        .data-list {
+            list-style: none;
+        }
+
+        .data-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
+            justify-content: space-between;
         }
 
-        .battery-level {
-            height: 25px;
+        .dark-mode .data-list li {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-list li:last-child {
+            border-bottom: none;
+        }
+
+        .data-key {
+            font-weight: 500;
+        }
+
+        .data-value {
+            color: var(--gray);
+            text-align: right;
+            max-width: 60%;
+            word-break: break-word;
+        }
+
+        /* Map Container */
+        .map-container {
+            height: 300px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .dark-mode .map-container {
+            background: #4b5563;
+        }
+
+        .map-placeholder {
             width: 100%;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .battery-fill {
             height: 100%;
-            border-radius: 12px;
-            background: linear-gradient(90deg, var(--success), #00FFB3);
-            transition: width 1s ease;
-            width: 0%;
-            animation: batteryFill 1.5s ease-out forwards;
-        }
-
-        .battery-percent {
-            font-weight: 700;
-            font-size: 1.2rem;
-            min-width: 50px;
-        }
-
-        .location-map {
-            height: 200px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .location-map i {
-            font-size: 3rem;
-            color: var(--primary);
-            opacity: 0.7;
-            animation: bounce 3s infinite;
-        }
-
-        .location-pin {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background: var(--danger);
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            animation: pinPulse 2s infinite;
-        }
-
-        .location-pin:after {
-            content: '';
-            width: 10px;
-            height: 10px;
-            margin: 5px 0 0 5px;
-            background: white;
-            position: absolute;
-            border-radius: 50%;
-        }
-
-        .apps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .app-item {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
-            transition: transform 0.3s ease;
-            animation: fadeIn 0.5s ease-out;
-            animation-fill-mode: both;
-        }
-
-        .app-item:nth-child(1) { animation-delay: 0.1s; }
-        .app-item:nth-child(2) { animation-delay: 0.2s; }
-        .app-item:nth-child(3) { animation-delay: 0.3s; }
-        .app-item:nth-child(4) { animation-delay: 0.4s; }
-        .app-item:nth-child(5) { animation-delay: 0.5s; }
-        .app-item:nth-child(6) { animation-delay: 0.6s; }
-
-        .app-item:hover {
-            transform: scale(1.1);
-        }
-
-        .app-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            color: var(--gray);
         }
 
-        .app-name {
-            font-size: 0.7rem;
-            text-align: center;
-            max-width: 70px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        .map-placeholder i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
         }
 
-        .files-container {
-            margin-top: 15px;
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            background: rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-            animation: slideInRight 0.5s ease-out;
-            animation-fill-mode: both;
-        }
-
-        .file-item:nth-child(1) { animation-delay: 0.1s; }
-        .file-item:nth-child(2) { animation-delay: 0.2s; }
-        .file-item:nth-child(3) { animation-delay: 0.3s; }
-        .file-item:nth-child(4) { animation-delay: 0.4s; }
-
-        .file-item:hover {
-            background: rgba(0, 0, 0, 0.3);
-            transform: translateX(5px);
-        }
-
-        .file-icon {
-            width: 30px;
-            height: 30px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-        }
-
-        .file-info {
-            flex: 1;
-        }
-
-        .file-name {
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .file-size {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .loading i {
-            margin-right: 10px;
-            animation: spin 1.5s linear infinite;
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
         }
 
         /* Animations */
@@ -358,416 +291,593 @@
             to { opacity: 1; }
         }
 
-        @keyframes fadeInUp {
-            from {
+        @keyframes slideUp {
+            from { 
                 opacity: 0;
-                transform: translateY(30px);
+                transform: translateY(20px);
             }
-            to {
+            to { 
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
-        @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
 
-        @keyframes batteryFill {
-            from { width: 0%; }
+        .pulse {
+            animation: pulse 2s infinite;
         }
 
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
-        }
-
-        @keyframes pinPulse {
-            0% { transform: rotate(-45deg) scale(1); }
-            50% { transform: rotate(-45deg) scale(1.2); }
-            100% { transform: rotate(-45deg) scale(1); }
-        }
-
-        /* Mobile Responsive Styles */
+        /* Responsive Design */
         @media (max-width: 768px) {
-            .dashboard {
+            .dashboard-grid {
                 grid-template-columns: 1fr;
             }
             
-            header {
-                flex-direction: column;
-                gap: 20px;
-                text-align: center;
-            }
-            
             .status-bar {
-                justify-content: center;
-                flex-wrap: wrap;
+                flex-direction: column;
             }
             
-            .card {
-                padding: 20px;
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
             }
             
             .logo h1 {
-                font-size: 1.8rem;
-            }
-            
-            .logo i {
-                font-size: 2rem;
+                font-size: 1.3rem;
             }
         }
 
-        @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-            
-            .card {
-                padding: 15px;
-            }
-            
-            .logo h1 {
-                font-size: 1.5rem;
-            }
-            
-            .status-item {
-                padding: 6px 12px;
-                font-size: 0.8rem;
-            }
-            
-            .card-title {
-                font-size: 1.1rem;
-            }
-            
-            .apps-grid {
-                grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-                gap: 10px;
-            }
-            
-            .app-icon {
-                width: 45px;
-                height: 45px;
-                font-size: 1rem;
-            }
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode .tabs {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .dark-mode ::-webkit-scrollbar-track {
+            background: #374151;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">
-                <i class="fas fa-shield-alt"></i>
-                <h1>Guard Web Panel</h1>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>Guard Service Monitor</h1>
+                </div>
+                <div class="controls">
+                    <button class="refresh-btn" id="refreshBtn">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
             </div>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <div class="container">
             <div class="status-bar">
-                <div class="status-item">
-                    <i class="fas fa-circle"></i>
-                    <span>Live Data</span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-wifi"></i>
-                    <span>Connected</span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-clock"></i>
-                    <span id="current-time">Loading...</span>
-                </div>
-            </div>
-        </header>
-
-        <div class="dashboard">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-mobile-alt"></i>
-                        <h2>Device Info</h2>
+                <div class="status-card">
+                    <div class="status-icon online pulse">
+                        <i class="fas fa-signal"></i>
                     </div>
-                    <i class="fas fa-ellipsis-h"></i>
-                </div>
-                <div class="card-content">
-                    <div class="loading" id="device-loading">
-                        <i class="fas fa-spinner"></i>
-                        <span>Loading device information...</span>
+                    <div class="status-info">
+                        <h3>Device Status</h3>
+                        <p>Online</p>
                     </div>
-                    <pre id="device" style="display: none;"></pre>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
+                <div class="status-card">
+                    <div class="status-icon warning">
                         <i class="fas fa-battery-half"></i>
-                        <h2>Battery</h2>
                     </div>
-                    <i class="fas fa-ellipsis-h"></i>
-                </div>
-                <div class="card-content">
-                    <div class="loading" id="battery-loading">
-                        <i class="fas fa-spinner"></i>
-                        <span>Loading battery information...</span>
-                    </div>
-                    <div id="battery-content" style="display: none;">
-                        <div class="battery-container">
-                            <div class="battery-level">
-                                <div class="battery-fill" id="battery-fill"></div>
-                            </div>
-                            <div class="battery-percent" id="battery-percent">0%</div>
-                        </div>
+                    <div class="status-info">
+                        <h3>Battery Level</h3>
+                        <p id="batteryLevel">65%</p>
                     </div>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
+                <div class="status-card">
+                    <div class="status-icon online">
+                        <i class="fas fa-wifi"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3>Network</h3>
+                        <p id="networkType">WiFi</p>
+                    </div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon online">
                         <i class="fas fa-map-marker-alt"></i>
-                        <h2>Location</h2>
                     </div>
-                    <i class="fas fa-ellipsis-h"></i>
+                    <div class="status-info">
+                        <h3>Location</h3>
+                        <p id="locationStatus">Active</p>
+                    </div>
                 </div>
-                <div class="card-content">
-                    <div class="loading" id="location-loading">
-                        <i class="fas fa-spinner"></i>
-                        <span>Loading location information...</span>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="overview">Overview</div>
+                <div class="tab" data-tab="location">Location</div>
+                <div class="tab" data-tab="apps">Apps & Files</div>
+                <div class="tab" data-tab="sensors">Sensors</div>
+            </div>
+
+            <div class="tab-content active" id="overview">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-microchip"></i> Device Information</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="deviceInfo">
+                                <!-- Device info will be populated here -->
+                            </ul>
+                        </div>
                     </div>
-                    <div id="location-content" style="display: none;">
-                        <pre id="location"></pre>
-                        <div class="location-map">
-                            <i class="fas fa-map"></i>
-                            <div class="location-pin"></div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-line"></i> Battery Status</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <canvas id="batteryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-network-wired"></i> Network Information</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="networkInfo">
+                                <!-- Network info will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-history"></i> Recent Activity</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="recentActivity">
+                                <!-- Recent activity will be populated here -->
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-th-large"></i>
-                        <h2>Installed Apps</h2>
+            <div class="tab-content" id="location">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-map-marked-alt"></i> Location Tracking</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="map-container">
+                                <div class="map-placeholder">
+                                    <i class="fas fa-map"></i>
+                                    <p>Interactive Map Loading...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <i class="fas fa-ellipsis-h"></i>
-                </div>
-                <div class="card-content">
-                    <div class="loading" id="apps-loading">
-                        <i class="fas fa-spinner"></i>
-                        <span>Loading apps information...</span>
-                    </div>
-                    <div id="apps-content" style="display: none;">
-                        <pre id="apps"></pre>
-                        <div class="apps-grid" id="apps-grid"></div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-info-circle"></i> Location Details</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="locationDetails">
+                                <!-- Location details will be populated here -->
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-folder"></i>
-                        <h2>My Files</h2>
+            <div class="tab-content" id="apps">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-mobile-alt"></i> Installed Apps</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="installedApps">
+                                <!-- Installed apps will be populated here -->
+                            </ul>
+                        </div>
                     </div>
-                    <i class="fas fa-ellipsis-h"></i>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-folder"></i> File System</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="fileSystem">
+                                <!-- File system info will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-content">
-                    <div class="loading" id="files-loading">
-                        <i class="fas fa-spinner"></i>
-                        <span>Loading files information...</span>
+            </div>
+
+            <div class="tab-content" id="sensors">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-compass"></i> Sensor Data</h2>
+                        </div>
+                        <div class="card-content">
+                            <ul class="data-list" id="sensorData">
+                                <!-- Sensor data will be populated here -->
+                            </ul>
+                        </div>
                     </div>
-                    <div id="files-content" style="display: none;">
-                        <pre id="myfiles"></pre>
-                        <div class="files-container" id="files-container"></div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-bar"></i> Sensor Charts</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <canvas id="sensorChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    </main>
 
     <script>
-        // Update current time
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('current-time').textContent = now.toLocaleTimeString();
-        }
-        setInterval(updateTime, 1000);
-        updateTime();
-
-        // Firebase config
+        // Firebase configuration - replace with your actual Firebase config
         const firebaseConfig = {
-            apiKey: "AIzaSyBu_kO8o411oUbAz0QiYUTmrOhaxf1gLyM",
+            apiKey: "your-api-key",
             authDomain: "guard-22007.firebaseapp.com",
             databaseURL: "https://guard-22007-default-rtdb.firebaseio.com",
             projectId: "guard-22007",
             storageBucket: "guard-22007.appspot.com",
-            messagingSenderId: "166908422013",
-            appId: "1:166908422013:android:3f6f845b720257c188ce14"
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
         };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const dbRef = firebase.database().ref('responses/structured_data');
+        // DOM Elements
+        const themeToggle = document.getElementById('themeToggle');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
 
-        // Listen for changes in Firebase
-        dbRef.on('value', snapshot => {
-            const data = snapshot.val();
-            if(!data) return;
-
-            // Hide loading indicators and show content
-            document.getElementById('device-loading').style.display = 'none';
-            document.getElementById('device').style.display = 'block';
-            document.getElementById('battery-loading').style.display = 'none';
-            document.getElementById('battery-content').style.display = 'block';
-            document.getElementById('location-loading').style.display = 'none';
-            document.getElementById('location-content').style.display = 'block';
-            document.getElementById('apps-loading').style.display = 'none';
-            document.getElementById('apps-content').style.display = 'block';
-            document.getElementById('files-loading').style.display = 'none';
-            document.getElementById('files-content').style.display = 'block';
-
-            // Update device info
-            if (data.Device) {
-                document.getElementById('device').textContent = JSON.stringify(data.Device, null, 2);
-            }
-
-            // Update battery info
-            if (data.Battery) {
-                const batteryPercent = data.Battery + "%";
-                document.getElementById('battery-percent').textContent = batteryPercent;
-                document.getElementById('battery-fill').style.width = batteryPercent;
-                
-                // Change color based on battery level
-                if (data.Battery < 20) {
-                    document.getElementById('battery-fill').style.background = "linear-gradient(90deg, var(--danger), #FF8A8A)";
-                } else if (data.Battery < 50) {
-                    document.getElementById('battery-fill').style.background = "linear-gradient(90deg, var(--warning), #FFD180)";
+        // Initialize Charts
+        const batteryCtx = document.getElementById('batteryChart').getContext('2d');
+        const batteryChart = new Chart(batteryCtx, {
+            type: 'line',
+            data: {
+                labels: ['10:00', '10:05', '10:10', '10:15', '10:20', '10:25'],
+                datasets: [{
+                    label: 'Battery Level (%)',
+                    data: [85, 80, 75, 70, 68, 65],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
                 }
             }
+        });
 
-            // Update location info
-            if (data.Location) {
-                document.getElementById('location').textContent = JSON.stringify(data.Location, null, 2);
+        const sensorCtx = document.getElementById('sensorChart').getContext('2d');
+        const sensorChart = new Chart(sensorCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Accelerometer X', 'Accelerometer Y', 'Accelerometer Z', 'Gyroscope X', 'Gyroscope Y', 'Gyroscope Z'],
+                datasets: [{
+                    label: 'Sensor Values',
+                    data: [0.12, -0.05, 9.81, 0.02, -0.01, 0.05],
+                    backgroundColor: [
+                        'rgba(99, 102, 241, 0.7)',
+                        'rgba(99, 102, 241, 0.7)',
+                        'rgba(99, 102, 241, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(16, 185, 129, 0.7)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
             }
+        });
 
-            // Update apps info
-            if (data.Apps) {
-                document.getElementById('apps').textContent = JSON.stringify(data.Apps, null, 2);
-                
-                // Create app icons for visualization
-                const appsGrid = document.getElementById('apps-grid');
-                appsGrid.innerHTML = '';
-                
-                // Sample app icons (in a real scenario, you would use actual app data)
-                const sampleApps = ['Settings', 'Camera', 'Chrome', 'Maps', 'Photos', 'Messages', 'Phone', 'WhatsApp'];
-                
-                sampleApps.forEach((app, index) => {
-                    const appItem = document.createElement('div');
-                    appItem.className = 'app-item';
-                    appItem.style.animationDelay = `${index * 0.1}s`;
-                    
-                    const appIcon = document.createElement('div');
-                    appIcon.className = 'app-icon';
-                    appIcon.innerHTML = `<i class="fas fa-mobile-alt"></i>`;
-                    
-                    const appName = document.createElement('div');
-                    appName.className = 'app-name';
-                    appName.textContent = app;
-                    
-                    appItem.appendChild(appIcon);
-                    appItem.appendChild(appName);
-                    appsGrid.appendChild(appItem);
-                });
+        // Theme Toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const icon = themeToggle.querySelector('i');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
             }
+        });
 
-            // Update files info
-            if (data.MyFiles) {
-                document.getElementById('myfiles').textContent = JSON.stringify(data.MyFiles, null, 2);
+        // Refresh Data
+        refreshBtn.addEventListener('click', () => {
+            refreshBtn.classList.add('fa-spin');
+            setTimeout(() => {
+                refreshBtn.classList.remove('fa-spin');
+                // In a real app, this would fetch new data from Firebase
+                simulateDataUpdate();
+            }, 1000);
+        });
+
+        // Tab Switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
                 
-                // Create file items for visualization
-                const filesContainer = document.getElementById('files-container');
-                filesContainer.innerHTML = '';
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
                 
-                // Sample files (in a real scenario, you would use actual file data)
-                const sampleFiles = [
-                    { name: 'document.pdf', size: '2.4 MB', type: 'pdf' },
-                    { name: 'image.jpg', size: '1.8 MB', type: 'image' },
-                    { name: 'video.mp4', size: '15.7 MB', type: 'video' },
-                    { name: 'notes.txt', size: '24 KB', type: 'text' }
-                ];
-                
-                sampleFiles.forEach((file, index) => {
-                    const fileItem = document.createElement('div');
-                    fileItem.className = 'file-item';
-                    fileItem.style.animationDelay = `${index * 0.1}s`;
-                    
-                    const fileIcon = document.createElement('div');
-                    fileIcon.className = 'file-icon';
-                    
-                    // Set appropriate icon based on file type
-                    if (file.type === 'pdf') {
-                        fileIcon.innerHTML = '<i class="fas fa-file-pdf"></i>';
-                    } else if (file.type === 'image') {
-                        fileIcon.innerHTML = '<i class="fas fa-file-image"></i>';
-                    } else if (file.type === 'video') {
-                        fileIcon.innerHTML = '<i class="fas fa-file-video"></i>';
-                    } else {
-                        fileIcon.innerHTML = '<i class="fas fa-file-alt"></i>';
+                // Show active tab content
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === tabId) {
+                        content.classList.add('active');
                     }
-                    
-                    const fileInfo = document.createElement('div');
-                    fileInfo.className = 'file-info';
-                    
-                    const fileName = document.createElement('div');
-                    fileName.className = 'file-name';
-                    fileName.textContent = file.name;
-                    
-                    const fileSize = document.createElement('div');
-                    fileSize.className = 'file-size';
-                    fileSize.textContent = file.size;
-                    
-                    fileInfo.appendChild(fileName);
-                    fileInfo.appendChild(fileSize);
-                    
-                    fileItem.appendChild(fileIcon);
-                    fileItem.appendChild(fileInfo);
-                    
-                    filesContainer.appendChild(fileItem);
                 });
+            });
+        });
+
+        // Populate with sample data
+        function populateSampleData() {
+            // Device Info
+            document.getElementById('deviceInfo').innerHTML = `
+                <li><span class="data-key">Device ID:</span><span class="data-value">a1b2c3d4e5f6</span></li>
+                <li><span class="data-key">Brand:</span><span class="data-value">Samsung</span></li>
+                <li><span class="data-key">Model:</span><span class="data-value">Galaxy S21</span></li>
+                <li><span class="data-key">OS Version:</span><span class="data-value">Android 12</span></li>
+                <li><span class="data-key">Last Update:</span><span class="data-value">2 minutes ago</span></li>
+            `;
+
+            // Network Info
+            document.getElementById('networkInfo').innerHTML = `
+                <li><span class="data-key">IP Address:</span><span class="data-value">192.168.1.105</span></li>
+                <li><span class="data-key">Connection Type:</span><span class="data-value">WiFi</span></li>
+                <li><span class="data-key">Signal Strength:</span><span class="data-value">Excellent</span></li>
+                <li><span class="data-key">Data Usage:</span><span class="data-value">1.2 GB</span></li>
+            `;
+
+            // Recent Activity
+            document.getElementById('recentActivity').innerHTML = `
+                <li><span class="data-key">Location Update</span><span class="data-value">2 min ago</span></li>
+                <li><span class="data-key">Battery Check</span><span class="data-value">5 min ago</span></li>
+                <li><span class="data-key">App List Refresh</span><span class="data-value">10 min ago</span></li>
+                <li><span class="data-key">File Scan</span><span class="data-value">15 min ago</span></li>
+            `;
+
+            // Location Details
+            document.getElementById('locationDetails').innerHTML = `
+                <li><span class="data-key">Latitude:</span><span class="data-value">28.6139° N</span></li>
+                <li><span class="data-key">Longitude:</span><span class="data-value">77.2090° E</span></li>
+                <li><span class="data-key">Accuracy:</span><span class="data-value">12 meters</span></li>
+                <li><span class="data-key">Last Update:</span><span class="data-value">2 minutes ago</span></li>
+                <li><span class="data-key">Provider:</span><span class="data-value">GPS</span></li>
+            `;
+
+            // Installed Apps
+            document.getElementById('installedApps').innerHTML = `
+                <li><span class="data-key">WhatsApp</span><span class="data-value">User App</span></li>
+                <li><span class="data-key">Instagram</span><span class="data-value">User App</span></li>
+                <li><span class="data-key">Google Maps</span><span class="data-value">System App</span></li>
+                <li><span class="data-key">Camera</span><span class="data-value">System App</span></li>
+                <li><span class="data-key">Chrome</span><span class="data-value">System App</span></li>
+            `;
+
+            // File System
+            document.getElementById('fileSystem').innerHTML = `
+                <li><span class="data-key">Download</span><span class="data-value">24 files</span></li>
+                <li><span class="data-key">DCIM</span><span class="data-value">156 files</span></li>
+                <li><span class="data-key">Documents</span><span class="data-value">18 files</span></li>
+                <li><span class="data-key">Movies</span><span class="data-value">5 files</span></li>
+            `;
+
+            // Sensor Data
+            document.getElementById('sensorData').innerHTML = `
+                <li><span class="data-key">Accelerometer X:</span><span class="data-value">0.12 m/s²</span></li>
+                <li><span class="data-key">Accelerometer Y:</span><span class="data-value">-0.05 m/s²</span></li>
+                <li><span class="data-key">Accelerometer Z:</span><span class="data-value">9.81 m/s²</span></li>
+                <li><span class="data-key">Gyroscope X:</span><span class="data-value">0.02 rad/s</span></li>
+                <li><span class="data-key">Gyroscope Y:</span><span class="data-value">-0.01 rad/s</span></li>
+                <li><span class="data-key">Gyroscope Z:</span><span class="data-value">0.05 rad/s</span></li>
+                <li><span class="data-key">Light Level:</span><span class="data-value">245 lux</span></li>
+                <li><span class="data-key">Proximity:</span><span class="data-value">5.2 cm</span></li>
+            `;
+        }
+
+        // Simulate data updates
+        function simulateDataUpdate() {
+            // Update battery level with random value between 60-70%
+            const newBatteryLevel = Math.floor(Math.random() * 10) + 60;
+            document.getElementById('batteryLevel').textContent = `${newBatteryLevel}%`;
+            
+            // Update battery chart
+            batteryChart.data.labels.push(new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+            batteryChart.data.datasets[0].data.push(newBatteryLevel);
+            
+            // Keep only last 6 data points
+            if (batteryChart.data.labels.length > 6) {
+                batteryChart.data.labels.shift();
+                batteryChart.data.datasets[0].data.shift();
             }
+            
+            batteryChart.update();
+            
+            // Update sensor data with small random variations
+            sensorChart.data.datasets[0].data = sensorChart.data.datasets[0].data.map(value => 
+                value + (Math.random() * 0.1 - 0.05)
+            );
+            sensorChart.update();
+            
+            // Show notification
+            showNotification('Data refreshed successfully');
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--secondary);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                animation: slideInRight 0.3s, slideOutRight 0.3s 2.7s;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            populateSampleData();
+            
+            // Add CSS for notification animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
         });
     </script>
 </body>
-    </html>
+</html>
