@@ -942,90 +942,93 @@ Google Maps: https://maps.google.com/?q={latitude},{longitude}
         print(f"❌ Legacy location upload error: {e}")
         return jsonify({'ok': False, 'error': f'Location save failed: {e}'}), 500
 
-# ✅ FILE DOWNLOAD ROUTES
-
+# File download route
 @app.route('/files/<filename>')
-def serve_file(filename):
+def download_file(filename):
+    """File download route"""
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(filepath):
-        return send_file(filepath)
-    else:
+    try:
+        return send_file(
+            os.path.join(app.config['UPLOAD_FOLDER'], filename),
+            as_attachment=True,
+            download_name=filename
+        )
+    except FileNotFoundError:
         return "File not found", 404
 
-# ✅ DEBUGGING ROUTES
-
-@app.route('/debug-filesystem')
-def debug_filesystem():
-    """Debug route to check file system status"""
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    upload_dir = app.config['UPLOAD_FOLDER']
-    device_dir = app.config['DEVICE_FOLDER']
-    notification_dir = app.config['NOTIFICATION_FOLDER']
-    
-    result = {
-        'upload_directory': {
-            'path': upload_dir,
-            'exists': os.path.exists(upload_dir),
-            'files': []
-        },
-        'device_directory': {
-            'path': device_dir,
-            'exists': os.path.exists(device_dir),
-            'files': []
-        },
-        'notification_directory': {
-            'path': notification_dir,
-            'exists': os.path.exists(notification_dir),
-            'files': []
-        }
-    }
-    
-    # Check upload directory
-    if os.path.exists(upload_dir):
-        try:
-            files = os.listdir(upload_dir)
-            for filename in files:
-                filepath = os.path.join(upload_dir, filename)
-                result['upload_directory']['files'].append({
-                    'name': filename,
-                    'size': os.path.getsize(filepath),
-                    'modified': time.ctime(os.path.getmtime(filepath))
-                })
-        except Exception as e:
-            result['upload_directory']['error'] = str(e)
-    
-    # Check device directory  
-    if os.path.exists(device_dir):
-        try:
-            files = os.listdir(device_dir)
-            for filename in files:
-                filepath = os.path.join(device_dir, filename)
-                result['device_directory']['files'].append({
-                    'name': filename,
-                    'size': os.path.getsize(filepath),
-                    'modified': time.ctime(os.path.getmtime(filepath))
-                })
-        except Exception as e:
-            result['device_directory']['error'] = str(e)
-    
-    return jsonify(result)
-
-@app.route('/device/<device_id>/refresh-files', methods=['POST'])
-def refresh_device_files(device_id):
-    """Manually refresh files for a device"""
+# File delete route
+@app.route('/delete-file/<filename>', methods=['POST'])
+def delete_file(filename):
+    """File delete route"""
     if not session.get('logged_in'):
         return jsonify({'ok': False, 'error': 'unauthorized'}), 401
     
     try:
-        # This will trigger the file scanning logic
-        return jsonify({'ok': True, 'message': 'Files refreshed successfully'})
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            return jsonify({'ok': True, 'message': 'File deleted'})
+        else:
+            return jsonify({'ok': False, 'error': 'File not found'}), 404
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
+
+# Clear all notifications for device
+@app.route('/device/<device_id>/clear-notifications', methods=['POST'])
+def clear_notifications(device_id):
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    try:
+        notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
+        if os.path.exists(notification_file):
+            os.remove(notification_file)
+        
+        return jsonify({'ok': True, 'message': 'All notifications cleared'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# Debug route to check devices
+@app.route('/debug-devices')
+def debug_devices():
+    devices = get_all_devices()
+    return jsonify({
+        'total_devices': len(devices),
+        'devices': devices
+    })
+
+# Debug route to check uploads
+@app.route('/debug-uploads')
+def debug_uploads():
+    """Debug route to check uploaded files"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    upload_dir = app.config['UPLOAD_FOLDER']
+    files = []
+    
+    try:
+        for filename in os.listdir(upload_dir):
+            filepath = os.path.join(upload_dir, filename)
+            files.append({
+                'name': filename,
+                'size': os.path.getsize(filepath),
+                'modified': time.ctime(os.path.getmtime(filepath)),
+                'path': filepath
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    
+    # Sort by modification time
+    files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
+    
+    return jsonify({
+        'upload_folder': upload_dir,
+        'total_files': len(files),
+        'files': files
+    })
 
 # ✅ HTML TEMPLATES
 
@@ -1386,6 +1389,78 @@ DEVICE_DASHBOARD_HTML = """
 </html>
 """
 
+# ✅ DEBUGGING ROUTES
+
+@app.route('/debug-filesystem')
+def debug_filesystem():
+    """Debug route to check file system status"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    upload_dir = app.config['UPLOAD_FOLDER']
+    device_dir = app.config['DEVICE_FOLDER']
+    notification_dir = app.config['NOTIFICATION_FOLDER']
+    
+    result = {
+        'upload_directory': {
+            'path': upload_dir,
+            'exists': os.path.exists(upload_dir),
+            'files': []
+        },
+        'device_directory': {
+            'path': device_dir,
+            'exists': os.path.exists(device_dir),
+            'files': []
+        },
+        'notification_directory': {
+            'path': notification_dir,
+            'exists': os.path.exists(notification_dir),
+            'files': []
+        }
+    }
+    
+    # Check upload directory
+    if os.path.exists(upload_dir):
+        try:
+            files = os.listdir(upload_dir)
+            for filename in files:
+                filepath = os.path.join(upload_dir, filename)
+                result['upload_directory']['files'].append({
+                    'name': filename,
+                    'size': os.path.getsize(filepath),
+                    'modified': time.ctime(os.path.getmtime(filepath))
+                })
+        except Exception as e:
+            result['upload_directory']['error'] = str(e)
+    
+    # Check device directory  
+    if os.path.exists(device_dir):
+        try:
+            files = os.listdir(device_dir)
+            for filename in files:
+                filepath = os.path.join(device_dir, filename)
+                result['device_directory']['files'].append({
+                    'name': filename,
+                    'size': os.path.getsize(filepath),
+                    'modified': time.ctime(os.path.getmtime(filepath))
+                })
+        except Exception as e:
+            result['device_directory']['error'] = str(e)
+    
+    return jsonify(result)
+
+@app.route('/device/<device_id>/refresh-files', methods=['POST'])
+def refresh_device_files(device_id):
+    """Manually refresh files for a device"""
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    try:
+        # This will trigger the file scanning logic
+        return jsonify({'ok': True, 'message': 'Files refreshed successfully'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # ✅ RUN THE APPLICATION
 
 if __name__ == '__main__':
@@ -1399,94 +1474,7 @@ if __name__ == '__main__':
     os.makedirs(app.config['DEVICE_FOLDER'], exist_ok=True)
     os.makedirs(app.config['NOTIFICATION_FOLDER'], exist_ok=True)
     
-    app.run(host='0.0.0.0', port=5000, debug=True)und: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin-bottom: 5px;
-        }
-        
-        .header-left p {
-            color: var(--gray);
-            font-size: 1rem;
-        }
-        
-        .device-info {
-            margin-top: 10px;
-            font-size: 0.9rem;
-            color: var(--gray);
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .device-info-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .header-right {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        
-        /* Button Styles */
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-logout {
-            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
-            color: white;
-        }
-        
-        .btn-back {
-            background: linear-gradient(135deg, var(--gray) 0%, #4b5563 100%);
-            color: white;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
-        }
-        
-        /* Control Sections */
-        .control-section {
-            background: rgba(31, 41, 55, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        }
-        
-        .section-title {
-            color: var(--light);
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
-            padding-bottom: 12px;
+    app.run(host='0.0.0.0', port=5000, debug=True)m: 12px;
         }
         
         /* Control Groups */
