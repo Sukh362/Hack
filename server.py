@@ -1,13 +1,13 @@
 import os
 import logging
-from flask import Flask, request, render_template, send_file, redirect, url_for, session, jsonify
+from flask import Flask, request, render_template_string, send_file, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
 from threading import Thread
 import time
 
 # Initialize Flask app FIRST
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-change-in-production'  # Important for sessions
+app.secret_key = 'your-secret-key-change-this-in-production-12345'
 app.config['UPLOAD_FOLDER'] = 'recordings'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
 
@@ -22,7 +22,7 @@ signal_listeners = []
 USERNAME = "admin"
 PASSWORD = "password"  # Change this in production
 
-# Login route
+# Login route - FIXED
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -31,8 +31,8 @@ def login():
         if username == USERNAME and password == PASSWORD:
             session['logged_in'] = True
             return redirect(url_for('dashboard'))
-        return render_template('login.html', error='Invalid credentials')
-    return render_template('login.html')
+        return render_template_string(LOGIN_HTML, error='Invalid credentials')
+    return render_template_string(LOGIN_HTML)
 
 @app.route('/logout')
 def logout():
@@ -48,14 +48,17 @@ def dashboard():
     # List audio files
     files = []
     upload_dir = app.config['UPLOAD_FOLDER']
-    for filename in os.listdir(upload_dir):
-        if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
-            filepath = os.path.join(upload_dir, filename)
-            files.append({
-                'name': filename,
-                'size': os.path.getsize(filepath),
-                'modified': os.path.getmtime(filepath)
-            })
+    try:
+        for filename in os.listdir(upload_dir):
+            if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
+                filepath = os.path.join(upload_dir, filename)
+                files.append({
+                    'name': filename,
+                    'size': os.path.getsize(filepath),
+                    'modified': os.path.getmtime(filepath)
+                })
+    except FileNotFoundError:
+        os.makedirs(upload_dir, exist_ok=True)
     
     # Sort by modification time (newest first)
     files.sort(key=lambda x: x['modified'], reverse=True)
@@ -74,20 +77,19 @@ def start_recording():
     
     # Notify all listeners
     for listener in signal_listeners:
-        listener['active'] = False  # Reset old listeners
+        listener['active'] = False
     
     return jsonify({'ok': True, 'message': 'Recording signal sent to app'})
 
 @app.route('/check-signal')
 def check_signal():
-    # This endpoint will be polled by Android app
     global recording_signal
     return jsonify({'record': recording_signal})
 
 @app.route('/signal-received', methods=['POST'])
 def signal_received():
     global recording_signal
-    recording_signal = False  # Reset signal after app acknowledges
+    recording_signal = False
     return jsonify({'ok': True})
 
 # File management routes
@@ -97,7 +99,12 @@ def serve_file(filename):
         return redirect(url_for('login'))
     
     safe_filename = secure_filename(filename)
-    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], safe_filename))
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+    
+    if not os.path.exists(filepath):
+        return "File not found", 404
+    
+    return send_file(filepath)
 
 @app.route('/delete/<filename>', methods=['POST'])
 def delete_file(filename):
@@ -135,7 +142,6 @@ def upload_recording():
     
     if audio_file:
         filename = secure_filename(audio_file.filename)
-        # Add timestamp to avoid overwrites
         name, ext = os.path.splitext(filename)
         timestamp = str(int(time.time()))
         filename = f"{name}_{timestamp}{ext}"
@@ -147,7 +153,41 @@ def upload_recording():
     
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
 
-# DASHBOARD_HTML template
+# LOGIN_HTML template
+LOGIN_HTML = """
+<!doctype html>
+<title>Login - Guard Recordings</title>
+<style>
+body{font-family:Inter,Arial;background:#f6f8fb;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.login-container{background:#fff;padding:40px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.1);width:100%;max-width:400px}
+h1{color:#0b74ff;text-align:center;margin-bottom:30px}
+.form-group{margin-bottom:20px}
+label{display:block;margin-bottom:8px;color:#555;font-weight:500}
+input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:16px;box-sizing:border-box}
+.btn-login{width:100%;padding:12px;background:#0b74ff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px}
+.btn-login:hover{background:#0056cc}
+.error{color:#dc3545;text-align:center;margin-top:15px}
+</style>
+<div class="login-container">
+    <h1>🔐 Guard Recordings</h1>
+    <form method="POST">
+        <div class="form-group">
+            <label>Username:</label>
+            <input type="text" name="username" required>
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn-login">Login</button>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+    </form>
+</div>
+"""
+
+# DASHBOARD_HTML template (same as before)
 DASHBOARD_HTML = """
 <!doctype html>
 <title>Guard Recordings</title>
@@ -203,7 +243,7 @@ audio{width:240px}
         <td><audio controls preload="none"><source src="{{ url_for('serve_file', filename=f.name) }}" type="audio/mp4"></audio></td>
         <td><a class="btn-small btn-download" href="{{ url_for('serve_file', filename=f.name) }}" download>⬇️ Download</a></td>
         <td>
-          <form method="post" action="{{ url_for('delete_file', filename=f.name) }}" onsubmit="return confirm('Delete file\\n\\n' + '{{f.name}}' + '\\n\\nThis cannot be undone. Continue?')">
+          <form method="post" action="{{ url_for('delete_file', filename=f.name) }}" onsubmit="return confirm('Delete file\\\\n\\\\n' + '{{f.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
             <button class="btn-small btn-delete" type="submit">Delete</button>
           </form>
         </td>
@@ -227,12 +267,11 @@ function startRecording() {
             document.getElementById('signalStatus').className = 'signal-status signal-active';
             document.getElementById('signalStatus').textContent = 'Signal: Active';
             
-            // Start checking if signal was received by app
             signalCheckInterval = setInterval(checkSignalStatus, 2000);
             
             setTimeout(() => {
                 stopRecording();
-            }, 30000); // Auto stop after 30 seconds
+            }, 30000);
         }
     })
     .catch(err => console.error('Error:', err));
@@ -251,7 +290,6 @@ function checkSignalStatus() {
     .then(r => r.json())
     .then(data => {
         if(!data.record) {
-            // Signal was received by app, reset UI
             stopRecording();
         }
     });
@@ -259,7 +297,7 @@ function checkSignalStatus() {
 </script>
 """
 
-# RECORDER_HTML template
+# RECORDER_HTML template (same as before)
 RECORDER_HTML = """
 <!doctype html>
 <title>Audio Recorder</title>
@@ -315,7 +353,6 @@ async function startRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Setup audio visualization
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
@@ -363,7 +400,6 @@ function stopRecording() {
         statusSpan.textContent = 'Recording Stopped';
         statusSpan.className = 'recording-status not-recording';
         
-        // Stop all tracks
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
 }
@@ -429,42 +465,6 @@ function visualize() {
     draw();
 }
 </script>
-"""
-
-# Login HTML template
-@app.route('/login-template')
-def login_template():
-    return """
-<!doctype html>
-<title>Login - Guard Recordings</title>
-<style>
-body{font-family:Inter,Arial;background:#f6f8fb;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-.login-container{background:#fff;padding:40px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.1);width:100%;max-width:400px}
-h1{color:#0b74ff;text-align:center;margin-bottom:30px}
-.form-group{margin-bottom:20px}
-label{display:block;margin-bottom:8px;color:#555;font-weight:500}
-input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:16px;box-sizing:border-box}
-.btn-login{width:100%;padding:12px;background:#0b74ff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px}
-.btn-login:hover{background:#0056cc}
-.error{color:#dc3545;text-align:center;margin-top:15px}
-</style>
-<div class="login-container">
-    <h1>🔐 Guard Recordings</h1>
-    <form method="POST">
-        <div class="form-group">
-            <label>Username:</label>
-            <input type="text" name="username" required>
-        </div>
-        <div class="form-group">
-            <label>Password:</label>
-            <input type="password" name="password" required>
-        </div>
-        <button type="submit" class="btn-login">Login</button>
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
-    </form>
-</div>
 """
 
 if __name__ == '__main__':
