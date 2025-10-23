@@ -233,7 +233,7 @@ input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px sol
 # DASHBOARD_HTML template - YE WALA USE KARO
 DASHBOARD_HTML = """
 <!doctype html>
-<title>Guard Recordings</title>
+<title>Guard Recordings & Camera</title>
 <style>
 body{font-family:Inter,Arial;padding:20px;background:#f6f8fb;color:#111}
 .container{max-width:1100px;margin:0 auto}
@@ -244,9 +244,13 @@ h1{color:#0b74ff;margin:0}
 .btn-start{background:#28a745;color:#fff}
 .btn-stop{background:#dc3545;color:#fff}
 .btn-recorder{background:#0b74ff;color:#fff;text-decoration:none;display:inline-block}
+.btn-camera{background:#ff6b00;color:#fff}
+.btn-camera-front{background:#17a2b8;color:#fff}
+.btn-camera-back{background:#6f42c1;color:#fff}
 .signal-status{padding:8px 12px;border-radius:6px;margin-left:12px;font-size:14px}
 .signal-active{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
 .signal-inactive{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.camera-active{background:#cce7ff;color:#004085;border:1px solid #b3d7ff}
 a.logout{background:#6c757d;color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none}
 table{width:100%;border-collapse:collapse;margin-top:18px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 6px 18px rgba(16,24,40,.06)}
 th,td{padding:12px 14px;border-bottom:1px solid #f1f5f9;text-align:left}
@@ -256,28 +260,55 @@ audio{width:240px}
 .btn-download{background:#eef6ff;color:#0b74ff;border:1px solid #d7ecff;text-decoration:none}
 .btn-delete{background:#dc3545;color:#fff;border:1px solid rgba(0,0,0,.06)}
 .small{font-size:13px;color:#666}
-.recording-controls{background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.recording-controls,.camera-controls{background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
 .control-group{margin-bottom:15px}
 .control-group label{display:block;margin-bottom:5px;font-weight:500}
 .control-group input{width:100px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px}
+.photo-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;margin-top:20px}
+.photo-item{border:1px solid #ddd;border-radius:8px;overflow:hidden}
+.photo-item img{width:100%;height:150px;object-fit:cover}
+.photo-info{padding:10px;background:#f8f9fa}
+.section-title{font-size:18px;font-weight:600;margin-bottom:15px;color:#333;border-bottom:2px solid #0b74ff;padding-bottom:5px}
 </style>
 <div class="container">
   <header>
-    <h1>🎧 Guard Recordings</h1>
+    <h1>🎧 Guard Recordings & Camera</h1>
     <div>
       <a class="logout" href="/logout" style="margin-right:12px">Logout</a>
       <a href="/recorder" class="btn-recorder btn-small">Recorder</a>
     </div>
   </header>
   
+  <!-- Camera Controls Section -->
+  <div class="camera-controls">
+    <div class="section-title">📸 Remote Camera Control</div>
+    
+    <div class="controls">
+      <button class="btn btn-camera-front" onclick="startCamera('front')">📱 Front Camera</button>
+      <button class="btn btn-camera-back" onclick="startCamera('back')">📷 Back Camera</button>
+      <button class="btn btn-stop" onclick="stopCamera()">⏹️ Stop Camera Signal</button>
+      <span id="cameraStatus" class="signal-status signal-inactive">Camera: Inactive</span>
+    </div>
+    
+    <div id="cameraInfo" class="small" style="margin-top:10px;color:#666;"></div>
+    
+    <!-- Photo Gallery -->
+    <div class="photo-gallery" id="photoGallery">
+      <!-- Photos yahan load hongi -->
+    </div>
+  </div>
+  
+  <!-- Recording Controls Section -->
   <div class="recording-controls">
+    <div class="section-title">🎤 Audio Recording Control</div>
+    
     <div class="control-group">
       <label for="recordTime">Recording Time (seconds):</label>
       <input type="number" id="recordTime" value="15" min="5" max="60">
     </div>
     
     <div class="controls">
-      <button class="btn btn-start" onclick="startRecording()">📱 Start Recording Signal</button>
+      <button class="btn btn-start" onclick="startRecording()">🎙️ Start Recording Signal</button>
       <button class="btn btn-stop" onclick="stopRecording()">⏹️ Stop Signal</button>
       <span id="signalStatus" class="signal-status signal-inactive">Signal: Inactive</span>
     </div>
@@ -289,14 +320,28 @@ audio{width:240px}
 
   <table>
     <thead>
-      <tr><th>Filename</th><th>Size (KB)</th><th>Play</th><th>Download</th><th>Delete</th></tr>
+      <tr><th>Filename</th><th>Size (KB)</th><th>Type</th><th>Play/View</th><th>Download</th><th>Delete</th></tr>
     </thead>
     <tbody>
     {% for f in files %}
       <tr>
         <td style="max-width:320px;word-break:break-all">{{ f.name }}</td>
         <td class="small">{{ '%.1f'|format(f.size / 1024) }}</td>
-        <td><audio controls preload="none"><source src="{{ url_for('serve_file', filename=f.name) }}" type="audio/mp4"></audio></td>
+        <td class="small">
+          {% if f.name.endswith('.jpg') or f.name.endswith('.jpeg') or f.name.endswith('.png') %}
+            📸 Photo
+          {% else %}
+            🎧 Audio
+          {% endif %}
+        </td>
+        <td>
+          {% if f.name.endswith('.jpg') or f.name.endswith('.jpeg') or f.name.endswith('.png') %}
+            <img src="{{ url_for('serve_file', filename=f.name) }}" style="width:80px;height:60px;object-fit:cover;border-radius:4px;cursor:pointer" 
+                 onclick="openPhoto('{{ url_for('serve_file', filename=f.name) }}')">
+          {% else %}
+            <audio controls preload="none"><source src="{{ url_for('serve_file', filename=f.name) }}" type="audio/mp4"></audio>
+          {% endif %}
+        </td>
         <td><a class="btn-small btn-download" href="{{ url_for('serve_file', filename=f.name) }}" download>⬇️ Download</a></td>
         <td>
           <form method="post" action="{{ url_for('delete_file', filename=f.name) }}" onsubmit="return confirm('Delete file\\\\n\\\\n' + '{{f.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
@@ -306,7 +351,7 @@ audio{width:240px}
       </tr>
     {% endfor %}
     {% if files|length == 0 %}
-      <tr><td colspan="5" class="small">No recordings yet.</td></tr>
+      <tr><td colspan="6" class="small">No files yet.</td></tr>
     {% endif %}
     </tbody>
   </table>
@@ -314,24 +359,20 @@ audio{width:240px}
 
 <script>
 let signalCheckInterval;
+let cameraCheckInterval;
 let recordingTime = 15;
 
+// Recording Functions
 function startRecording() {
-    // Get recording time from input
     recordingTime = parseInt(document.getElementById('recordTime').value) || 15;
-    
-    // Validate recording time
     if (recordingTime < 5) recordingTime = 5;
     if (recordingTime > 60) recordingTime = 60;
     
-    // Update display
     document.getElementById('recordingInfo').textContent = `Recording will be ${recordingTime} seconds`;
     
     fetch('/start-recording', { 
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ record_time: recordingTime })
     })
     .then(r => r.json())
@@ -340,21 +381,15 @@ function startRecording() {
             document.getElementById('signalStatus').className = 'signal-status signal-active';
             document.getElementById('signalStatus').textContent = 'Signal: Active';
             
-            // Start checking if signal was received by app
             signalCheckInterval = setInterval(checkSignalStatus, 2000);
-            
-            setTimeout(() => {
-                stopRecording();
-            }, 30000); // Auto stop after 30 seconds
+            setTimeout(() => stopRecording(), 30000);
         }
     })
     .catch(err => console.error('Error:', err));
 }
 
 function stopRecording() {
-    if(signalCheckInterval) {
-        clearInterval(signalCheckInterval);
-    }
+    if(signalCheckInterval) clearInterval(signalCheckInterval);
     document.getElementById('signalStatus').className = 'signal-status signal-inactive';
     document.getElementById('signalStatus').textContent = 'Signal: Inactive';
     document.getElementById('recordingInfo').textContent = '';
@@ -364,11 +399,61 @@ function checkSignalStatus() {
     fetch('/check-signal')
     .then(r => r.json())
     .then(data => {
-        if(!data.record) {
-            // Signal was received by app, reset UI
-            stopRecording();
-        }
+        if(!data.record) stopRecording();
     });
+}
+
+// Camera Functions
+function startCamera(cameraType) {
+    const cameraName = cameraType === 'front' ? 'Front' : 'Back';
+    document.getElementById('cameraInfo').textContent = `${cameraName} camera signal sent to app`;
+    
+    fetch('/start-camera-signal', { 
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ camera_type: cameraType })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.ok) {
+            document.getElementById('cameraStatus').className = 'signal-status camera-active';
+            document.getElementById('cameraStatus').textContent = `Camera: ${cameraName} Active`;
+            
+            cameraCheckInterval = setInterval(checkCameraStatus, 2000);
+            setTimeout(() => stopCamera(), 30000);
+        }
+    })
+    .catch(err => console.error('Error:', err));
+}
+
+function stopCamera() {
+    if(cameraCheckInterval) clearInterval(cameraCheckInterval);
+    document.getElementById('cameraStatus').className = 'signal-status signal-inactive';
+    document.getElementById('cameraStatus').textContent = 'Camera: Inactive';
+    document.getElementById('cameraInfo').textContent = '';
+}
+
+function checkCameraStatus() {
+    fetch('/check-camera-signal')
+    .then(r => r.json())
+    .then(data => {
+        if(!data.capture) stopCamera();
+    });
+}
+
+function openPhoto(photoUrl) {
+    window.open(photoUrl, '_blank');
+}
+
+// Load photos on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadPhotoGallery();
+});
+
+function loadPhotoGallery() {
+    // Recent photos display karega
+    const gallery = document.getElementById('photoGallery');
+    gallery.innerHTML = '<div class="small">Recent photos will appear here</div>';
 }
 
 // Update recording info when input changes
