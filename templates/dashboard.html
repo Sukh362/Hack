@@ -1,18 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Guard Dashboard</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Guard — Recordings</title>
+<style>
+  :root{--accent:#0b74ff;--danger:#dc3545;--muted:#666;}
+  body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f6f8fb;color:#111;margin:0;padding:24px;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  h1{margin:0;color:var(--accent);font-size:22px}
+  .logout{background:var(--danger);color:#fff;padding:8px 12px;border-radius:8px;text-decoration:none}
+  .notice{color:var(--muted);margin-top:8px}
+  table{width:100%;border-collapse:collapse;margin-top:16px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 6px 18px rgba(16,24,40,.06)}
+  th,td{padding:12px 14px;text-align:left;border-bottom:1px solid #f1f5f9}
+  th{background:linear-gradient(90deg,var(--accent),#3aa0ff);color:#fff;font-weight:600}
+  tr:last-child td{border-bottom:none}
+  td.actions{display:flex;gap:8px;align-items:center}
+  a.btn, button.btn{display:inline-block;padding:8px 10px;border-radius:6px;border:none;text-decoration:none;font-size:14px;cursor:pointer}
+  a.btn.download{background:#eef6ff;color:var(--accent);border:1px solid #d7ecff}
+  button.btn.delete{background:var(--danger);color:#fff;border:1px solid rgba(0,0,0,.06)}
+  audio{width:260px}
+  .small{font-size:13px;color:var(--muted)}
+</style>
 </head>
 <body>
-  <h2>Uploaded Recordings</h2>
-  <ul>
-    {% for file in files %}
-      <li>
-        <a href="{{ url_for('uploaded_file', filename=file) }}">{{ file }}</a>
-      </li>
-    {% endfor %}
-  </ul>
-  <br>
-  <a href="/logout">Logout</a>
+  <div class="wrap">
+    <header>
+      <h1>🎧 Guard Recordings</h1>
+      <a class="logout" href="/logout">Logout</a>
+    </header>
+
+    <p class="notice">Total files: <strong>{{ files|length }}</strong></p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Filename</th>
+          <th>Size (KB)</th>
+          <th>Play</th>
+          <th>Download</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for file in files %}
+        <tr>
+          <td style="max-width:320px;word-break:break-all">{{ file }}</td>
+          <td class="small">{{ "%.1f"|format((os.path.getsize('uploads/' + file) / 1024)) }}</td>
+          <td><audio controls preload="none"><source src="{{ url_for('serve_file', filename=file) }}" type="audio/mp4">Your browser doesn't support audio</audio></td>
+          <td><a class="btn download" href="{{ url_for('serve_file', filename=file) }}" download>⬇️ Download</a></td>
+          <td>
+            <form method="post" action="{{ url_for('delete_file', filename=file) }}" onsubmit="return confirmDelete('{{ file }}')">
+              <button type="submit" class="btn delete">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      {% if files|length == 0 %}
+        <tr><td colspan="5" class="small">No recordings yet.</td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+    <p class="small" style="margin-top:12px">Tip: Use the recorder at <code>/static/recorder.html</code> or your app to upload new files.</p>
+  </div>
+
+<script>
+function confirmDelete(name){
+  return confirm("Delete file\\n\\n"+name+"\\n\\nThis action cannot be undone. Continue?");
+}
+</script>
 </body>
 </html>
