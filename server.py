@@ -66,6 +66,7 @@ def dashboard():
     return render_template_string(DASHBOARD_HTML, files=files)
 
 # Recording signal routes
+# Recording signal routes - YE WALA USE KARO
 @app.route('/start-recording', methods=['POST'])
 def start_recording():
     if not session.get('logged_in'):
@@ -73,13 +74,20 @@ def start_recording():
     
     global recording_signal
     recording_signal = True
-    print("Recording signal activated")
+    
+    # Get recording time from request
+    record_time = 15  # default
+    if request.is_json:
+        data = request.get_json()
+        record_time = data.get('record_time', 15)
+    
+    print(f"Recording signal activated - {record_time} seconds")
     
     # Notify all listeners
     for listener in signal_listeners:
-        listener['active'] = False  # Reset old listeners
+        listener['active'] = False
     
-    return jsonify({'ok': True, 'message': 'Recording signal sent to app'})
+    return jsonify({'ok': True, 'message': f'Recording signal sent to app - {record_time}s', 'record_time': record_time})
 
 @app.route('/check-signal')
 def check_signal():
