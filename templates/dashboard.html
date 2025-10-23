@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Guard Dashboard</title>
+</head>
+<body>
+  <h2>Uploaded Recordings</h2>
+  <ul>
+    {% for file in files %}
+      <li>
+        <a href="{{ url_for('uploaded_file', filename=file) }}">{{ file }}</a>
+      </li>
+    {% endfor %}
+  </ul>
+  <br>
+  <a href="/logout">Logout</a>
+</body>
+</html>
