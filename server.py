@@ -4,6 +4,10 @@ import os
 app = Flask(__name__)
 app.secret_key = "supersecret"
 
+# hardcoded login credentials
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "guard123"
+
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -19,7 +23,10 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form['username'] == os.getenv('ADMIN_USERNAME') and request.form['password'] == os.getenv('ADMIN_PASSWORD'):
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             session['logged_in'] = True
             return redirect('/')
         else:
