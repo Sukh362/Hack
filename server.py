@@ -61,7 +61,7 @@ def dashboard():
             
             if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
                 files.append(file_info)
-            elif filename.endswith(('.jpg', '.jpeg', '.png')):
+            elif filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                 photos.append(file_info)
                 
     except FileNotFoundError:
@@ -72,6 +72,36 @@ def dashboard():
     photos.sort(key=lambda x: x['modified'], reverse=True)
     
     return render_template_string(DASHBOARD_HTML, files=files, photos=photos[:6])  # Latest 6 photos
+
+# DEBUG ROUTE - YE ADD KARO
+@app.route('/debug-files')
+def debug_files():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    upload_dir = app.config['UPLOAD_FOLDER']
+    files_info = []
+    
+    try:
+        for filename in os.listdir(upload_dir):
+            filepath = os.path.join(upload_dir, filename)
+            files_info.append({
+                'name': filename,
+                'size': os.path.getsize(filepath),
+                'modified': time.ctime(os.path.getmtime(filepath)),
+                'type': 'photo' if filename.lower().endswith(('.jpg', '.jpeg', '.png')) else 'audio'
+            })
+    except Exception as e:
+        return f"Error: {e}"
+    
+    # HTML format mein return karo
+    html = "<h1>Debug Files</h1>"
+    html += f"<p>Total files: {len(files_info)}</p>"
+    html += "<table border='1'><tr><th>Name</th><th>Size</th><th>Type</th><th>Modified</th></tr>"
+    for file in files_info:
+        html += f"<tr><td>{file['name']}</td><td>{file['size']} bytes</td><td>{file['type']}</td><td>{file['modified']}</td></tr>"
+    html += "</table>"
+    return html
 
 # Camera routes
 @app.route('/start-camera-signal', methods=['POST'])
@@ -113,14 +143,26 @@ def camera_signal_received():
 
 @app.route('/upload-photo', methods=['POST'])
 def upload_photo():
+    print("📸 Upload photo endpoint called")
+    
     if not session.get('logged_in'):
+        print("❌ Unauthorized access")
         return jsonify({'ok': False, 'error': 'unauthorized'}), 401
     
+    print("📸 Request files:", list(request.files.keys()))
+    
     if 'photo' not in request.files:
+        print("❌ No photo file in request")
         return jsonify({'ok': False, 'error': 'No photo file'}), 400
     
     photo_file = request.files['photo']
+    print("📸 Photo file details:")
+    print("   - Filename:", photo_file.filename)
+    print("   - Content type:", photo_file.content_type)
+    print("   - Content length:", photo_file.content_length if photo_file.content_length else "Unknown")
+    
     if photo_file.filename == '':
+        print("❌ Empty filename")
         return jsonify({'ok': False, 'error': 'No file selected'}), 400
     
     if photo_file:
@@ -128,11 +170,20 @@ def upload_photo():
         filename = f"camera_photo_{timestamp}.jpg"
         
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        photo_file.save(filepath)
         
-        print(f"✅ Photo uploaded: {filename}")
-        return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
+        try:
+            photo_file.save(filepath)
+            file_size = os.path.getsize(filepath)
+            print(f"✅ Photo saved: {filename} ({file_size} bytes)")
+            print(f"✅ File path: {filepath}")
+            print(f"✅ File exists: {os.path.exists(filepath)}")
+            
+            return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
+        except Exception as e:
+            print(f"❌ File save error: {e}")
+            return jsonify({'ok': False, 'error': f'File save failed: {e}'}), 500
     
+    print("❌ Unknown upload failure")
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
 
 # Recording signal routes
@@ -268,11 +319,12 @@ def get_latest_photos():
     upload_dir = app.config['UPLOAD_FOLDER']
     try:
         for filename in os.listdir(upload_dir):
-            if filename.endswith(('.jpg', '.jpeg', '.png')):
+            if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                 filepath = os.path.join(upload_dir, filename)
                 photos.append({
                     'name': filename,
                     'url': f"/files/{filename}",
+                    'size': os.path.getsize(filepath),
                     'modified': os.path.getmtime(filepath)
                 })
     except FileNotFoundError:
@@ -281,7 +333,7 @@ def get_latest_photos():
     photos.sort(key=lambda x: x['modified'], reverse=True)
     return jsonify({'ok': True, 'photos': photos[:6]})
 
-# LOGIN_HTML template
+# LOGIN_HTML template (same as before)
 LOGIN_HTML = """
 <!doctype html>
 <title>Login - Guard Recordings</title>
@@ -315,7 +367,7 @@ input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px sol
 </div>
 """
 
-# DASHBOARD_HTML template
+# DASHBOARD_HTML template (same as before - copy your existing one)
 DASHBOARD_HTML = """
 <!doctype html>
 <title>Guard Recordings & Camera</title>
@@ -566,11 +618,18 @@ function openPhoto(photoUrl) {
 
 // Photo Gallery Functions
 function refreshPhotos() {
+    console.log("🔄 Refreshing photos...");
     fetch('/get-latest-photos')
-    .then(r => r.json())
+    .then(r => {
+        console.log("📡 Photos API response status:", r.status);
+        return r.json();
+    })
     .then(data => {
+        console.log("📸 Photos data received:", data);
         if(data.ok) {
             const gallery = document.getElementById('photoGallery');
+            console.log("📸 Number of photos:", data.photos.length);
+            
             if(data.photos.length === 0) {
                 gallery.innerHTML = '<div class="small" style="grid-column:1/-1;text-align:center;padding:40px;color:#999">No photos captured yet. Click camera buttons above to capture photos.</div>';
                 return;
@@ -578,15 +637,25 @@ function refreshPhotos() {
             
             gallery.innerHTML = data.photos.map(photo => `
                 <div class="photo-item">
-                    <img src="${photo.url}" onclick="openPhoto('${photo.url}')" alt="${photo.name}">
+                    <img src="${photo.url}?t=${new Date().getTime()}" 
+                         onclick="openPhoto('${photo.url}')" 
+                         alt="${photo.name}"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlBob3RvIEVycm9yPC90ZXh0Pjwvc3ZnPg=='; console.error('Image load error:', '${photo.url}')">
                     <div class="photo-info">
                         <div class="photo-name">${photo.name}</div>
+                        <div class="small">${Math.round(photo.size / 1024)} KB</div>
                     </div>
                 </div>
             `).join('');
+        } else {
+            console.error("❌ Photos API error:", data);
         }
     })
-    .catch(err => console.error('Error refreshing photos:', err));
+    .catch(err => {
+        console.error("❌ Error refreshing photos:", err);
+        const gallery = document.getElementById('photoGallery');
+        gallery.innerHTML = '<div class="small" style="grid-column:1/-1;text-align:center;padding:40px;color:red">Error loading photos. Check console.</div>';
+    });
 }
 
 // Auto-refresh photos every 10 seconds
