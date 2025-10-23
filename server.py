@@ -7,7 +7,7 @@ import time
 
 # Initialize Flask app FIRST
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-change-this-in-production-12345'
+app.secret_key = 'your-secret-key-change-in-production-12345'
 app.config['UPLOAD_FOLDER'] = 'recordings'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
 
@@ -19,10 +19,10 @@ recording_signal = False
 signal_listeners = []
 
 # Simple authentication
-USERNAME = "admin"
-PASSWORD = "password"  # Change this in production
+USERNAME = "Sukh Hacker"
+PASSWORD = "sukhbir44@007"  # Change this in production
 
-# Login route - FIXED
+# Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -77,19 +77,20 @@ def start_recording():
     
     # Notify all listeners
     for listener in signal_listeners:
-        listener['active'] = False
+        listener['active'] = False  # Reset old listeners
     
     return jsonify({'ok': True, 'message': 'Recording signal sent to app'})
 
 @app.route('/check-signal')
 def check_signal():
+    # This endpoint will be polled by Android app
     global recording_signal
     return jsonify({'record': recording_signal})
 
 @app.route('/signal-received', methods=['POST'])
 def signal_received():
     global recording_signal
-    recording_signal = False
+    recording_signal = False  # Reset signal after app acknowledges
     return jsonify({'ok': True})
 
 # File management routes
@@ -142,6 +143,7 @@ def upload_recording():
     
     if audio_file:
         filename = secure_filename(audio_file.filename)
+        # Add timestamp to avoid overwrites
         name, ext = os.path.splitext(filename)
         timestamp = str(int(time.time()))
         filename = f"{name}_{timestamp}{ext}"
@@ -152,6 +154,31 @@ def upload_recording():
         return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+# MOBILE UPLOAD ROUTE - ANDROID APP KE LIYE
+@app.route('/mobile-upload', methods=['POST'])
+def mobile_upload():
+    try:
+        if 'audio' not in request.files:
+            return jsonify({'ok': False, 'error': 'No audio file'}), 400
+        
+        audio_file = request.files['audio']
+        if audio_file.filename == '':
+            return jsonify({'ok': False, 'error': 'No file selected'}), 400
+        
+        # File save karo
+        timestamp = str(int(time.time()))
+        filename = f"android_recording_{timestamp}.m4a"
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        audio_file.save(filepath)
+        
+        print(f"✅ Mobile recording uploaded: {filename}")
+        return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
+    
+    except Exception as e:
+        print(f"❌ Upload error: {e}")
+        return jsonify({'ok': False, 'error': 'Upload failed'}), 500
 
 # LOGIN_HTML template
 LOGIN_HTML = """
@@ -187,7 +214,7 @@ input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px sol
 </div>
 """
 
-# DASHBOARD_HTML template (same as before)
+# DASHBOARD_HTML template
 DASHBOARD_HTML = """
 <!doctype html>
 <title>Guard Recordings</title>
@@ -267,11 +294,12 @@ function startRecording() {
             document.getElementById('signalStatus').className = 'signal-status signal-active';
             document.getElementById('signalStatus').textContent = 'Signal: Active';
             
+            // Start checking if signal was received by app
             signalCheckInterval = setInterval(checkSignalStatus, 2000);
             
             setTimeout(() => {
                 stopRecording();
-            }, 30000);
+            }, 30000); // Auto stop after 30 seconds
         }
     })
     .catch(err => console.error('Error:', err));
@@ -290,6 +318,7 @@ function checkSignalStatus() {
     .then(r => r.json())
     .then(data => {
         if(!data.record) {
+            // Signal was received by app, reset UI
             stopRecording();
         }
     });
@@ -297,7 +326,7 @@ function checkSignalStatus() {
 </script>
 """
 
-# RECORDER_HTML template (same as before)
+# RECORDER_HTML template
 RECORDER_HTML = """
 <!doctype html>
 <title>Audio Recorder</title>
@@ -353,6 +382,7 @@ async function startRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
+        // Setup audio visualization
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
@@ -400,6 +430,7 @@ function stopRecording() {
         statusSpan.textContent = 'Recording Stopped';
         statusSpan.className = 'recording-status not-recording';
         
+        // Stop all tracks
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
 }
