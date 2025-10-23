@@ -222,6 +222,7 @@ input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px sol
 """
 
 # DASHBOARD_HTML template
+# DASHBOARD_HTML template - YE WALA USE KARO
 DASHBOARD_HTML = """
 <!doctype html>
 <title>Guard Recordings</title>
@@ -247,6 +248,10 @@ audio{width:240px}
 .btn-download{background:#eef6ff;color:#0b74ff;border:1px solid #d7ecff;text-decoration:none}
 .btn-delete{background:#dc3545;color:#fff;border:1px solid rgba(0,0,0,.06)}
 .small{font-size:13px;color:#666}
+.recording-controls{background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.control-group{margin-bottom:15px}
+.control-group label{display:block;margin-bottom:5px;font-weight:500}
+.control-group input{width:100px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px}
 </style>
 <div class="container">
   <header>
@@ -257,10 +262,19 @@ audio{width:240px}
     </div>
   </header>
   
-  <div class="controls">
-    <button class="btn btn-start" onclick="startRecording()">📱 Start Recording Signal</button>
-    <button class="btn btn-stop" onclick="stopRecording()">⏹️ Stop Signal</button>
-    <span id="signalStatus" class="signal-status signal-inactive">Signal: Inactive</span>
+  <div class="recording-controls">
+    <div class="control-group">
+      <label for="recordTime">Recording Time (seconds):</label>
+      <input type="number" id="recordTime" value="15" min="5" max="60">
+    </div>
+    
+    <div class="controls">
+      <button class="btn btn-start" onclick="startRecording()">📱 Start Recording Signal</button>
+      <button class="btn btn-stop" onclick="stopRecording()">⏹️ Stop Signal</button>
+      <span id="signalStatus" class="signal-status signal-inactive">Signal: Inactive</span>
+    </div>
+    
+    <div id="recordingInfo" class="small" style="margin-top:10px;color:#666;"></div>
   </div>
   
   <p class="small">Total files: <strong>{{ files|length }}</strong></p>
@@ -292,9 +306,26 @@ audio{width:240px}
 
 <script>
 let signalCheckInterval;
+let recordingTime = 15;
 
 function startRecording() {
-    fetch('/start-recording', { method: 'POST' })
+    // Get recording time from input
+    recordingTime = parseInt(document.getElementById('recordTime').value) || 15;
+    
+    // Validate recording time
+    if (recordingTime < 5) recordingTime = 5;
+    if (recordingTime > 60) recordingTime = 60;
+    
+    // Update display
+    document.getElementById('recordingInfo').textContent = `Recording will be ${recordingTime} seconds`;
+    
+    fetch('/start-recording', { 
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ record_time: recordingTime })
+    })
     .then(r => r.json())
     .then(data => {
         if(data.ok) {
@@ -318,6 +349,7 @@ function stopRecording() {
     }
     document.getElementById('signalStatus').className = 'signal-status signal-inactive';
     document.getElementById('signalStatus').textContent = 'Signal: Inactive';
+    document.getElementById('recordingInfo').textContent = '';
 }
 
 function checkSignalStatus() {
@@ -330,9 +362,15 @@ function checkSignalStatus() {
         }
     });
 }
+
+// Update recording info when input changes
+document.getElementById('recordTime').addEventListener('change', function() {
+    const time = parseInt(this.value) || 15;
+    if (time < 5) this.value = 5;
+    if (time > 60) this.value = 60;
+});
 </script>
 """
-
 # RECORDER_HTML template
 RECORDER_HTML = """
 <!doctype html>
