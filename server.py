@@ -154,16 +154,23 @@ def upload_recording():
         return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
-
-# MOBILE UPLOAD ROUTE - ANDROID APP KE LIYE
+# MOBILE UPLOAD ROUTE - ANDROID APP KE LIYE (NO LOGIN REQUIRED)
 @app.route('/mobile-upload', methods=['POST'])
 def mobile_upload():
     try:
-        if 'audio' not in request.files:
-            return jsonify({'ok': False, 'error': 'No audio file'}), 400
+        # Debug - check what files are being received
+        print("Files received:", list(request.files.keys()))
         
-        audio_file = request.files['audio']
-        if audio_file.filename == '':
+        # Android app 'file' naam se bhejta hai, web 'audio' naam se
+        audio_file = None
+        if 'file' in request.files:
+            audio_file = request.files['file']
+            print("Using 'file' field")
+        elif 'audio' in request.files:
+            audio_file = request.files['audio']
+            print("Using 'audio' field")
+        
+        if not audio_file or audio_file.filename == '':
             return jsonify({'ok': False, 'error': 'No file selected'}), 400
         
         # File save karo
@@ -173,7 +180,7 @@ def mobile_upload():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         audio_file.save(filepath)
         
-        print(f"✅ Mobile recording uploaded: {filename}")
+        print(f"✅ Mobile recording uploaded: {filename} ({os.path.getsize(filepath)} bytes)")
         return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     except Exception as e:
