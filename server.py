@@ -123,7 +123,7 @@ def start_camera_signal():
     return jsonify({'ok': True, 'message': f'{camera_type} camera signal sent'})
 
 @app.route('/check-camera-signal')
-def check_camera_signal():
+def check_camera_signals():
     global camera_signal
     if camera_signal and camera_signal.get('active'):
         if time.time() - camera_signal.get('timestamp', 0) < 30:
@@ -379,516 +379,1327 @@ def get_latest_photos():
     photos.sort(key=lambda x: x['modified'], reverse=True)
     return jsonify({'ok': True, 'photos': photos[:6]})
 
-# LOGIN_HTML template (same as before)
+# COOL BLACK THEME LOGIN PAGE
 LOGIN_HTML = """
 <!doctype html>
-<title>Login - Guard Recordings</title>
-<style>
-body{font-family:Inter,Arial;background:#f6f8fb;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-.login-container{background:#fff;padding:40px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.1);width:100%;max-width:400px}
-h1{color:#0b74ff;text-align:center;margin-bottom:30px}
-.form-group{margin-bottom:20px}
-label{display:block;margin-bottom:8px;color:#555;font-weight:500}
-input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px solid #ddd;border-radius:6px;font-size:16px;box-sizing:border-box}
-.btn-login{width:100%;padding:12px;background:#0b74ff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;margin-top:10px}
-.btn-login:hover{background:#0056cc}
-.error{color:#dc3545;text-align:center;margin-top:15px}
-</style>
-<div class="login-container">
-    <h1>🔐 Guard Recordings</h1>
-    <form method="POST">
-        <div class="form-group">
-            <label>Username:</label>
-            <input type="text" name="username" required>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Guard System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .login-container {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 183, 255, 0.1), transparent);
+            animation: shine 6s infinite linear;
+        }
+        
+        @keyframes shine {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo h1 {
+            color: #00b7ff;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            margin-bottom: 10px;
+        }
+        
+        .logo p {
+            color: #888;
+            font-size: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #00b7ff;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #00b7ff;
+            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .form-group input::placeholder {
+            color: #666;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-login:hover {
+            background: linear-gradient(135deg, #00ccff 0%, #00aadd 100%);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff4444;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .particle {
+            position: absolute;
+            background: rgba(0, 183, 255, 0.3);
+            border-radius: 50%;
+            animation: float 6s infinite ease-in-out;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <div class="login-container">
+        <div class="logo">
+            <h1>🚀 GUARD SYSTEM</h1>
+            <p>Secure Access Portal</p>
         </div>
-        <div class="form-group">
-            <label>Password:</label>
-            <input type="password" name="password" required>
-        </div>
-        <button type="submit" class="btn-login">Login</button>
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
-    </form>
-</div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>👤 Username</label>
+                <input type="text" name="username" required placeholder="Enter your username">
+            </div>
+            
+            <div class="form-group">
+                <label>🔒 Password</label>
+                <input type="password" name="password" required placeholder="Enter your password">
+            </div>
+            
+            <button type="submit" class="btn-login">🔓 Login to System</button>
+            
+            {% if error %}
+            <div class="error">⚠️ {{ error }}</div>
+            {% endif %}
+        </form>
+    </div>
+
+    <script>
+        // Create floating particles
+        const particlesContainer = document.getElementById('particles');
+        const particleCount = 15;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            const size = Math.random() * 20 + 5;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.left = `${Math.random() * 100}vw`;
+            particle.style.top = `${Math.random() * 100}vh`;
+            particle.style.animationDelay = `${Math.random() * 5}s`;
+            particle.style.opacity = Math.random() * 0.5 + 0.1;
+            
+            particlesContainer.appendChild(particle);
+        }
+        
+        // Add input focus effects
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.style.transform = 'scale(1.02)';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
 """
 
-# DASHBOARD_HTML template (same as your existing one)
+# COOL BLACK THEME DASHBOARD
 DASHBOARD_HTML = """
 <!doctype html>
-<title>Guard Recordings & Camera</title>
-<style>
-body{font-family:Inter,Arial;padding:20px;background:#f6f8fb;color:#111}
-.container{max-width:1100px;margin:0 auto}
-header{display:flex;justify-content:space-between;align-items:center}
-h1{color:#0b74ff;margin:0}
-.controls{margin:20px 0}
-.btn{padding:12px 24px;border-radius:8px;border:none;cursor:pointer;font-size:16px;margin-right:12px}
-.btn-start{background:#28a745;color:#fff}
-.btn-stop{background:#dc3545;color:#fff}
-.btn-recorder{background:#0b74ff;color:#fff;text-decoration:none;display:inline-block}
-.btn-camera-front{background:#17a2b8;color:#fff}
-.btn-camera-back{background:#6f42c1;color:#fff}
-.signal-status{padding:8px 12px;border-radius:6px;margin-left:12px;font-size:14px}
-.signal-active{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
-.signal-inactive{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
-.camera-active{background:#cce7ff;color:#004085;border:1px solid #b3d7ff}
-a.logout{background:#6c757d;color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none}
-table{width:100%;border-collapse:collapse;margin-top:18px;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 6px 18px rgba(16,24,40,.06)}
-th,td{padding:12px 14px;border-bottom:1px solid #f1f5f9;text-align:left}
-th{background:#0b74ff;color:#fff}
-audio{width:240px}
-.btn-small{padding:8px 10px;border-radius:6px;border:none;cursor:pointer;font-size:13px}
-.btn-download{background:#eef6ff;color:#0b74ff;border:1px solid #d7ecff;text-decoration:none}
-.btn-delete{background:#dc3545;color:#fff;border:1px solid rgba(0,0,0,.06)}
-.small{font-size:13px;color:#666}
-.recording-controls,.camera-controls{background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
-.control-group{margin-bottom:15px}
-.control-group label{display:block;margin-bottom:5px;font-weight:500}
-.control-group input{width:100px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px}
-.photo-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;margin-top:20px}
-.photo-item{border:1px solid #ddd;border-radius:8px;overflow:hidden;background:#fff}
-.photo-item img{width:100%;height:150px;object-fit:cover;cursor:pointer;transition:transform 0.2s}
-.photo-item img:hover{transform:scale(1.05)}
-.photo-info{padding:10px;background:#f8f9fa;border-top:1px solid #eee}
-.photo-name{font-size:12px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.section-title{font-size:18px;font-weight:600;margin-bottom:15px;color:#333;border-bottom:2px solid #0b74ff;padding-bottom:5px}
-.refresh-btn{background:#6c757d;color:#fff;padding:8px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-left:10px}
-</style>
-<div class="container">
-  <header>
-    <h1>🎧 Guard Recordings & Camera</h1>
-    <div>
-      <a class="logout" href="/logout" style="margin-right:12px">Logout</a>
-      <a href="/recorder" class="btn-recorder btn-small">Recorder</a>
-    </div>
-  </header>
-  
-  <!-- Camera Controls Section -->
-  <div class="camera-controls">
-    <div class="section-title">
-      📸 Remote Camera Control 
-      <button class="refresh-btn" onclick="refreshPhotos()">🔄 Refresh Photos</button>
-    </div>
-    
-    <div class="controls">
-      <button class="btn btn-camera-front" onclick="startCamera('front')">📱 Front Camera</button>
-      <button class="btn btn-camera-back" onclick="startCamera('back')">📷 Back Camera</button>
-      <button class="btn btn-stop" onclick="stopCamera()">⏹️ Stop Camera Signal</button>
-      <span id="cameraStatus" class="signal-status signal-inactive">Camera: Inactive</span>
-    </div>
-    
-    <div id="cameraInfo" class="small" style="margin-top:10px;color:#666;"></div>
-    
-    <!-- Live Photo Gallery -->
-    <div class="section-title">🖼️ Latest Photos</div>
-    <div class="photo-gallery" id="photoGallery">
-      {% for photo in photos %}
-      <div class="photo-item">
-        <img src="{{ url_for('serve_file', filename=photo.name) }}" 
-             onclick="openPhoto('{{ url_for('serve_file', filename=photo.name) }}')"
-             alt="{{ photo.name }}">
-        <div class="photo-info">
-          <div class="photo-name">{{ photo.name }}</div>
-          <div class="small">{{ '%.1f'|format(photo.size / 1024) }} KB</div>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Guard System - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header Styles */
+        header {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-left h1 {
+            color: #00b7ff;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            margin-bottom: 5px;
+        }
+        
+        .header-left p {
+            color: #888;
+            font-size: 1rem;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-logout {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+        
+        .btn-recorder {
+            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+        }
+        
+        /* Control Sections */
+        .control-section {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        .section-title {
+            color: #00b7ff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid rgba(0, 183, 255, 0.3);
+            padding-bottom: 12px;
+        }
+        
+        /* Control Groups */
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            color: #00b7ff;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-group input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            padding: 12px 15px;
+            font-size: 1rem;
+            width: 120px;
+            transition: all 0.3s ease;
+        }
+        
+        .control-group input:focus {
+            outline: none;
+            border-color: #00b7ff;
+            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
+        }
+        
+        /* Control Buttons */
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-control {
+            padding: 14px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        
+        .btn-camera-front {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
+        
+        .btn-camera-back {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a2d91 100%);
+            color: white;
+        }
+        
+        /* Status Indicators */
+        .signal-status {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-left: 15px;
+        }
+        
+        .signal-active {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+        }
+        
+        .signal-inactive {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        
+        .camera-active {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            box-shadow: 0 0 20px rgba(23, 162, 184, 0.5);
+        }
+        
+        /* Photo Gallery */
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .photo-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .photo-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 183, 255, 0.3);
+            border-color: #00b7ff;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .photo-item img:hover {
+            transform: scale(1.05);
+        }
+        
+        .photo-info {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .photo-name {
+            font-size: 0.8rem;
+            color: #ccc;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 5px;
+        }
+        
+        .photo-size {
+            font-size: 0.75rem;
+            color: #888;
+        }
+        
+        /* Files Table */
+        .files-section {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            color: white;
+            padding: 18px 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.85rem;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #ccc;
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Small Buttons */
+        .btn-small {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-download {
+            background: rgba(0, 183, 255, 0.2);
+            color: #00b7ff;
+            border: 1px solid rgba(0, 183, 255, 0.3);
+        }
+        
+        .btn-delete {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid rgba(220, 53, 69, 0.3);
+        }
+        
+        .btn-small:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Audio Player */
+        audio {
+            width: 200px;
+            height: 40px;
+            border-radius: 20px;
+        }
+        
+        /* Refresh Button */
+        .refresh-btn {
+            background: rgba(108, 117, 125, 0.3);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(108, 117, 125, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        /* Info Text */
+        .info-text {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-number {
+            color: #00b7ff;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <h1>🚀 GUARD SYSTEM</h1>
+                <p>Remote Audio & Camera Control Dashboard</p>
+            </div>
+            <div class="header-right">
+                <a href="/logout" class="btn btn-logout">🚪 Logout</a>
+                <a href="/recorder" class="btn btn-recorder">🎤 Recorder</a>
+            </div>
+        </header>
+
+        <!-- Camera Controls -->
+        <div class="control-section">
+            <div class="section-title">
+                📸 Remote Camera Control
+                <button class="refresh-btn" onclick="refreshPhotos()">🔄 Refresh Photos</button>
+            </div>
+            
+            <div class="controls">
+                <button class="btn-control btn-camera-front" onclick="startCamera('front')">📱 Front Camera</button>
+                <button class="btn-control btn-camera-back" onclick="startCamera('back')">📷 Back Camera</button>
+                <button class="btn-control btn-stop" onclick="stopCamera()">⏹️ Stop Camera</button>
+                <span id="cameraStatus" class="signal-status signal-inactive">Camera: Inactive</span>
+            </div>
+            
+            <div id="cameraInfo" class="info-text"></div>
+            
+            <!-- Photo Gallery -->
+            <div class="section-title" style="margin-top: 30px;">🖼️ Latest Photos</div>
+            <div class="photo-gallery" id="photoGallery">
+                {% for photo in photos %}
+                <div class="photo-item">
+                    <img src="{{ url_for('serve_file', filename=photo.name) }}" 
+                         onclick="openPhoto('{{ url_for('serve_file', filename=photo.name) }}')"
+                         alt="{{ photo.name }}"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlBob3RvIEVycm9yPC90ZXh0Pjwvc3ZnPg=='">
+                    <div class="photo-info">
+                        <div class="photo-name">{{ photo.name }}</div>
+                        <div class="photo-size">{{ '%.1f'|format(photo.size / 1024) }} KB</div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if photos|length == 0 %}
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#666;">
+                    📷 No photos captured yet. Click camera buttons above to capture photos.
+                </div>
+                {% endif %}
+            </div>
         </div>
-      </div>
-      {% endfor %}
-      {% if photos|length == 0 %}
-      <div class="small" style="grid-column:1/-1;text-align:center;padding:40px;color:#999">
-        No photos captured yet. Click camera buttons above to capture photos.
-      </div>
-      {% endif %}
-    </div>
-  </div>
-  
-  <!-- Recording Controls Section -->
-  <div class="recording-controls">
-    <div class="section-title">🎤 Audio Recording Control</div>
-    
-    <div class="control-group">
-      <label for="recordTime">Recording Time (seconds):</label>
-      <input type="number" id="recordTime" value="15" min="5" max="60">
-    </div>
-    
-    <div class="controls">
-      <button class="btn btn-start" onclick="startRecording()">🎙️ Start Recording Signal</button>
-      <button class="btn btn-stop" onclick="stopRecording()">⏹️ Stop Signal</button>
-      <span id="signalStatus" class="signal-status signal-inactive">Signal: Inactive</span>
-    </div>
-    
-    <div id="recordingInfo" class="small" style="margin-top:10px;color:#666;"></div>
-  </div>
-  
-  <p class="small">Total files: <strong>{{ files|length + photos|length }}</strong> ({{ files|length }} audio, {{ photos|length }} photos)</p>
 
-  <table>
-    <thead>
-      <tr><th>Filename</th><th>Size (KB)</th><th>Type</th><th>Play/View</th><th>Download</th><th>Delete</th></tr>
-    </thead>
-    <tbody>
-    {% for f in files %}
-      <tr>
-        <td style="max-width:320px;word-break:break-all">{{ f.name }}</td>
-        <td class="small">{{ '%.1f'|format(f.size / 1024) }}</td>
-        <td class="small">🎧 Audio</td>
-        <td><audio controls preload="none"><source src="{{ url_for('serve_file', filename=f.name) }}" type="audio/mp4"></audio></td>
-        <td><a class="btn-small btn-download" href="{{ url_for('serve_file', filename=f.name) }}" download>⬇️ Download</a></td>
-        <td>
-          <form method="post" action="{{ url_for('delete_file', filename=f.name) }}" onsubmit="return confirm('Delete file\\\\n\\\\n' + '{{f.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
-            <button class="btn-small btn-delete" type="submit">Delete</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-    {% for p in photos %}
-      <tr>
-        <td style="max-width:320px;word-break:break-all">{{ p.name }}</td>
-        <td class="small">{{ '%.1f'|format(p.size / 1024) }}</td>
-        <td class="small">📸 Photo</td>
-        <td>
-          <img src="{{ url_for('serve_file', filename=p.name) }}" 
-               style="width:80px;height:60px;object-fit:cover;border-radius:4px;cursor:pointer" 
-               onclick="openPhoto('{{ url_for('serve_file', filename=p.name) }}')">
-        </td>
-        <td><a class="btn-small btn-download" href="{{ url_for('serve_file', filename=p.name) }}" download>⬇️ Download</a></td>
-        <td>
-          <form method="post" action="{{ url_for('delete_file', filename=p.name) }}" onsubmit="return confirm('Delete photo\\\\n\\\\n' + '{{p.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
-            <button class="btn-small btn-delete" type="submit">Delete</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-    {% if files|length == 0 and photos|length == 0 %}
-      <tr><td colspan="6" class="small">No files yet.</td></tr>
-    {% endif %}
-    </tbody>
-  </table>
-</div>
-
-<script>
-let signalCheckInterval;
-let cameraCheckInterval;
-let recordingTime = 15;
-
-// Recording Functions
-function startRecording() {
-    recordingTime = parseInt(document.getElementById('recordTime').value) || 15;
-    if (recordingTime < 5) recordingTime = 5;
-    if (recordingTime > 60) recordingTime = 60;
-    
-    document.getElementById('recordingInfo').textContent = `Recording will be ${recordingTime} seconds`;
-    
-    fetch('/start-recording', { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ record_time: recordingTime })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if(data.ok) {
-            document.getElementById('signalStatus').className = 'signal-status signal-active';
-            document.getElementById('signalStatus').textContent = 'Signal: Active';
+        <!-- Recording Controls -->
+        <div class="control-section">
+            <div class="section-title">🎤 Audio Recording Control</div>
             
-            signalCheckInterval = setInterval(checkSignalStatus, 2000);
-            setTimeout(() => stopRecording(), 30000);
-        }
-    })
-    .catch(err => console.error('Error:', err));
-}
-
-function stopRecording() {
-    if(signalCheckInterval) clearInterval(signalCheckInterval);
-    document.getElementById('signalStatus').className = 'signal-status signal-inactive';
-    document.getElementById('signalStatus').textContent = 'Signal: Inactive';
-    document.getElementById('recordingInfo').textContent = '';
-}
-
-function checkSignalStatus() {
-    fetch('/check-signal')
-    .then(r => r.json())
-    .then(data => {
-        if(!data.record) stopRecording();
-    });
-}
-
-// Camera Functions
-function startCamera(cameraType) {
-    const cameraName = cameraType === 'front' ? 'Front' : 'Back';
-    document.getElementById('cameraInfo').textContent = `${cameraName} camera signal sent to app`;
-    
-    fetch('/start-camera-signal', { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ camera_type: cameraType })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if(data.ok) {
-            document.getElementById('cameraStatus').className = 'signal-status camera-active';
-            document.getElementById('cameraStatus').textContent = `Camera: ${cameraName} Active`;
+            <div class="control-group">
+                <label for="recordTime">⏱️ Recording Duration (seconds)</label>
+                <input type="number" id="recordTime" value="15" min="5" max="60">
+            </div>
             
-            cameraCheckInterval = setInterval(checkCameraStatus, 2000);
-            setTimeout(() => {
-                stopCamera();
-                // Photo capture ke baad gallery refresh karo
-                setTimeout(refreshPhotos, 3000);
-            }, 30000);
-        }
-    })
-    .catch(err => console.error('Error:', err));
-}
-
-function stopCamera() {
-    if(cameraCheckInterval) clearInterval(cameraCheckInterval);
-    document.getElementById('cameraStatus').className = 'signal-status signal-inactive';
-    document.getElementById('cameraStatus').textContent = 'Camera: Inactive';
-    document.getElementById('cameraInfo').textContent = '';
-}
-
-function checkCameraStatus() {
-    fetch('/check-camera-signal')
-    .then(r => r.json())
-    .then(data => {
-        if(!data.capture) {
-            stopCamera();
-            // Signal complete hone par gallery refresh karo
-            setTimeout(refreshPhotos, 2000);
-        }
-    });
-}
-
-function openPhoto(photoUrl) {
-    window.open(photoUrl, '_blank');
-}
-
-// Photo Gallery Functions
-function refreshPhotos() {
-    console.log("🔄 Refreshing photos...");
-    fetch('/get-latest-photos')
-    .then(r => {
-        console.log("📡 Photos API response status:", r.status);
-        return r.json();
-    })
-    .then(data => {
-        console.log("📸 Photos data received:", data);
-        if(data.ok) {
-            const gallery = document.getElementById('photoGallery');
-            console.log("📸 Number of photos:", data.photos.length);
+            <div class="controls">
+                <button class="btn-control btn-start" onclick="startRecording()">🎙️ Start Recording</button>
+                <button class="btn-control btn-stop" onclick="stopRecording()">⏹️ Stop Signal</button>
+                <span id="signalStatus" class="signal-status signal-inactive">Signal: Inactive</span>
+            </div>
             
-            if(data.photos.length === 0) {
-                gallery.innerHTML = '<div class="small" style="grid-column:1/-1;text-align:center;padding:40px;color:#999">No photos captured yet. Click camera buttons above to capture photos.</div>';
+            <div id="recordingInfo" class="info-text"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">{{ files|length + photos|length }}</div>
+                <div class="stat-label">Total Files</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ files|length }}</div>
+                <div class="stat-label">Audio Files</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">{{ photos|length }}</div>
+                <div class="stat-label">Photos</div>
+            </div>
+        </div>
+
+        <!-- Files Table -->
+        <div class="files-section">
+            <div class="section-title">📁 File Management</div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Size</th>
+                        <th>Type</th>
+                        <th>Preview</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for f in files %}
+                    <tr>
+                        <td style="max-width: 300px; word-break: break-all;">{{ f.name }}</td>
+                        <td>{{ '%.1f'|format(f.size / 1024) }} KB</td>
+                        <td>🎧 Audio</td>
+                        <td>
+                            <audio controls preload="none">
+                                <source src="{{ url_for('serve_file', filename=f.name) }}" type="audio/mp4">
+                            </audio>
+                        </td>
+                        <td style="display: flex; gap: 8px;">
+                            <a class="btn-small btn-download" href="{{ url_for('serve_file', filename=f.name) }}" download>⬇️ Download</a>
+                            <form method="post" action="{{ url_for('delete_file', filename=f.name) }}" 
+                                  onsubmit="return confirm('Delete file\\\\n\\\\n' + '{{f.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
+                                <button class="btn-small btn-delete" type="submit">🗑️ Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% for p in photos %}
+                    <tr>
+                        <td style="max-width: 300px; word-break: break-all;">{{ p.name }}</td>
+                        <td>{{ '%.1f'|format(p.size / 1024) }} KB</td>
+                        <td>📸 Photo</td>
+                        <td>
+                            <img src="{{ url_for('serve_file', filename=p.name) }}" 
+                                 style="width: 80px; height: 60px; object-fit: cover; border-radius: 8px; cursor: pointer;" 
+                                 onclick="openPhoto('{{ url_for('serve_file', filename=p.name) }}')">
+                        </td>
+                        <td style="display: flex; gap: 8px;">
+                            <a class="btn-small btn-download" href="{{ url_for('serve_file', filename=p.name) }}" download>⬇️ Download</a>
+                            <form method="post" action="{{ url_for('delete_file', filename=p.name) }}" 
+                                  onsubmit="return confirm('Delete photo\\\\n\\\\n' + '{{p.name}}' + '\\\\n\\\\nThis cannot be undone. Continue?')">
+                                <button class="btn-small btn-delete" type="submit">🗑️ Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% if files|length == 0 and photos|length == 0 %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                            📭 No files available
+                        </td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let signalCheckInterval;
+        let cameraCheckInterval;
+        let recordingTime = 15;
+
+        // Recording Functions
+        function startRecording() {
+            recordingTime = parseInt(document.getElementById('recordTime').value) || 15;
+            if (recordingTime < 5) recordingTime = 5;
+            if (recordingTime > 60) recordingTime = 60;
+            
+            document.getElementById('recordingInfo').textContent = `Recording will be ${recordingTime} seconds`;
+            
+            fetch('/start-recording', { 
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ record_time: recordingTime })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.ok) {
+                    document.getElementById('signalStatus').className = 'signal-status signal-active';
+                    document.getElementById('signalStatus').textContent = 'Signal: Active';
+                    
+                    signalCheckInterval = setInterval(checkSignalStatus, 2000);
+                    setTimeout(() => stopRecording(), 30000);
+                }
+            })
+            .catch(err => console.error('Error:', err));
+        }
+
+        function stopRecording() {
+            if(signalCheckInterval) clearInterval(signalCheckInterval);
+            document.getElementById('signalStatus').className = 'signal-status signal-inactive';
+            document.getElementById('signalStatus').textContent = 'Signal: Inactive';
+            document.getElementById('recordingInfo').textContent = '';
+        }
+
+        function checkSignalStatus() {
+            fetch('/check-signal')
+            .then(r => r.json())
+            .then(data => {
+                if(!data.record) stopRecording();
+            });
+        }
+
+        // Camera Functions
+        function startCamera(cameraType) {
+            const cameraName = cameraType === 'front' ? 'Front' : 'Back';
+            document.getElementById('cameraInfo').textContent = `${cameraName} camera signal sent to app`;
+            
+            fetch('/start-camera-signal', { 
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ camera_type: cameraType })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.ok) {
+                    document.getElementById('cameraStatus').className = 'signal-status camera-active';
+                    document.getElementById('cameraStatus').textContent = `Camera: ${cameraName} Active`;
+                    
+                    cameraCheckInterval = setInterval(checkCameraStatus, 2000);
+                    setTimeout(() => {
+                        stopCamera();
+                        setTimeout(refreshPhotos, 3000);
+                    }, 30000);
+                }
+            })
+            .catch(err => console.error('Error:', err));
+        }
+
+        function stopCamera() {
+            if(cameraCheckInterval) clearInterval(cameraCheckInterval);
+            document.getElementById('cameraStatus').className = 'signal-status signal-inactive';
+            document.getElementById('cameraStatus').textContent = 'Camera: Inactive';
+            document.getElementById('cameraInfo').textContent = '';
+        }
+
+        function checkCameraStatus() {
+            fetch('/check-camera-signal')
+            .then(r => r.json())
+            .then(data => {
+                if(!data.capture) {
+                    stopCamera();
+                    setTimeout(refreshPhotos, 2000);
+                }
+            });
+        }
+
+        function openPhoto(photoUrl) {
+            window.open(photoUrl, '_blank');
+        }
+
+        // Photo Gallery Functions
+        function refreshPhotos() {
+            console.log("🔄 Refreshing photos...");
+            fetch('/get-latest-photos')
+            .then(r => {
+                console.log("📡 Photos API response status:", r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log("📸 Photos data received:", data);
+                if(data.ok) {
+                    const gallery = document.getElementById('photoGallery');
+                    console.log("📸 Number of photos:", data.photos.length);
+                    
+                    if(data.photos.length === 0) {
+                        gallery.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#666;">📷 No photos captured yet. Click camera buttons above to capture photos.</div>';
+                        return;
+                    }
+                    
+                    gallery.innerHTML = data.photos.map(photo => `
+                        <div class="photo-item">
+                            <img src="${photo.url}?t=${new Date().getTime()}" 
+                                 onclick="openPhoto('${photo.url}')" 
+                                 alt="${photo.name}"
+                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlBob3RvIEVycm9yPC90ZXh0Pjwvc3ZnPg=='; console.error('Image load error:', '${photo.url}')">
+                            <div class="photo-info">
+                                <div class="photo-name">${photo.name}</div>
+                                <div class="photo-size">${Math.round(photo.size / 1024)} KB</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    console.error("❌ Photos API error:", data);
+                }
+            })
+            .catch(err => {
+                console.error("❌ Error refreshing photos:", err);
+                const gallery = document.getElementById('photoGallery');
+                gallery.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:red">❌ Error loading photos. Check console.</div>';
+            });
+        }
+
+        // Auto-refresh photos every 10 seconds
+        setInterval(refreshPhotos, 10000);
+
+        // Load photos on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshPhotos();
+        });
+
+        // Update recording info when input changes
+        document.getElementById('recordTime').addEventListener('change', function() {
+            const time = parseInt(this.value) || 15;
+            if (time < 5) this.value = 5;
+            if (time > 60) this.value = 60;
+        });
+
+        // Add some cool hover effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.btn, .btn-control, .btn-small');
+            buttons.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px)';
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+"""
+
+# RECORDER PAGE (Black Theme)
+RECORDER_HTML = """
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎤 Audio Recorder - Guard System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .back-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .recorder-card {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+        
+        .recorder-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .recorder-header h1 {
+            color: #00b7ff;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            margin-bottom: 10px;
+        }
+        
+        .recorder-header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 16px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-record {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        
+        .btn-upload {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .recording {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            box-shadow: 0 0 20px rgba(220, 53, 69, 0.5);
+        }
+        
+        .not-recording {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+        
+        .visualizer {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            height: 120px;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+        
+        .audio-playback {
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 25px;
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← Back to Dashboard</a>
+        
+        <div class="recorder-card">
+            <div class="recorder-header">
+                <h1>🎤 AUDIO RECORDER</h1>
+                <p>Record and upload audio files directly from your browser</p>
+            </div>
+            
+            <div class="controls">
+                <button class="btn btn-record" onclick="startRecording()">● Start Recording</button>
+                <button class="btn btn-stop" onclick="stopRecording()" disabled>■ Stop</button>
+                <button class="btn btn-upload" onclick="uploadRecording()" disabled>📤 Upload</button>
+            </div>
+            
+            <div id="status" class="status not-recording">Ready to Record</div>
+            
+            <div class="visualizer">
+                <canvas id="canvas" width="760" height="100"></canvas>
+            </div>
+            
+            <audio id="audioPlayback" controls class="audio-playback"></audio>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioContext;
+        let analyser;
+        let canvasCtx;
+        let isRecording = false;
+
+        const recordBtn = document.querySelector('.btn-record');
+        const stopBtn = document.querySelector('.btn-stop');
+        const uploadBtn = document.querySelector('.btn-upload');
+        const statusSpan = document.getElementById('status');
+        const canvas = document.getElementById('canvas');
+        const audioPlayback = document.getElementById('audioPlayback');
+
+        canvasCtx = canvas.getContext('2d');
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+                
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPlayback.src = audioUrl;
+                    uploadBtn.disabled = false;
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                
+                recordBtn.disabled = true;
+                stopBtn.disabled = false;
+                uploadBtn.disabled = true;
+                statusSpan.textContent = '🎙️ Recording...';
+                statusSpan.className = 'status recording pulse';
+                
+                visualize();
+                
+            } catch (err) {
+                console.error('Error starting recording:', err);
+                alert('❌ Error accessing microphone. Please check permissions.');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+                statusSpan.textContent = '✅ Recording Complete';
+                statusSpan.className = 'status not-recording';
+                statusSpan.classList.remove('pulse');
+                
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function uploadRecording() {
+            if (audioChunks.length === 0) {
+                alert('❌ No recording to upload');
                 return;
             }
             
-            gallery.innerHTML = data.photos.map(photo => `
-                <div class="photo-item">
-                    <img src="${photo.url}?t=${new Date().getTime()}" 
-                         onclick="openPhoto('${photo.url}')" 
-                         alt="${photo.name}"
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlBob3RvIEVycm9yPC90ZXh0Pjwvc3ZnPg=='; console.error('Image load error:', '${photo.url}')">
-                    <div class="photo-info">
-                        <div class="photo-name">${photo.name}</div>
-                        <div class="small">${Math.round(photo.size / 1024)} KB</div>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            console.error("❌ Photos API error:", data);
-        }
-    })
-    .catch(err => {
-        console.error("❌ Error refreshing photos:", err);
-        const gallery = document.getElementById('photoGallery');
-        gallery.innerHTML = '<div class="small" style="grid-column:1/-1;text-align:center;padding:40px;color:red">Error loading photos. Check console.</div>';
-    });
-}
-
-// Auto-refresh photos every 10 seconds
-setInterval(refreshPhotos, 10000);
-
-// Load photos on page load
-document.addEventListener('DOMContentLoaded', function() {
-    refreshPhotos();
-});
-
-// Update recording info when input changes
-document.getElementById('recordTime').addEventListener('change', function() {
-    const time = parseInt(this.value) || 15;
-    if (time < 5) this.value = 5;
-    if (time > 60) this.value = 60;
-});
-</script>
-"""
-
-# RECORDER_HTML template (same as before)
-RECORDER_HTML = """
-<!doctype html>
-<title>Audio Recorder</title>
-<style>
-body{font-family:Inter,Arial;padding:20px;background:#f6f8fb;color:#111;max-width:600px;margin:0 auto}
-h1{color:#0b74ff}
-.controls{margin:20px 0}
-.btn{padding:12px 24px;border-radius:8px;border:none;cursor:pointer;font-size:16px;margin-right:12px}
-.btn-record{background:#dc3545;color:#fff}
-.btn-stop{background:#6c757d;color:#fff}
-.btn-upload{background:#28a745;color:#fff}
-.visualizer{margin:20px 0;height:80px;border:1px solid #ddd;border-radius:8px}
-.recording-status{padding:8px 12px;border-radius:6px;margin-left:12px}
-.recording{background:#f8d7da;color:#721c24}
-.not-recording{background:#d4edda;color:#155724}
-a.back{background:#6c757d;color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none;display:inline-block;margin-bottom:20px}
-</style>
-
-<a href="/" class="back">← Back to Dashboard</a>
-<h1>🎤 Audio Recorder</h1>
-
-<div class="controls">
-    <button class="btn btn-record" onclick="startRecording()">● Start Recording</button>
-    <button class="btn btn-stop" onclick="stopRecording()" disabled>■ Stop</button>
-    <button class="btn btn-upload" onclick="uploadRecording()" disabled>📤 Upload</button>
-    <span id="status" class="recording-status not-recording">Not Recording</span>
-</div>
-
-<div class="visualizer" id="visualizer">
-    <canvas id="canvas" width="600" height="80"></canvas>
-</div>
-
-<audio id="audioPlayback" controls style="width:100%;margin-top:20px"></audio>
-
-<script>
-let mediaRecorder;
-let audioChunks = [];
-let audioContext;
-let analyser;
-let canvasCtx;
-let isRecording = false;
-
-const recordBtn = document.querySelector('.btn-record');
-const stopBtn = document.querySelector('.btn-stop');
-const uploadBtn = document.querySelector('.btn-upload');
-const statusSpan = document.getElementById('status');
-const canvas = document.getElementById('canvas');
-const audioPlayback = document.getElementById('audioPlayback');
-
-canvasCtx = canvas.getContext('2d');
-
-async function startRecording() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        analyser.fftSize = 256;
-        
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = event => {
-            audioChunks.push(event.data);
-        };
-        
-        mediaRecorder.onstop = () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            audioPlayback.src = audioUrl;
-            uploadBtn.disabled = false;
-        };
-        
-        mediaRecorder.start();
-        isRecording = true;
-        
-        recordBtn.disabled = true;
-        stopBtn.disabled = false;
-        uploadBtn.disabled = true;
-        statusSpan.textContent = 'Recording...';
-        statusSpan.className = 'recording-status recording';
-        
-        visualize();
-        
-    } catch (err) {
-        console.error('Error starting recording:', err);
-        alert('Error accessing microphone. Please check permissions.');
-    }
-}
-
-function stopRecording() {
-    if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        
-        recordBtn.disabled = false;
-        stopBtn.disabled = true;
-        statusSpan.textContent = 'Recording Stopped';
-        statusSpan.className = 'recording-status not-recording';
-        
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-    }
-}
-
-function uploadRecording() {
-    if (audioChunks.length === 0) {
-        alert('No recording to upload');
-        return;
-    }
-    
-    const audioBlob = new Blob(audioChunks, { type: 'audio/mp4' });
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording_' + Date.now() + '.m4a');
-    
-    fetch('/upload', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.ok) {
-            alert('Recording uploaded successfully!');
-            uploadBtn.disabled = true;
-        } else {
-            alert('Upload failed: ' + data.error);
-        }
-    })
-    .catch(err => {
-        console.error('Upload error:', err);
-        alert('Upload failed');
-    });
-}
-
-function visualize() {
-    if (!isRecording) return;
-    
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    
-    function draw() {
-        if (!isRecording) return;
-        
-        requestAnimationFrame(draw);
-        analyser.getByteFrequencyData(dataArray);
-        
-        canvasCtx.fillStyle = 'white';
-        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        const barWidth = (canvas.width / bufferLength) * 2.5;
-        let barHeight;
-        let x = 0;
-        
-        for (let i = 0; i < bufferLength; i++) {
-            barHeight = dataArray[i] / 2;
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording_' + Date.now() + '.m4a');
             
-            canvasCtx.fillStyle = `rgb(${barHeight + 100},50,50)`;
-            canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+            statusSpan.textContent = '📤 Uploading...';
+            statusSpan.className = 'status recording';
             
-            x += barWidth + 1;
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    statusSpan.textContent = '✅ Upload Successful!';
+                    statusSpan.className = 'status not-recording';
+                    uploadBtn.disabled = true;
+                } else {
+                    statusSpan.textContent = '❌ Upload Failed';
+                    statusSpan.className = 'status recording';
+                    alert('Upload failed: ' + data.error);
+                }
+            })
+            .catch(err => {
+                console.error('Upload error:', err);
+                statusSpan.textContent = '❌ Upload Failed';
+                statusSpan.className = 'status recording';
+                alert('Upload failed');
+            });
         }
-    }
-    
-    draw();
-}
-</script>
+
+        function visualize() {
+            if (!isRecording) return;
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function draw() {
+                if (!isRecording) return;
+                
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+                
+                canvasCtx.fillStyle = 'rgba(10, 10, 10, 0.1)';
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    barHeight = dataArray[i] / 2;
+                    
+                    const gradient = canvasCtx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
+                    gradient.addColorStop(0, '#00b7ff');
+                    gradient.addColorStop(1, '#0099cc');
+                    
+                    canvasCtx.fillStyle = gradient;
+                    canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                    
+                    x += barWidth + 1;
+                }
+            }
+            
+            draw();
+        }
+
+        // Add button hover effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    if (!this.disabled) {
+                        this.style.transform = 'translateY(-3px)';
+                    }
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
 """
 
 if __name__ == '__main__':
