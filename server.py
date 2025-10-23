@@ -73,7 +73,7 @@ def dashboard():
     
     return render_template_string(DASHBOARD_HTML, files=files, photos=photos[:6])  # Latest 6 photos
 
-# DEBUG ROUTE - YE ADD KARO
+# DEBUG ROUTE
 @app.route('/debug-files')
 def debug_files():
     if not session.get('logged_in'):
@@ -185,6 +185,52 @@ def upload_photo():
     
     print("❌ Unknown upload failure")
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+
+# MOBILE UPLOAD PHOTO ROUTE - ANDROID APP KE LIYE (NO LOGIN REQUIRED)
+@app.route('/mobile-upload-photo', methods=['POST'])
+def mobile_upload_photo():
+    try:
+        print("📸 Mobile photo upload endpoint called")
+        print("📸 Request files:", list(request.files.keys()))
+        
+        if 'photo' not in request.files:
+            print("❌ No photo file in request")
+            return jsonify({'ok': False, 'error': 'No photo file'}), 400
+        
+        photo_file = request.files['photo']
+        print("📸 Photo file details:")
+        print("   - Filename:", photo_file.filename)
+        print("   - Content type:", photo_file.content_type)
+        print("   - Content length:", photo_file.content_length if photo_file.content_length else "Unknown")
+        
+        if photo_file.filename == '':
+            print("❌ Empty filename")
+            return jsonify({'ok': False, 'error': 'No file selected'}), 400
+        
+        if photo_file:
+            timestamp = str(int(time.time()))
+            filename = f"mobile_photo_{timestamp}.jpg"
+            
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            try:
+                photo_file.save(filepath)
+                file_size = os.path.getsize(filepath)
+                print(f"✅ Mobile photo saved: {filename} ({file_size} bytes)")
+                print(f"✅ File path: {filepath}")
+                print(f"✅ File exists: {os.path.exists(filepath)}")
+                
+                return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
+            except Exception as e:
+                print(f"❌ File save error: {e}")
+                return jsonify({'ok': False, 'error': f'File save failed: {e}'}), 500
+        
+        print("❌ Unknown upload failure")
+        return jsonify({'ok': False, 'error': 'Upload failed'}), 500
+        
+    except Exception as e:
+        print(f"❌ Mobile photo upload error: {e}")
+        return jsonify({'ok': False, 'error': 'Upload failed'}), 500
 
 # Recording signal routes
 @app.route('/start-recording', methods=['POST'])
@@ -367,7 +413,7 @@ input[type="text"],input[type="password"]{width:100%;padding:12px;border:1px sol
 </div>
 """
 
-# DASHBOARD_HTML template (same as before - copy your existing one)
+# DASHBOARD_HTML template (same as your existing one)
 DASHBOARD_HTML = """
 <!doctype html>
 <title>Guard Recordings & Camera</title>
