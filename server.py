@@ -1,6 +1,8 @@
 # Add this after your existing routes
+from flask import flask
 import threading
 import time
+app = Flask(__name__) 
 
 # Global variable to track recording signal
 recording_signal = False
