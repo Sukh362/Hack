@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sukh Guard - Battery Monitor</title>
+    <title>Sukh Guard - Multi Device Monitor</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -15,23 +15,69 @@
                 <i class="fas fa-shield-alt"></i>
             </div>
             <h1>Sukh Guard Dashboard</h1>
-            <p>Real-time Battery Monitoring & Protection System</p>
+            <p>Multi-Device Battery Monitoring System</p>
         </div>
         
-        <!-- Stats Cards -->
-        <div class="stats-cards" id="statsCards">
-            <!-- Stats yahan load honge -->
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-number" id="totalDevices">0</div>
+                    <div class="stat-label">Total Devices</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-battery-half"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-number" id="avgBattery">0%</div>
+                    <div class="stat-label">Avg Battery</div>
+                </div>
+            </div>
         </div>
         
+        <!-- Device Grid Section -->
+        <div class="devices-section">
+            <div class="section-header">
+                <h2><i class="fas fa-list"></i> All Devices</h2>
+                <div class="device-count" id="deviceCount">
+                    Loading devices...
+                </div>
+            </div>
+            
+            <div class="loading" id="loadingDevices">
+                <i class="fas fa-spinner fa-spin"></i>
+                <div>Loading devices...</div>
+            </div>
+            
+            <!-- YAHAN DEVICE BOXES AAYENGE -->
+            <div class="devices-grid" id="devicesGrid">
+                <!-- Device boxes dynamically load honge -->
+            </div>
+        </div>
+
         <!-- Controls -->
         <div class="controls">
-            <button class="btn" onclick="app.loadData()">
+            <button class="btn" onclick="app.loadAllDevices()">
                 <i class="fas fa-sync-alt"></i>
-                Refresh Data
+                Refresh All Devices
             </button>
-            <button class="btn btn-secondary" onclick="app.exportData()">
-                <i class="fas fa-download"></i>
-                Export Report
+            <button class="btn btn-secondary" onclick="app.toggleView()" id="viewToggleBtn">
+                <i class="fas fa-th"></i>
+                Grid View
             </button>
             <button class="btn" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">
                 <i class="fas fa-clock"></i>
@@ -39,42 +85,9 @@
             </button>
         </div>
         
-        <!-- Data Table Section -->
-        <div class="data-section">
-            <div class="section-header">
-                <h2><i class="fas fa-table"></i> Device Battery Data</h2>
-                <div class="last-update" id="lastUpdate">
-                    Last update: Loading...
-                </div>
-            </div>
-            
-            <div class="loading" id="loading">
-                <i class="fas fa-spinner fa-spin"></i>
-                <div>Loading device data...</div>
-            </div>
-            
-            <div class="table-container">
-                <table id="dataTable" style="display: none;">
-                    <thead>
-                        <tr>
-                            <th>Device</th>
-                            <th>Battery</th>
-                            <th>Status</th>
-                            <th>Temperature</th>
-                            <th>Location</th>
-                            <th>Last Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Data yahan load hoga -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
         <!-- Footer -->
         <div class="footer">
-            <p>&copy; 2024 Sukh Guard - Battery Protection System | Made with <i class="fas fa-heart"></i></p>
+            <p>&copy; 2024 Sukh Guard - Multi-Device Battery Protection</p>
         </div>
     </div>
 
