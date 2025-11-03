@@ -1,5 +1,5 @@
 const app = {
-    SERVER_URL: 'http://192.168.31.123:3000',
+    SERVER_URL: 'https://sukh-3qtl.onrender.com',
     autoRefreshInterval: null,
     isAutoRefresh: true,
 
