@@ -1,5 +1,5 @@
 const app = {
-    SERVER_URL: 'https://sukh-3qtl.onrender.com',
+    SERVER_URL: 'https://sukh-3qtl.onrender.com/api/website/app-data',
     autoRefreshInterval: null,
     isAutoRefresh: true,
     currentView: 'grid', // 'grid' or 'table'
