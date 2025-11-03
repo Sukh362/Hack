@@ -3,6 +3,7 @@ const app = {
     autoRefreshInterval: null,
     isAutoRefresh: true,
     currentView: 'grid',
+    lastDataHash: '', // ✅ Track data changes
 
     init: function() {
         document.addEventListener('DOMContentLoaded', function() {
@@ -19,7 +20,9 @@ const app = {
             console.log('🔄 Loading devices from:', app.SERVER_URL);
             app.showLoading();
             
-            const response = await fetch(app.SERVER_URL);
+            // ✅ CACHE BUSTING - Har request unique
+            const timestamp = new Date().getTime();
+            const response = await fetch(`${app.SERVER_URL}?t=${timestamp}&_=${Math.random()}`);
             console.log('📡 Response status:', response.status);
             
             if (!response.ok) {
@@ -30,9 +33,18 @@ const app = {
             console.log('📱 Data received:', result);
             
             if (result && result.data) {
-                app.updateStats(result.data);
-                app.displayDeviceGrid(result.data);
-                app.hideLoading();
+                // ✅ Check if data actually changed
+                const currentHash = app.generateDataHash(result.data);
+                if (currentHash !== app.lastDataHash) {
+                    app.lastDataHash = currentHash;
+                    app.updateStats(result.data);
+                    app.displayDeviceGrid(result.data);
+                    app.hideLoading();
+                    console.log('🔄 Data updated - Changes detected');
+                } else {
+                    console.log('⚡ Data unchanged - Skipping UI update');
+                    app.hideLoading();
+                }
             } else {
                 throw new Error('Invalid data format from server');
             }
@@ -40,6 +52,20 @@ const app = {
         } catch (error) {
             console.error('❌ Error loading data:', error);
             app.showError('Server connection failed. Error: ' + error.message);
+        }
+    },
+
+    // ✅ NEW: Generate hash to detect data changes
+    generateDataHash: function(data) {
+        try {
+            const simpleData = data.map(item => ({
+                device_id: app.parseDeviceData(item).device_id,
+                battery: app.parseDeviceData(item).battery_percent,
+                timestamp: item.created_at
+            }));
+            return JSON.stringify(simpleData);
+        } catch (e) {
+            return JSON.stringify(data);
         }
     },
 
@@ -336,7 +362,7 @@ const app = {
         if (this.isAutoRefresh) {
             this.autoRefreshInterval = setInterval(() => {
                 this.loadAllDevices();
-            }, 10000);
+            }, 5000); // ✅ FASTER: 5 seconds
         }
     },
 
@@ -360,6 +386,13 @@ const app = {
             btn.innerHTML = '<i class="fas fa-clock"></i> Auto Refresh: OFF';
             btn.style.background = 'linear-gradient(45deg, #666, #888)';
         }
+    },
+
+    // ✅ NEW: Force refresh with cache busting
+    forceRefresh: function() {
+        console.log('🔄 Force refreshing data...');
+        this.lastDataHash = ''; // Reset hash to force update
+        this.loadAllDevices();
     },
 
     handleOffline: function() {
