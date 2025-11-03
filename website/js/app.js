@@ -2,43 +2,44 @@ const app = {
     SERVER_URL: 'https://sukh-3qtl.onrender.com/api/website/app-data',
     autoRefreshInterval: null,
     isAutoRefresh: true,
-    currentView: 'grid', // 'grid' or 'table'
+    currentView: 'grid',
 
     init: function() {
-        // Page load pe data load karo
         document.addEventListener('DOMContentLoaded', function() {
             app.loadAllDevices();
             app.startAutoRefresh();
         });
         
-        // Online/offline detection
         window.addEventListener('online', app.loadAllDevices);
         window.addEventListener('offline', app.handleOffline);
     },
 
     loadAllDevices: async function() {
         try {
+            console.log('🔄 Loading devices from:', app.SERVER_URL);
             app.showLoading();
-            app.updateLastUpdate();
             
-            // App data fetch karo
-            const response = await fetch(`${app.SERVER_URL}/api/website/app-data`);
+            const response = await fetch(app.SERVER_URL);
+            console.log('📡 Response status:', response.status);
+            
             if (!response.ok) {
                 throw new Error(`Server error: ${response.status}`);
             }
+            
             const result = await response.json();
+            console.log('📱 Data received:', result);
             
-            // Stats update karo
-            app.updateStats(result.data);
-            
-            // Device grid display karo
-            app.displayDeviceGrid(result.data);
-            
-            app.hideLoading();
+            if (result && result.data) {
+                app.updateStats(result.data);
+                app.displayDeviceGrid(result.data);
+                app.hideLoading();
+            } else {
+                throw new Error('Invalid data format from server');
+            }
             
         } catch (error) {
-            console.error('Error loading data:', error);
-            app.showError('Error loading data. Please check server connection.');
+            console.error('❌ Error loading data:', error);
+            app.showError('Server connection failed. Error: ' + error.message);
         }
     },
 
@@ -47,42 +48,53 @@ const app = {
         const totalUsersElement = document.getElementById('totalUsers');
         const avgBatteryElement = document.getElementById('avgBattery');
         
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
             totalDevicesElement.textContent = '0';
             totalUsersElement.textContent = '0';
             avgBatteryElement.textContent = '0%';
             return;
         }
         
-        // Calculate stats
-        const uniqueDevices = new Set(data.map(item => {
-            const deviceData = app.parseDeviceData(item);
-            return deviceData.device_id || deviceData.device_model;
-        })).size;
-        
-        const uniqueUsers = new Set(data.map(item => {
-            const deviceData = app.parseDeviceData(item);
-            return deviceData.user_id || 1;
-        })).size;
-        
-        const totalBattery = data.reduce((sum, item) => {
-            const deviceData = app.parseDeviceData(item);
-            return sum + (deviceData.battery_percent || 0);
-        }, 0);
-        
-        const avgBattery = Math.round(totalBattery / data.length);
-        
-        // Update stats
-        totalDevicesElement.textContent = uniqueDevices;
-        totalUsersElement.textContent = uniqueUsers;
-        avgBatteryElement.textContent = avgBattery + '%';
+        try {
+            const uniqueDevices = new Set();
+            const userSet = new Set();
+            let totalBattery = 0;
+            let validBatteryCount = 0;
+
+            data.forEach(item => {
+                try {
+                    const deviceData = app.parseDeviceData(item);
+                    const deviceKey = deviceData.device_id || deviceData.device_model;
+                    
+                    if (deviceKey) uniqueDevices.add(deviceKey);
+                    if (deviceData.user_id) userSet.add(deviceData.user_id);
+                    if (deviceData.battery_percent) {
+                        totalBattery += deviceData.battery_percent;
+                        validBatteryCount++;
+                    }
+                } catch (e) {
+                    console.warn('Skipping invalid data item:', e);
+                }
+            });
+
+            totalDevicesElement.textContent = uniqueDevices.size;
+            totalUsersElement.textContent = userSet.size;
+            avgBatteryElement.textContent = validBatteryCount > 0 ? 
+                Math.round(totalBattery / validBatteryCount) + '%' : '0%';
+                
+        } catch (error) {
+            console.error('Error updating stats:', error);
+            totalDevicesElement.textContent = '0';
+            totalUsersElement.textContent = '0';
+            avgBatteryElement.textContent = '0%';
+        }
     },
 
     displayDeviceGrid: function(data) {
         const devicesGrid = document.getElementById('devicesGrid');
         const deviceCount = document.getElementById('deviceCount');
         
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
             devicesGrid.innerHTML = `
                 <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
                     <i class="fas fa-mobile-alt" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
@@ -94,119 +106,152 @@ const app = {
             return;
         }
         
-        // Group data by device (latest entry for each device)
-        const deviceMap = new Map();
-        
-        data.forEach(item => {
-            const deviceData = app.parseDeviceData(item);
-            const deviceKey = deviceData.device_id || deviceData.device_model;
+        try {
+            const deviceMap = new Map();
             
-            if (!deviceMap.has(deviceKey) || new Date(item.created_at) > new Date(deviceMap.get(deviceKey).created_at)) {
-                deviceMap.set(deviceKey, {
-                    ...deviceData,
-                    created_at: item.created_at,
-                    rawData: item
-                });
-            }
-        });
-        
-        const latestDevices = Array.from(deviceMap.values());
-        
-        // Update device count
-        deviceCount.textContent = `${latestDevices.length} device${latestDevices.length !== 1 ? 's' : ''} connected`;
-        
-        // Create device cards
-        devicesGrid.innerHTML = latestDevices.map(device => app.createDeviceCard(device)).join('');
-        
-        // Add click event listeners
-        document.querySelectorAll('.device-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const deviceId = this.getAttribute('data-device-id');
-                app.openDeviceDetails(deviceId);
+            data.forEach(item => {
+                try {
+                    const deviceData = app.parseDeviceData(item);
+                    const deviceKey = deviceData.device_id || deviceData.device_model;
+                    
+                    if (deviceKey) {
+                        if (!deviceMap.has(deviceKey) || new Date(item.created_at) > new Date(deviceMap.get(deviceKey).created_at)) {
+                            deviceMap.set(deviceKey, {
+                                ...deviceData,
+                                created_at: item.created_at,
+                                rawData: item
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Skipping invalid device data:', e);
+                }
             });
-        });
+            
+            const latestDevices = Array.from(deviceMap.values());
+            deviceCount.textContent = `${latestDevices.length} device${latestDevices.length !== 1 ? 's' : ''} connected`;
+            devicesGrid.innerHTML = latestDevices.map(device => app.createDeviceCard(device)).join('');
+            
+            // Add click events
+            document.querySelectorAll('.device-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const deviceId = this.getAttribute('data-device-id');
+                    app.openDeviceDetails(deviceId);
+                });
+            });
+            
+        } catch (error) {
+            console.error('Error displaying device grid:', error);
+            devicesGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--secondary);">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
+                    <h3>Error Displaying Devices</h3>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        }
     },
 
     createDeviceCard: function(device) {
-        const batteryPercent = device.battery_percent || 0;
-        const batteryClass = app.getBatteryLevelClass(batteryPercent);
-        const timeAgo = app.getTimeAgo(device.created_at);
-        const deviceId = device.device_id || device.device_model || 'unknown';
-        
-        return `
-            <div class="device-card" data-device-id="${deviceId}">
-                <div class="device-header">
-                    <div class="device-name">${device.device_model || 'Unknown Device'}</div>
-                    <div class="device-user">User ${device.user_id || 1}</div>
-                </div>
-                
-                <div class="battery-indicator">
-                    <div class="battery-level">
-                        <div class="battery-fill ${batteryClass}" style="width: ${batteryPercent}%"></div>
+        try {
+            const batteryPercent = device.battery_percent || 0;
+            const batteryClass = app.getBatteryLevelClass(batteryPercent);
+            const timeAgo = app.getTimeAgo(device.created_at);
+            const deviceId = device.device_id || device.device_model || 'unknown';
+            const deviceModel = device.device_model || 'Unknown Device';
+            const userId = device.user_id || 1;
+            const temperature = device.temperature || 0;
+            const androidVersion = device.android_version || 'Unknown';
+            const isCharging = device.is_charging || false;
+            
+            return `
+                <div class="device-card" data-device-id="${deviceId}">
+                    <div class="device-header">
+                        <div class="device-name">${deviceModel}</div>
+                        <div class="device-user">User ${userId}</div>
                     </div>
-                    <div class="battery-percent ${batteryClass}">${batteryPercent}%</div>
-                </div>
-                
-                <div class="device-details">
-                    <div class="detail-item">
-                        <span class="detail-label">Status</span>
-                        <span class="detail-value">
-                            <span class="${device.is_charging ? 'status-charging' : 'status-online'}">
-                                <i class="fas ${device.is_charging ? 'fa-bolt' : 'fa-check'}"></i>
-                                ${device.is_charging ? 'Charging' : 'Online'}
+                    
+                    <div class="battery-indicator">
+                        <div class="battery-level">
+                            <div class="battery-fill ${batteryClass}" style="width: ${batteryPercent}%"></div>
+                        </div>
+                        <div class="battery-percent ${batteryClass}">${batteryPercent}%</div>
+                    </div>
+                    
+                    <div class="device-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Status</span>
+                            <span class="detail-value">
+                                <span class="${isCharging ? 'status-charging' : 'status-online'}">
+                                    <i class="fas ${isCharging ? 'fa-bolt' : 'fa-check'}"></i>
+                                    ${isCharging ? 'Charging' : 'Online'}
+                                </span>
                             </span>
-                        </span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">Temperature</span>
+                            <span class="detail-value">
+                                <i class="fas fa-thermometer-half"></i>
+                                ${temperature}°C
+                            </span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">Android</span>
+                            <span class="detail-value">
+                                <i class="fab fa-android"></i>
+                                ${androidVersion}
+                            </span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">Last Update</span>
+                            <span class="detail-value">
+                                <i class="far fa-clock"></i>
+                                ${timeAgo}
+                            </span>
+                        </div>
                     </div>
                     
-                    <div class="detail-item">
-                        <span class="detail-label">Temperature</span>
-                        <span class="detail-value">
-                            <i class="fas fa-thermometer-half"></i>
-                            ${device.temperature || 0}°C
-                        </span>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <span class="detail-label">Android</span>
-                        <span class="detail-value">
-                            <i class="fab fa-android"></i>
-                            ${device.android_version || 'Unknown'}
-                        </span>
-                    </div>
-                    
-                    <div class="detail-item">
-                        <span class="detail-label">Last Update</span>
-                        <span class="detail-value">
-                            <i class="far fa-clock"></i>
-                            ${timeAgo}
-                        </span>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+                        <small style="color: var(--text-muted);">
+                            <i class="fas fa-id-card"></i>
+                            ID: ${deviceId.substring(0, 12)}...
+                        </small>
                     </div>
                 </div>
-                
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
-                    <small style="color: var(--text-muted);">
-                        <i class="fas fa-id-card"></i>
-                        ID: ${deviceId.substring(0, 12)}...
-                    </small>
+            `;
+        } catch (error) {
+            console.error('Error creating device card:', error);
+            return `
+                <div class="device-card" style="border-color: var(--secondary);">
+                    <div style="text-align: center; color: var(--secondary); padding: 20px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>Invalid Device Data</div>
+                    </div>
                 </div>
-            </div>
-        `;
-    },
-
-    openDeviceDetails: function(deviceId) {
-        // Yahan device details page open karenge
-        // Temporary - alert show karte hain
-        alert(`Opening details for device: ${deviceId}\n\nYe feature abhi implement ho raha hai!`);
-        
-        // Future mein yahan redirect karenge device-details.html?deviceId=${deviceId}
-        // window.location.href = `device-details.html?deviceId=${deviceId}`;
+            `;
+        }
     },
 
     parseDeviceData: function(item) {
         try {
+            if (!item.data) {
+                return {
+                    battery_percent: 0,
+                    is_charging: false,
+                    temperature: 0,
+                    device_model: 'Unknown',
+                    android_version: 'Unknown',
+                    device_id: 'unknown',
+                    user_id: 1
+                };
+            }
+            
             const deviceData = JSON.parse(item.data);
             
-            // Check if it's full device data or just battery
+            // Check different data formats
             if (deviceData.battery_data) {
                 return {
                     ...deviceData.battery_data,
@@ -217,7 +262,9 @@ const app = {
                     user_id: deviceData.user_id
                 };
             }
+            
             return deviceData;
+            
         } catch (e) {
             console.error('Error parsing device data:', e);
             return {
@@ -227,8 +274,7 @@ const app = {
                 device_model: 'Unknown',
                 android_version: 'Unknown',
                 device_id: 'unknown',
-                user_id: 1,
-                location_data: null
+                user_id: 1
             };
         }
     },
@@ -240,31 +286,28 @@ const app = {
     },
 
     getTimeAgo: function(timestamp) {
-        const now = new Date();
-        const time = new Date(timestamp);
-        const diffInSeconds = Math.floor((now - time) / 1000);
+        if (!timestamp) return 'Unknown';
         
-        if (diffInSeconds < 60) return 'Just now';
-        if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' min ago';
-        if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' hours ago';
-        return Math.floor(diffInSeconds / 86400) + ' days ago';
+        try {
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diffInSeconds = Math.floor((now - time) / 1000);
+            
+            if (diffInSeconds < 60) return 'Just now';
+            if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' min ago';
+            if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' hours ago';
+            return Math.floor(diffInSeconds / 86400) + ' days ago';
+        } catch (e) {
+            return 'Unknown';
+        }
+    },
+
+    openDeviceDetails: function(deviceId) {
+        alert(`Opening details for device: ${deviceId}\n\nFeature coming soon!`);
     },
 
     toggleView: function() {
-        const btn = document.getElementById('viewToggleBtn');
-        
-        if (this.currentView === 'grid') {
-            // Switch to table view
-            this.currentView = 'table';
-            btn.innerHTML = '<i class="fas fa-table"></i> Table View';
-            // Yahan table view implement karenge
-            alert('Table view coming soon!');
-        } else {
-            // Switch to grid view
-            this.currentView = 'grid';
-            btn.innerHTML = '<i class="fas fa-th"></i> Grid View';
-            this.loadAllDevices();
-        }
+        alert('Table view coming soon! Currently in Grid View.');
     },
 
     showLoading: function() {
@@ -289,17 +332,11 @@ const app = {
         loadingElement.style.display = 'block';
     },
 
-    updateLastUpdate: function() {
-        const now = new Date();
-        document.getElementById('lastUpdate').textContent = 
-            `Last update: ${now.toLocaleTimeString()}`;
-    },
-
     startAutoRefresh: function() {
         if (this.isAutoRefresh) {
             this.autoRefreshInterval = setInterval(() => {
                 this.loadAllDevices();
-            }, 10000); // 10 seconds
+            }, 10000);
         }
     },
 
@@ -323,37 +360,6 @@ const app = {
             btn.innerHTML = '<i class="fas fa-clock"></i> Auto Refresh: OFF';
             btn.style.background = 'linear-gradient(45deg, #666, #888)';
         }
-    },
-
-    exportData: function() {
-        // Simple export functionality
-        const dataStr = JSON.stringify(this.getCurrentData(), null, 2);
-        const dataBlob = new Blob([dataStr], {type: 'application/json'});
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'sukh-guard-devices.json';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        // Show success message
-        const originalText = document.querySelector('.btn-secondary').innerHTML;
-        document.querySelector('.btn-secondary').innerHTML = '<i class="fas fa-check"></i> Exported!';
-        setTimeout(() => {
-            document.querySelector('.btn-secondary').innerHTML = originalText;
-        }, 2000);
-    },
-
-    getCurrentData: function() {
-        // Current devices data return karega for export
-        return {
-            exportTime: new Date().toISOString(),
-            totalDevices: document.getElementById('totalDevices').textContent,
-            totalUsers: document.getElementById('totalUsers').textContent,
-            avgBattery: document.getElementById('avgBattery').textContent
-        };
     },
 
     handleOffline: function() {
