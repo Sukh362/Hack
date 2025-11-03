@@ -1,0 +1,500 @@
+{
+  "users": [
+    {
+      "id": 1762169585891,
+      "name": "Rahul Sharma",
+      "email": "rahul@example.com",
+      "phone": "9876543210",
+      "created_at": "2025-11-03T11:33:05.891Z"
+    }
+  ],
+  "app_data": [
+    {
+      "id": 1762179829817,
+      "user_id": 1,
+      "data": "{\"battery_percent\":24,\"is_charging\":true,\"temperature\":34.70000076293945,\"device_model\":\"SM-E156B\",\"timestamp\":1762179829572}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T14:23:49.817Z"
+    },
+    {
+      "id": 1762179832071,
+      "user_id": 1,
+      "data": "{\"battery_percent\":24,\"is_charging\":true,\"temperature\":34.70000076293945,\"device_model\":\"SM-E156B\",\"timestamp\":1762179832062}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T14:23:52.071Z"
+    },
+    {
+      "id": 1762180286860,
+      "user_id": 1,
+      "data": "{\"battery_percent\":26,\"is_charging\":true,\"temperature\":35.29999923706055,\"device_model\":\"SM-E156B\",\"timestamp\":1762180286798}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T14:31:26.860Z"
+    },
+    {
+      "id": 1762181702706,
+      "user_id": 1,
+      "data": "{\"battery_percent\":38,\"is_charging\":true,\"temperature\":34.5,\"device_model\":\"SM-E156B\",\"timestamp\":1762181702647}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T14:55:02.706Z"
+    },
+    {
+      "id": 1762182529612,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":45,\"is_charging\":true,\"health\":\"Good\",\"temperature\":35.29999923706055,\"voltage\":3959,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762182529388}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:08:49.612Z"
+    },
+    {
+      "id": 1762182533117,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":45,\"is_charging\":true,\"health\":\"Good\",\"temperature\":35.29999923706055,\"voltage\":3959,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762182533105}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:08:53.117Z"
+    },
+    {
+      "id": 1762185414834,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":true,\"health\":\"Good\",\"temperature\":34.5,\"voltage\":4157,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762185414761}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:56:54.834Z"
+    },
+    {
+      "id": 1762185415310,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":true,\"health\":\"Good\",\"temperature\":34.5,\"voltage\":4157,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762185415301}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:56:55.310Z"
+    },
+    {
+      "id": 1762185415485,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":true,\"health\":\"Good\",\"temperature\":34.5,\"voltage\":4157,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762185415479}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:56:55.485Z"
+    },
+    {
+      "id": 1762185415641,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":true,\"health\":\"Good\",\"temperature\":34.5,\"voltage\":4157,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762185415635}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:56:55.641Z"
+    },
+    {
+      "id": 1762185415819,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":true,\"health\":\"Good\",\"temperature\":34.5,\"voltage\":4157,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762185415812}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:56:55.819Z"
+    },
+    {
+      "id": 1762185415961,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":true,\"health\":\"Good\",\"temperature\":34.5,\"voltage\":4157,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Location not available\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762185415956}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T15:56:55.961Z"
+    },
+    {
+      "id": 1762185752476,
+      "user_id": 1,
+      "data": "{\"battery_percent\":72,\"is_charging\":true,\"health\":\"Good\",\"temperature\":35.099998474121094,\"voltage\":4175,\"technology\":\"Li-ion\"}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T16:02:32.476Z"
+    },
+    {
+      "id": 1762185754379,
+      "user_id": 1,
+      "data": "{\"battery_percent\":72,\"is_charging\":true,\"health\":\"Good\",\"temperature\":35.099998474121094,\"voltage\":4175,\"technology\":\"Li-ion\"}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T16:02:34.379Z"
+    },
+    {
+      "id": 1762186696418,
+      "user_id": 1,
+      "data": "{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T16:18:16.418Z"
+    },
+    {
+      "id": 1762186697478,
+      "user_id": 1,
+      "data": "{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T16:18:17.478Z"
+    },
+    {
+      "id": 1762186701830,
+      "user_id": 1,
+      "data": "{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"}",
+      "type": "battery_info",
+      "created_at": "2025-11-03T16:18:21.830Z"
+    },
+    {
+      "id": 1762186767584,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location data available\",\"suggestion\":\"Move to open area or enable GPS\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186767569}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:19:27.584Z"
+    },
+    {
+      "id": 1762186767735,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location data available\",\"suggestion\":\"Move to open area or enable GPS\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186767730}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:19:27.735Z"
+    },
+    {
+      "id": 1762186767914,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location data available\",\"suggestion\":\"Move to open area or enable GPS\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186767908}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:19:27.914Z"
+    },
+    {
+      "id": 1762186768094,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location data available\",\"suggestion\":\"Move to open area or enable GPS\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186768086}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:19:28.094Z"
+    },
+    {
+      "id": 1762186917273,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location data available\",\"suggestion\":\"Move to open area or enable GPS\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186917082}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:21:57.273Z"
+    },
+    {
+      "id": 1762186923722,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":72,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":4065,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location data available\",\"suggestion\":\"Move to open area or enable GPS\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186923693}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:22:03.722Z"
+    },
+    {
+      "id": 1762186967865,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":71,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32,\"voltage\":4073,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.6139,\"longitude\":77.209,\"accuracy\":25.5,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762186967585,\"provider\":\"debug\",\"status\":\"debug_location\",\"city\":\"New Delhi\",\"country\":\"India\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186967603,\"debug_mode\":true}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:22:47.865Z"
+    },
+    {
+      "id": 1762186969250,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":71,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32,\"voltage\":4073,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.6139,\"longitude\":77.209,\"accuracy\":25.5,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762186969230,\"provider\":\"debug\",\"status\":\"debug_location\",\"city\":\"New Delhi\",\"country\":\"India\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186969231,\"debug_mode\":true}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:22:49.250Z"
+    },
+    {
+      "id": 1762186969393,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":71,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32,\"voltage\":4073,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.6139,\"longitude\":77.209,\"accuracy\":25.5,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762186969375,\"provider\":\"debug\",\"status\":\"debug_location\",\"city\":\"New Delhi\",\"country\":\"India\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186969375,\"debug_mode\":true}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:22:49.393Z"
+    },
+    {
+      "id": 1762186969591,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":71,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32,\"voltage\":4073,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.6139,\"longitude\":77.209,\"accuracy\":25.5,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762186969564,\"provider\":\"debug\",\"status\":\"debug_location\",\"city\":\"New Delhi\",\"country\":\"India\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186969564,\"debug_mode\":true}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:22:49.591Z"
+    },
+    {
+      "id": 1762186969752,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":71,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32,\"voltage\":4073,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.6139,\"longitude\":77.209,\"accuracy\":25.5,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762186969730,\"provider\":\"debug\",\"status\":\"debug_location\",\"city\":\"New Delhi\",\"country\":\"India\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186969730,\"debug_mode\":true}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:22:49.752Z"
+    },
+    {
+      "id": 1762186977061,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":71,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32,\"voltage\":4073,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.6139,\"longitude\":77.209,\"accuracy\":25.5,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762186977051,\"provider\":\"debug\",\"status\":\"debug_location\",\"city\":\"New Delhi\",\"country\":\"India\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762186977051,\"debug_mode\":true}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:22:57.061Z"
+    },
+    {
+      "id": 1762187947612,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.099998474121094,\"voltage\":4039,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":12.969193,\"longitude\":77.596884,\"accuracy\":49.1,\"speed\":1.7,\"altitude\":219.6,\"location_timestamp\":1762187947391,\"provider\":\"simulated\",\"status\":\"active\",\"city\":\"Bangalore\",\"country\":\"India\",\"debug_mode\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762187947391}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:39:07.612Z"
+    },
+    {
+      "id": 1762187949109,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.099998474121094,\"voltage\":4039,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":12.975723,\"longitude\":77.595599,\"accuracy\":24.2,\"speed\":3.7,\"altitude\":276.3,\"location_timestamp\":1762187949092,\"provider\":\"simulated\",\"status\":\"active\",\"city\":\"Bangalore\",\"country\":\"India\",\"debug_mode\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762187949092}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:39:09.109Z"
+    },
+    {
+      "id": 1762187953130,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":70,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.099998474121094,\"voltage\":4039,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":13.080171,\"longitude\":80.274185,\"accuracy\":43.1,\"speed\":2.4,\"altitude\":112.7,\"location_timestamp\":1762187953121,\"provider\":\"simulated\",\"status\":\"active\",\"city\":\"Chennai\",\"country\":\"India\",\"debug_mode\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762187953121}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:39:13.130Z"
+    },
+    {
+      "id": 1762188212616,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":69,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.599998474121094,\"voltage\":4047,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":12.969104,\"longitude\":77.595048,\"accuracy\":41.4,\"speed\":3.2,\"altitude\":100.3,\"location_timestamp\":1762188212574,\"provider\":\"simulated\",\"status\":\"active\",\"city\":\"Bangalore\",\"country\":\"India\",\"debug_mode\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188212574}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:43:32.616Z"
+    },
+    {
+      "id": 1762188214392,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":69,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.599998474121094,\"voltage\":4047,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":22.571697,\"longitude\":88.368515,\"accuracy\":35.7,\"speed\":1.2,\"altitude\":264.4,\"location_timestamp\":1762188214384,\"provider\":\"simulated\",\"status\":\"active\",\"city\":\"Kolkata\",\"country\":\"India\",\"debug_mode\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188214384}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:43:34.392Z"
+    },
+    {
+      "id": 1762188377023,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":69,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.599998474121094,\"voltage\":4047,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Unable to get device location\",\"status\":\"location_unavailable\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188376871}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:46:17.023Z"
+    },
+    {
+      "id": 1762188381605,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":69,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.599998474121094,\"voltage\":4047,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Unable to get device location\",\"status\":\"location_unavailable\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188381594}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:46:21.605Z"
+    },
+    {
+      "id": 1762188387326,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":69,\"is_charging\":false,\"health\":\"Good\",\"temperature\":33.599998474121094,\"voltage\":4047,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Unable to get device location\",\"status\":\"location_unavailable\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188387311}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:46:27.326Z"
+    },
+    {
+      "id": 1762188554112,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":68,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.29999923706055,\"voltage\":4022,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.591815443060938,\"longitude\":77.16172379115756,\"accuracy\":50,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762188553929,\"provider\":\"device_simulated\",\"source\":\"simulated\",\"status\":\"success\",\"device_time\":1762188553929,\"device_based\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188553929}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:49:14.112Z"
+    },
+    {
+      "id": 1762188558179,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":68,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.29999923706055,\"voltage\":4022,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.591815443060938,\"longitude\":77.16172379115756,\"accuracy\":50,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762188558171,\"provider\":\"device_simulated\",\"source\":\"simulated\",\"status\":\"success\",\"device_time\":1762188558171,\"device_based\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188558171}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:49:18.179Z"
+    },
+    {
+      "id": 1762188561508,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":68,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.29999923706055,\"voltage\":4022,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.591815443060938,\"longitude\":77.16172379115756,\"accuracy\":50,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762188561494,\"provider\":\"device_simulated\",\"source\":\"simulated\",\"status\":\"success\",\"device_time\":1762188561494,\"device_based\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188561494}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:49:21.508Z"
+    },
+    {
+      "id": 1762188710151,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":68,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.29999923706055,\"voltage\":4022,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.591815443060938,\"longitude\":77.16172379115756,\"accuracy\":50,\"speed\":0,\"altitude\":218,\"location_timestamp\":1762188710109,\"provider\":\"device_simulated\",\"source\":\"simulated\",\"status\":\"success\",\"device_time\":1762188710109,\"device_based\":true},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762188710109}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:51:50.151Z"
+    },
+    {
+      "id": 1762189045334,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":68,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.29999923706055,\"voltage\":4022,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Turn on GPS and move to open area for better signal\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189045167}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:57:25.334Z"
+    },
+    {
+      "id": 1762189046768,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":68,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.29999923706055,\"voltage\":4022,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Turn on GPS and move to open area for better signal\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189046745}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:57:26.768Z"
+    },
+    {
+      "id": 1762189050775,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":68,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.29999923706055,\"voltage\":4022,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Turn on GPS and move to open area for better signal\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189050767}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T16:57:30.775Z"
+    },
+    {
+      "id": 1762189224282,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":67,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.599998474121094,\"voltage\":4026,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Turn on GPS and move to open area for better signal\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189224048}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:00:24.282Z"
+    },
+    {
+      "id": 1762189228050,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":67,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.599998474121094,\"voltage\":4026,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Turn on GPS and move to open area for better signal\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189228041}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:00:28.050Z"
+    },
+    {
+      "id": 1762189233089,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":67,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.599998474121094,\"voltage\":4026,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No location signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Turn on GPS and move to open area for better signal\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189233077}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:00:33.089Z"
+    },
+    {
+      "id": 1762189460957,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":67,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.599998474121094,\"voltage\":4026,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Wait 30 seconds for GPS to connect\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189460862}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:04:20.957Z"
+    },
+    {
+      "id": 1762189466750,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":67,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.599998474121094,\"voltage\":4026,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Wait 30 seconds for GPS to connect\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189466735}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:04:26.750Z"
+    },
+    {
+      "id": 1762189497534,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":67,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.599998474121094,\"voltage\":4026,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Wait 30 seconds for GPS to connect\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189497513}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:04:57.534Z"
+    },
+    {
+      "id": 1762189497766,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":67,\"is_charging\":false,\"health\":\"Good\",\"temperature\":34.599998474121094,\"voltage\":4026,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Wait 30 seconds for GPS to connect\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189497751}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:04:57.766Z"
+    },
+    {
+      "id": 1762189669743,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Wait 30 seconds for GPS to connect\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189669626}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:07:49.743Z"
+    },
+    {
+      "id": 1762189671322,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal. Move to open area.\",\"status\":\"no_signal\",\"suggestion\":\"Wait 30 seconds for GPS to connect\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189671312}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:07:51.322Z"
+    },
+    {
+      "id": 1762189778875,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762189778724,\"provider\":\"device_based\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false,\"device_id\":\"3fdf8d3a\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189778725}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:09:38.875Z"
+    },
+    {
+      "id": 1762189789505,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762189789493,\"provider\":\"device_based\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false,\"device_id\":\"3fdf8d3a\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189789493}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:09:49.505Z"
+    },
+    {
+      "id": 1762189794530,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762189794509,\"provider\":\"device_based\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false,\"device_id\":\"3fdf8d3a\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762189794510}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:09:54.530Z"
+    },
+    {
+      "id": 1762190132738,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762190132586,\"provider\":\"device_based\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false,\"device_id\":\"3fdf8d3a\"},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190132587}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:15:32.738Z"
+    },
+    {
+      "id": 1762190134903,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Can't create handler inside thread Thread[Thread-2,5,main] that has not called Looper.prepare()\",\"status\":\"error\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190134867}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:15:34.903Z"
+    },
+    {
+      "id": 1762190144854,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Can't create handler inside thread Thread[Thread-3,5,main] that has not called Looper.prepare()\",\"status\":\"error\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190144844}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:15:44.854Z"
+    },
+    {
+      "id": 1762190145135,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Can't create handler inside thread Thread[Thread-4,5,main] that has not called Looper.prepare()\",\"status\":\"error\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190145125}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:15:45.135Z"
+    },
+    {
+      "id": 1762190145308,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Can't create handler inside thread Thread[Thread-5,5,main] that has not called Looper.prepare()\",\"status\":\"error\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190145300}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:15:45.308Z"
+    },
+    {
+      "id": 1762190150549,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":66,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4014,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"Can't create handler inside thread Thread[Thread-6,5,main] that has not called Looper.prepare()\",\"status\":\"error\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190150540}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:15:50.549Z"
+    },
+    {
+      "id": 1762190632254,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":65,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4004,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762190632144,\"provider\":\"device_specific\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190632144}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:23:52.254Z"
+    },
+    {
+      "id": 1762190634357,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":65,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4004,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762190634342,\"provider\":\"device_specific\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190634343}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:23:54.357Z"
+    },
+    {
+      "id": 1762190637822,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":65,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4004,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762190637803,\"provider\":\"device_specific\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190637804}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:23:57.822Z"
+    },
+    {
+      "id": 1762190700990,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":65,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4004,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762190700956,\"provider\":\"device_specific\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190700956}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:25:00.990Z"
+    },
+    {
+      "id": 1762190701162,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":65,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.900001525878906,\"voltage\":4004,\"technology\":\"Li-ion\"},\"location_data\":{\"latitude\":28.5757,\"longitude\":77.1708,\"accuracy\":50,\"speed\":0,\"altitude\":200,\"location_timestamp\":1762190701152,\"provider\":\"device_specific\",\"source\":\"device_specific\",\"status\":\"success\",\"is_real\":false},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190701152}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:25:01.162Z"
+    },
+    {
+      "id": 1762190942770,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":64,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":3991,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal found. Please move to open area and wait for GPS to connect.\",\"status\":\"no_signal\",\"is_real\":false,\"timestamp\":1762190942707},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190942707}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:29:02.770Z"
+    },
+    {
+      "id": 1762190948097,
+      "user_id": 1,
+      "data": "{\"battery_data\":{\"battery_percent\":64,\"is_charging\":false,\"health\":\"Good\",\"temperature\":32.5,\"voltage\":3991,\"technology\":\"Li-ion\"},\"location_data\":{\"error\":\"No GPS signal found. Please move to open area and wait for GPS to connect.\",\"status\":\"no_signal\",\"is_real\":false,\"timestamp\":1762190948078},\"device_model\":\"SM-E156B\",\"android_version\":\"15\",\"timestamp\":1762190948079}",
+      "type": "full_device_info",
+      "created_at": "2025-11-03T17:29:08.097Z"
+    }
+  ],
+  "stats": {
+    "total_users": 1,
+    "total_data": 69
+  }
+}

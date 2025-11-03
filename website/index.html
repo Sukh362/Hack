@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sukh Guard - Battery Monitor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1>Sukh Guard Dashboard</h1>
+            <p>Real-time Battery Monitoring & Protection System</p>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="stats-cards" id="statsCards">
+            <!-- Stats yahan load honge -->
+        </div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn" onclick="app.loadData()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh Data
+            </button>
+            <button class="btn btn-secondary" onclick="app.exportData()">
+                <i class="fas fa-download"></i>
+                Export Report
+            </button>
+            <button class="btn" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">
+                <i class="fas fa-clock"></i>
+                Auto Refresh: ON
+            </button>
+        </div>
+        
+        <!-- Data Table Section -->
+        <div class="data-section">
+            <div class="section-header">
+                <h2><i class="fas fa-table"></i> Device Battery Data</h2>
+                <div class="last-update" id="lastUpdate">
+                    Last update: Loading...
+                </div>
+            </div>
+            
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <div>Loading device data...</div>
+            </div>
+            
+            <div class="table-container">
+                <table id="dataTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Device</th>
+                            <th>Battery</th>
+                            <th>Status</th>
+                            <th>Temperature</th>
+                            <th>Location</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data yahan load hoga -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>&copy; 2024 Sukh Guard - Battery Protection System | Made with <i class="fas fa-heart"></i></p>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
