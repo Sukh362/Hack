@@ -5,11 +5,13 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+
+// Render ke liye environment port use karo, nahi toh 3000
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
 
 // Website folder serve karega
 app.use(express.static('website'));
@@ -60,6 +62,16 @@ initializeDataFile();
 
 // 📱 MOBILE APP ROUTES
 
+// Health check route - Render ke liye important
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        message: 'Sukh Guard Backend is running',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
 // New user register (App se)
 app.post('/api/register', (req, res) => {
     const { name, email, phone } = req.body;
@@ -86,29 +98,45 @@ app.post('/api/register', (req, res) => {
     }
 });
 
-// App se data save karega
-app.post('/api/save-data', (req, res) => {
-    const { user_id, data, type } = req.body;
-    
-    const allData = readData();
-    const newData = {
-        id: Date.now(),
-        user_id: parseInt(user_id),
-        data,
-        type,
-        created_at: new Date().toISOString()
-    };
-    
-    allData.app_data.push(newData);
-    allData.stats.total_data = allData.app_data.length;
-    
-    if (writeData(allData)) {
-        res.json({
-            message: 'Data saved successfully!',
-            data_id: newData.id
+// App se data save karega - MAIN ENDPOINT
+app.post('/api/website/app-data', (req, res) => {
+    try {
+        const { user_id, data, type } = req.body;
+        
+        console.log('📱 Received app data:', { user_id, type });
+        
+        const allData = readData();
+        const newData = {
+            id: Date.now(),
+            user_id: user_id || 1, // Default user ID
+            data: data,
+            type: type || 'full_device_info',
+            created_at: new Date().toISOString()
+        };
+        
+        allData.app_data.push(newData);
+        allData.stats.total_data = allData.app_data.length;
+        
+        if (writeData(allData)) {
+            console.log('✅ Data saved successfully');
+            res.json({
+                success: true,
+                message: 'Data saved successfully!',
+                data_id: newData.id
+            });
+        } else {
+            console.error('❌ Failed to save data');
+            res.status(500).json({ 
+                success: false,
+                error: 'Failed to save data' 
+            });
+        }
+    } catch (error) {
+        console.error('💥 Error in app-data endpoint:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Internal server error' 
         });
-    } else {
-        res.status(500).json({ error: 'Failed to save data' });
     }
 });
 
@@ -136,22 +164,29 @@ app.get('/api/website/users', (req, res) => {
     });
 });
 
-// Website ke liye all app data
+// Website ke liye all app data - GET endpoint
 app.get('/api/website/app-data', (req, res) => {
-    const data = readData();
-    
-    const appDataWithUsers = data.app_data.map(item => {
-        const user = data.users.find(u => u.id === item.user_id);
-        return {
-            ...item,
-            user_name: user ? user.name : 'Unknown'
-        };
-    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
-    res.json({
-        data: appDataWithUsers,
-        total: appDataWithUsers.length
-    });
+    try {
+        const data = readData();
+        
+        const appDataWithUsers = data.app_data.map(item => {
+            const user = data.users.find(u => u.id === item.user_id);
+            return {
+                ...item,
+                user_name: user ? user.name : 'Unknown'
+            };
+        }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        console.log('📊 Sending app data to website:', appDataWithUsers.length, 'items');
+        
+        res.json({
+            data: appDataWithUsers,
+            total: appDataWithUsers.length
+        });
+    } catch (error) {
+        console.error('Error in GET app-data:', error);
+        res.status(500).json({ error: 'Failed to fetch data' });
+    }
 });
 
 // 📊 STATS ROUTES
@@ -182,10 +217,11 @@ app.get('/api/docs', (req, res) => {
     res.json({
         message: 'Sukh Guard API Documentation',
         version: '1.0',
+        environment: process.env.NODE_ENV || 'development',
         endpoints: {
             mobile: {
                 'POST /api/register': 'Register new user',
-                'POST /api/save-data': 'Save app data',
+                'POST /api/website/app-data': 'Save app data',
                 'GET /api/user/:id': 'Get user data'
             },
             website: {
@@ -197,6 +233,9 @@ app.get('/api/docs', (req, res) => {
                 'GET /web': 'Website Dashboard',
                 'GET /dashboard': 'Dashboard',
                 'GET /admin': 'Admin Panel'
+            },
+            health: {
+                'GET /health': 'Server health check'
             }
         }
     });
@@ -207,16 +246,18 @@ app.get('/', (req, res) => {
     res.json({
         message: '🚀 Sukh Guard Backend Server Running!',
         version: '1.0',
+        environment: process.env.NODE_ENV || 'development',
+        port: PORT,
         storage: 'JSON File',
         website: {
-            dashboard: 'http://' + req.get('host') + '/web',
-            admin: 'http://' + req.get('host') + '/admin'
+            dashboard: 'https://' + req.get('host') + '/web',
+            admin: 'https://' + req.get('host') + '/admin'
         },
         endpoints: {
-            mobile: ['/api/register', '/api/save-data', '/api/user/:id'],
+            mobile: ['/api/register', '/api/website/app-data', '/api/user/:id'],
             website: ['/api/website/users', '/api/website/app-data'],
             stats: ['/api/stats'],
-            pages: ['/web', '/dashboard', '/admin']
+            pages: ['/web', '/dashboard', '/admin', '/health']
         }
     });
 });
@@ -226,20 +267,21 @@ app.use((req, res) => {
     res.status(404).json({
         error: 'Endpoint not found',
         available_endpoints: {
-            api: ['/api/register', '/api/save-data', '/api/website/app-data', '/api/stats'],
+            api: ['/api/register', '/api/website/app-data', '/api/stats', '/health'],
             pages: ['/web', '/dashboard', '/admin', '/api/docs']
         }
     });
 });
 
-// Server start karein
+// Server start karein - Render compatible (0.0.0.0)
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Sukh Guard Server running on port ${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`📱 Mobile App API: http://localhost:${PORT}/api`);
     console.log(`🌐 Website Dashboard: http://localhost:${PORT}/web`);
     console.log(`📊 Admin Panel: http://localhost:${PORT}/admin`);
+    console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
     console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
     console.log(`💾 Data Storage: ${DATA_FILE}`);
-    console.log(`📡 Network Access: http://[YOUR_IP]:${PORT}`);
-    console.log(`\n✅ Server ready for connections!`);
+    console.log(`\n✅ Server ready for production!`);
 });
