@@ -3,7 +3,7 @@ const app = {
     autoRefreshInterval: null,
     isAutoRefresh: true,
     currentView: 'grid',
-    lastDataHash: '', // ✅ Track data changes
+    lastDataHash: '',
 
     init: function() {
         document.addEventListener('DOMContentLoaded', function() {
@@ -20,7 +20,6 @@ const app = {
             console.log('🔄 Loading devices from:', app.SERVER_URL);
             app.showLoading();
             
-            // ✅ CACHE BUSTING - Har request unique
             const timestamp = new Date().getTime();
             const response = await fetch(`${app.SERVER_URL}?t=${timestamp}&_=${Math.random()}`);
             console.log('📡 Response status:', response.status);
@@ -33,7 +32,6 @@ const app = {
             console.log('📱 Data received:', result);
             
             if (result && result.data) {
-                // ✅ Check if data actually changed
                 const currentHash = app.generateDataHash(result.data);
                 if (currentHash !== app.lastDataHash) {
                     app.lastDataHash = currentHash;
@@ -55,7 +53,6 @@ const app = {
         }
     },
 
-    // ✅ NEW: Generate hash to detect data changes
     generateDataHash: function(data) {
         try {
             const simpleData = data.map(item => ({
@@ -134,6 +131,8 @@ const app = {
         
         try {
             const deviceMap = new Map();
+            let recentDataCount = 0;
+            let oldDataCount = 0;
             
             data.forEach(item => {
                 try {
@@ -141,12 +140,23 @@ const app = {
                     const deviceKey = deviceData.device_id || deviceData.device_model;
                     
                     if (deviceKey) {
-                        if (!deviceMap.has(deviceKey) || new Date(item.created_at) > new Date(deviceMap.get(deviceKey).created_at)) {
-                            deviceMap.set(deviceKey, {
-                                ...deviceData,
-                                created_at: item.created_at,
-                                rawData: item
-                            });
+                        // ✅ ONLY SHOW DATA FROM LAST 1 HOUR
+                        const dataTime = new Date(item.created_at);
+                        const oneHourAgo = new Date(Date.now() - (60 * 60 * 1000));
+                        
+                        if (dataTime > oneHourAgo) {
+                            recentDataCount++;
+                            if (!deviceMap.has(deviceKey) || dataTime > new Date(deviceMap.get(deviceKey).created_at)) {
+                                deviceMap.set(deviceKey, {
+                                    ...deviceData,
+                                    created_at: item.created_at,
+                                    rawData: item,
+                                    isRecent: true
+                                });
+                            }
+                        } else {
+                            oldDataCount++;
+                            console.log('⏰ Skipping old data:', deviceKey, item.created_at);
                         }
                     }
                 } catch (e) {
@@ -154,7 +164,35 @@ const app = {
                 }
             });
             
-            const latestDevices = Array.from(deviceMap.values());
+            let latestDevices = Array.from(deviceMap.values());
+            
+            // ✅ AGAR KOI RECENT DATA NAHI HAI, TOH LATEST PURANA DATA DIKHAO
+            if (latestDevices.length === 0 && data.length > 0) {
+                console.log('🔄 No recent data found, showing latest available data...');
+                const fallbackMap = new Map();
+                data.forEach(item => {
+                    try {
+                        const deviceData = app.parseDeviceData(item);
+                        const deviceKey = deviceData.device_id || deviceData.device_model;
+                        if (deviceKey) {
+                            if (!fallbackMap.has(deviceKey) || new Date(item.created_at) > new Date(fallbackMap.get(deviceKey).created_at)) {
+                                fallbackMap.set(deviceKey, {
+                                    ...deviceData,
+                                    created_at: item.created_at,
+                                    rawData: item,
+                                    isRecent: false
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Skipping invalid fallback data:', e);
+                    }
+                });
+                latestDevices = Array.from(fallbackMap.values());
+            }
+            
+            console.log(`📊 Data Summary: ${recentDataCount} recent, ${oldDataCount} old, ${latestDevices.length} displayed`);
+            
             deviceCount.textContent = `${latestDevices.length} device${latestDevices.length !== 1 ? 's' : ''} connected`;
             devicesGrid.innerHTML = latestDevices.map(device => app.createDeviceCard(device)).join('');
             
@@ -190,8 +228,13 @@ const app = {
             const androidVersion = device.android_version || 'Unknown';
             const isCharging = device.is_charging || false;
             
+            // ✅ OLD DATA KO DIFFERENT STYLE MEIN DIKHAO
+            const isRecent = device.isRecent !== false;
+            const cardStyle = isRecent ? '' : 'opacity: 0.7; border-color: var(--text-muted);';
+            const recentBadge = isRecent ? '' : '<div style="background: var(--text-muted); color: var(--dark); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-top: 5px;">Old Data</div>';
+            
             return `
-                <div class="device-card" data-device-id="${deviceId}">
+                <div class="device-card" data-device-id="${deviceId}" style="${cardStyle}">
                     <div class="device-header">
                         <div class="device-name">${deviceModel}</div>
                         <div class="device-user">User ${userId}</div>
@@ -219,7 +262,7 @@ const app = {
                             <span class="detail-label">Temperature</span>
                             <span class="detail-value">
                                 <i class="fas fa-thermometer-half"></i>
-                                ${temperature}°C
+                                ${temperature.toFixed(1)}°C
                             </span>
                         </div>
                         
@@ -245,6 +288,7 @@ const app = {
                             <i class="fas fa-id-card"></i>
                             ID: ${deviceId.substring(0, 12)}...
                         </small>
+                        ${recentBadge}
                     </div>
                 </div>
             `;
@@ -277,7 +321,6 @@ const app = {
             
             const deviceData = JSON.parse(item.data);
             
-            // Check different data formats
             if (deviceData.battery_data) {
                 return {
                     ...deviceData.battery_data,
@@ -362,7 +405,7 @@ const app = {
         if (this.isAutoRefresh) {
             this.autoRefreshInterval = setInterval(() => {
                 this.loadAllDevices();
-            }, 5000); // ✅ FASTER: 5 seconds
+            }, 5000); // 5 seconds
         }
     },
 
@@ -388,10 +431,9 @@ const app = {
         }
     },
 
-    // ✅ NEW: Force refresh with cache busting
     forceRefresh: function() {
         console.log('🔄 Force refreshing data...');
-        this.lastDataHash = ''; // Reset hash to force update
+        this.lastDataHash = '';
         this.loadAllDevices();
     },
 
@@ -400,5 +442,4 @@ const app = {
     }
 };
 
-// App initialize karo
 app.init();
