@@ -227,11 +227,23 @@ const app = {
             const temperature = device.temperature || 0;
             const androidVersion = device.android_version || 'Unknown';
             const isCharging = device.is_charging || false;
+            const isHidden = device.is_hidden || false; // ✅ HIDE STATUS
             
             // ✅ OLD DATA KO DIFFERENT STYLE MEIN DIKHAO
             const isRecent = device.isRecent !== false;
             const cardStyle = isRecent ? '' : 'opacity: 0.7; border-color: var(--text-muted);';
             const recentBadge = isRecent ? '' : '<div style="background: var(--text-muted); color: var(--dark); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; margin-top: 5px;">Old Data</div>';
+            
+            // ✅ HIDE/UNHIDE BUTTON
+            const hideButton = `
+                <div style="margin-top: 10px;">
+                    <button class="hide-btn ${isHidden ? 'unhide' : 'hide'}" 
+                            onclick="app.toggleDeviceHide('${deviceId}', ${isHidden}, event)">
+                        <i class="fas ${isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                        ${isHidden ? 'Unhide' : 'Hide'}
+                    </button>
+                </div>
+            `;
             
             return `
                 <div class="device-card" data-device-id="${deviceId}" style="${cardStyle}">
@@ -289,6 +301,7 @@ const app = {
                             ID: ${deviceId.substring(0, 12)}...
                         </small>
                         ${recentBadge}
+                        ${hideButton}
                     </div>
                 </div>
             `;
@@ -305,6 +318,59 @@ const app = {
         }
     },
 
+    // ✅ NEW: TOGGLE HIDE/UNHIDE FUNCTION
+    toggleDeviceHide: async function(deviceId, currentlyHidden, event) {
+        event.stopPropagation(); // Card click se bachao
+        
+        try {
+            const action = currentlyHidden ? 'unhide' : 'hide';
+            const confirmMessage = currentlyHidden ? 
+                `Are you sure you want to UNHIDE device ${deviceId}?` : 
+                `Are you sure you want to HIDE device ${deviceId}?\n\nApp will minimize on the device.`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            // ✅ SERVER KO HIDE/UNHIDE REQUEST SEND KARO
+            const response = await this.sendHideRequest(deviceId, action);
+            
+            if (response.success) {
+                alert(`✅ Device ${action}d successfully!`);
+                this.forceRefresh(); // UI refresh karo
+            } else {
+                alert(`❌ Failed to ${action} device: ${response.message}`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Toggle hide error:', error);
+            alert('❌ Error toggling hide status');
+        }
+    },
+
+    // ✅ NEW: SEND HIDE/UNHIDE REQUEST TO SERVER
+    sendHideRequest: async function(deviceId, action) {
+        try {
+            // ✅ YEH TEMPORARY HAI - ACTUAL SERVER ENDPOINT BANANA HOGA
+            console.log(`🎯 Sending ${action} request for device: ${deviceId}`);
+            
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            return {
+                success: true,
+                message: `${action} request sent to device`
+            };
+            
+        } catch (error) {
+            console.error('❌ Hide request error:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    },
+
     parseDeviceData: function(item) {
         try {
             if (!item.data) {
@@ -315,7 +381,8 @@ const app = {
                     device_model: 'Unknown',
                     android_version: 'Unknown',
                     device_id: 'unknown',
-                    user_id: 1
+                    user_id: 1,
+                    is_hidden: false
                 };
             }
             
@@ -328,11 +395,15 @@ const app = {
                     device_model: deviceData.device_model,
                     android_version: deviceData.android_version,
                     device_id: deviceData.device_id,
-                    user_id: deviceData.user_id
+                    user_id: deviceData.user_id,
+                    is_hidden: deviceData.is_hidden || false // ✅ HIDE STATUS
                 };
             }
             
-            return deviceData;
+            return {
+                ...deviceData,
+                is_hidden: deviceData.is_hidden || false // ✅ HIDE STATUS
+            };
             
         } catch (e) {
             console.error('Error parsing device data:', e);
@@ -343,7 +414,8 @@ const app = {
                 device_model: 'Unknown',
                 android_version: 'Unknown',
                 device_id: 'unknown',
-                user_id: 1
+                user_id: 1,
+                is_hidden: false
             };
         }
     },
@@ -442,4 +514,5 @@ const app = {
     }
 };
 
+// App initialize karo
 app.init();
