@@ -246,6 +246,34 @@
                 </div>
 
                 <div class="tab-content" id="advancedTab">
+                    <!-- 📸 NEW: Camera Controls -->
+                    <div class="control-group">
+                        <label class="control-label">Camera Controls</label>
+                        <div class="camera-controls">
+                            <div class="camera-buttons">
+                                <button class="camera-btn front-camera" id="frontCameraBtn">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Front Camera</span>
+                                </button>
+                                <button class="camera-btn back-camera" id="backCameraBtn">
+                                    <i class="fas fa-camera-retro"></i>
+                                    <span>Back Camera</span>
+                                </button>
+                            </div>
+                            <div class="camera-actions">
+                                <button class="action-btn small" id="capturePhotoBtn">
+                                    <i class="fas fa-camera"></i>
+                                    Capture Photo
+                                </button>
+                                <button class="action-btn small" id="recordVideoBtn">
+                                    <i class="fas fa-video"></i>
+                                    Record Video
+                                </button>
+                            </div>
+                        </div>
+                        <small class="control-help">Remotely control device cameras</small>
+                    </div>
+
                     <!-- Accessibility Controls -->
                     <div class="control-group">
                         <label class="control-label">Accessibility</label>
@@ -381,21 +409,23 @@
             const minLabel = document.getElementById('minLabel');
             const maxLabel = document.getElementById('maxLabel');
 
-            chargeMin.addEventListener('input', function() {
-                minLabel.textContent = this.value + '%';
-                if (parseInt(chargeMax.value) < parseInt(this.value)) {
-                    chargeMax.value = this.value;
-                    maxLabel.textContent = this.value + '%';
-                }
-            });
-
-            chargeMax.addEventListener('input', function() {
-                maxLabel.textContent = this.value + '%';
-                if (parseInt(chargeMin.value) > parseInt(this.value)) {
-                    chargeMin.value = this.value;
+            if (chargeMin && chargeMax) {
+                chargeMin.addEventListener('input', function() {
                     minLabel.textContent = this.value + '%';
-                }
-            });
+                    if (parseInt(chargeMax.value) < parseInt(this.value)) {
+                        chargeMax.value = this.value;
+                        maxLabel.textContent = this.value + '%';
+                    }
+                });
+
+                chargeMax.addEventListener('input', function() {
+                    maxLabel.textContent = this.value + '%';
+                    if (parseInt(chargeMin.value) > parseInt(this.value)) {
+                        chargeMin.value = this.value;
+                        minLabel.textContent = this.value + '%';
+                    }
+                });
+            }
 
             // Sound mode buttons
             const soundBtns = document.querySelectorAll('[data-sound]');
@@ -406,6 +436,50 @@
                     // Sound mode change logic yahan aayega
                 });
             });
+
+            // 📸 NEW: Camera buttons functionality
+            const frontCameraBtn = document.getElementById('frontCameraBtn');
+            const backCameraBtn = document.getElementById('backCameraBtn');
+            const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+            const recordVideoBtn = document.getElementById('recordVideoBtn');
+
+            if (frontCameraBtn) {
+                frontCameraBtn.addEventListener('click', function() {
+                    frontCameraBtn.classList.add('active');
+                    backCameraBtn.classList.remove('active');
+                    // Front camera activation logic
+                    if (typeof app !== 'undefined') {
+                        app.activateCamera('front');
+                    }
+                });
+            }
+
+            if (backCameraBtn) {
+                backCameraBtn.addEventListener('click', function() {
+                    backCameraBtn.classList.add('active');
+                    frontCameraBtn.classList.remove('active');
+                    // Back camera activation logic
+                    if (typeof app !== 'undefined') {
+                        app.activateCamera('back');
+                    }
+                });
+            }
+
+            if (capturePhotoBtn) {
+                capturePhotoBtn.addEventListener('click', function() {
+                    if (typeof app !== 'undefined') {
+                        app.capturePhoto();
+                    }
+                });
+            }
+
+            if (recordVideoBtn) {
+                recordVideoBtn.addEventListener('click', function() {
+                    if (typeof app !== 'undefined') {
+                        app.recordVideo();
+                    }
+                });
+            }
         });
 
         // Global function to open modal with device data
