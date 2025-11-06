@@ -13,7 +13,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 
-// ✅ SECURITY MIDDLEWARE - ADD THIS
+// ✅ PEHLE: Website folder serve karega - ABSOLUTE PATH use karo
+app.use(express.static(path.join(__dirname, 'website')));
+
+// ✅ SECURITY MIDDLEWARE - PHIR LAGAO
 const authMiddleware = (req, res, next) => {
     // Public routes - inko authentication ki need nahi
     const publicRoutes = [
@@ -46,9 +49,6 @@ const authMiddleware = (req, res, next) => {
 
 // Use the security middleware
 app.use(authMiddleware);
-
-// Website folder server krega 
-app.use(express.static(path.join(__dirname, 'website')));
 
 // Data storage file
 const DATA_FILE = './app_data.json';
