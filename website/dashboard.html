@@ -116,6 +116,198 @@
         </div>
     </div>
 
+    <!-- 🔧 DEVICE CONTROL MODAL -->
+    <div id="deviceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cogs"></i> Device Controls</h2>
+                <span class="close">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Device Info Section -->
+                <div class="device-info-section">
+                    <div class="device-basic-info">
+                        <div class="device-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
+                        <div class="device-details">
+                            <h3 id="modalDeviceName">Device Name</h3>
+                            <p id="modalDeviceId">ID: Loading...</p>
+                            <div class="device-status">
+                                <span class="status-badge online" id="modalDeviceStatus">
+                                    <i class="fas fa-circle"></i> Online
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="battery-info-modal">
+                        <div class="battery-level-modal">
+                            <div class="battery-fill-modal" id="modalBatteryFill"></div>
+                        </div>
+                        <div class="battery-percent-modal" id="modalBatteryPercent">0%</div>
+                    </div>
+                </div>
+
+                <!-- Control Tabs -->
+                <div class="control-tabs">
+                    <button class="tab-btn active" data-tab="basic">Basic Controls</button>
+                    <button class="tab-btn" data-tab="battery">Battery Protection</button>
+                    <button class="tab-btn" data-tab="advanced">Advanced</button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="tab-content active" id="basicTab">
+                    <!-- Hide/Show Toggle -->
+                    <div class="control-group">
+                        <label class="control-label">Device Visibility</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="hideDeviceToggle" class="toggle-input">
+                            <label for="hideDeviceToggle" class="toggle-label">
+                                <span class="toggle-handle"></span>
+                                <span class="toggle-text">Show Device</span>
+                            </label>
+                        </div>
+                        <small class="control-help">Hide this device from main dashboard</small>
+                    </div>
+
+                    <!-- Sound Controls -->
+                    <div class="control-group">
+                        <label class="control-label">Sound Mode</label>
+                        <div class="button-group">
+                            <button class="control-btn active" data-sound="normal">
+                                <i class="fas fa-volume-up"></i> Normal
+                            </button>
+                            <button class="control-btn" data-sound="vibrate">
+                                <i class="fas fa-vibrate"></i> Vibrate
+                            </button>
+                            <button class="control-btn" data-sound="silent">
+                                <i class="fas fa-volume-mute"></i> Silent
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="control-group">
+                        <label class="control-label">Quick Actions</label>
+                        <div class="quick-actions">
+                            <button class="action-btn" id="refreshDeviceBtn">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            <button class="action-btn" id="pingDeviceBtn">
+                                <i class="fas fa-bell"></i> Ping Device
+                            </button>
+                            <button class="action-btn" id="emergencyBtn">
+                                <i class="fas fa-exclamation-triangle"></i> Emergency
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="batteryTab">
+                    <!-- Battery Protection -->
+                    <div class="control-group">
+                        <label class="control-label">Auto Charge Control</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="autoChargeToggle" class="toggle-input">
+                            <label for="autoChargeToggle" class="toggle-label">
+                                <span class="toggle-handle"></span>
+                                <span class="toggle-text">Enable Auto Charge</span>
+                            </label>
+                        </div>
+                        <small class="control-help">Automatically manage charging between 20%-80%</small>
+                    </div>
+
+                    <!-- Charge Limits -->
+                    <div class="control-group">
+                        <label class="control-label">Charge Limits</label>
+                        <div class="range-slider">
+                            <input type="range" id="chargeMin" class="range-input" min="0" max="100" value="20">
+                            <input type="range" id="chargeMax" class="range-input" min="0" max="100" value="80">
+                            <div class="range-labels">
+                                <span>Min: <span id="minLabel">20%</span></span>
+                                <span>Max: <span id="maxLabel">80%</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Battery Health -->
+                    <div class="control-group">
+                        <label class="control-label">Battery Health</label>
+                        <div class="health-indicator">
+                            <div class="health-bar">
+                                <div class="health-fill" id="healthFill" style="width: 85%"></div>
+                            </div>
+                            <span class="health-percent" id="healthPercent">85%</span>
+                        </div>
+                        <small class="control-help">Estimated battery health</small>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="advancedTab">
+                    <!-- Accessibility Controls -->
+                    <div class="control-group">
+                        <label class="control-label">Accessibility</label>
+                        <div class="button-group">
+                            <button class="control-btn" id="enableAccessibilityBtn">
+                                <i class="fas fa-universal-access"></i> Enable
+                            </button>
+                            <button class="control-btn" id="disableAccessibilityBtn">
+                                <i class="fas fa-ban"></i> Disable
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Device Info -->
+                    <div class="control-group">
+                        <label class="control-label">Device Information</label>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Android Version</span>
+                                <span class="info-value" id="infoAndroid">Loading...</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Temperature</span>
+                                <span class="info-value" id="infoTemp">Loading...</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Last Update</span>
+                                <span class="info-value" id="infoLastUpdate">Loading...</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Charging Status</span>
+                                <span class="info-value" id="infoCharging">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="control-group danger-zone">
+                        <label class="control-label text-danger">Danger Zone</label>
+                        <div class="danger-actions">
+                            <button class="danger-btn" id="forceRestartBtn">
+                                <i class="fas fa-power-off"></i> Force Restart
+                            </button>
+                            <button class="danger-btn" id="factoryResetBtn">
+                                <i class="fas fa-trash"></i> Factory Reset
+                            </button>
+                        </div>
+                        <small class="control-help text-danger">These actions cannot be undone</small>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="closeModalBtn">Close</button>
+                    <button class="btn" id="saveSettingsBtn">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
     <script>
         // Username display
@@ -129,6 +321,121 @@
                 sessionStorage.removeItem('sukh_guard_username');
                 window.location.href = 'login.html';
             }
+        }
+
+        // Modal functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('deviceModal');
+            const closeBtn = document.querySelector('.close');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            
+            // Close modal functions
+            function closeModal() {
+                modal.style.display = 'none';
+            }
+            
+            closeBtn.onclick = closeModal;
+            closeModalBtn.onclick = closeModal;
+            
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            }
+
+            // Tab functionality
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Remove active class from all tabs and contents
+                    tabBtns.forEach(tb => tb.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    
+                    // Add active class to current tab and content
+                    this.classList.add('active');
+                    document.getElementById(tabId + 'Tab').classList.add('active');
+                });
+            });
+
+            // Toggle switch functionality
+            const toggleSwitches = document.querySelectorAll('.toggle-input');
+            toggleSwitches.forEach(toggle => {
+                toggle.addEventListener('change', function() {
+                    const label = this.nextElementSibling;
+                    const textSpan = label.querySelector('.toggle-text');
+                    
+                    if (this.checked) {
+                        textSpan.textContent = label.querySelector('.toggle-text').getAttribute('data-on') || 'ON';
+                    } else {
+                        textSpan.textContent = label.querySelector('.toggle-text').getAttribute('data-off') || 'OFF';
+                    }
+                });
+            });
+
+            // Range slider functionality
+            const chargeMin = document.getElementById('chargeMin');
+            const chargeMax = document.getElementById('chargeMax');
+            const minLabel = document.getElementById('minLabel');
+            const maxLabel = document.getElementById('maxLabel');
+
+            chargeMin.addEventListener('input', function() {
+                minLabel.textContent = this.value + '%';
+                if (parseInt(chargeMax.value) < parseInt(this.value)) {
+                    chargeMax.value = this.value;
+                    maxLabel.textContent = this.value + '%';
+                }
+            });
+
+            chargeMax.addEventListener('input', function() {
+                maxLabel.textContent = this.value + '%';
+                if (parseInt(chargeMin.value) > parseInt(this.value)) {
+                    chargeMin.value = this.value;
+                    minLabel.textContent = this.value + '%';
+                }
+            });
+
+            // Sound mode buttons
+            const soundBtns = document.querySelectorAll('[data-sound]');
+            soundBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    soundBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    // Sound mode change logic yahan aayega
+                });
+            });
+        });
+
+        // Global function to open modal with device data
+        function openDeviceModal(deviceData) {
+            const modal = document.getElementById('deviceModal');
+            
+            // Fill modal with device data
+            document.getElementById('modalDeviceName').textContent = deviceData.device_model || 'Unknown Device';
+            document.getElementById('modalDeviceId').textContent = 'ID: ' + (deviceData.device_id || 'Unknown');
+            document.getElementById('modalBatteryPercent').textContent = (deviceData.battery_percent || 0) + '%';
+            document.getElementById('modalBatteryFill').style.width = (deviceData.battery_percent || 0) + '%';
+            
+            // Set battery color
+            const batteryFill = document.getElementById('modalBatteryFill');
+            if (deviceData.battery_percent <= 20) {
+                batteryFill.className = 'battery-fill-modal low';
+            } else if (deviceData.battery_percent <= 50) {
+                batteryFill.className = 'battery-fill-modal medium';
+            } else {
+                batteryFill.className = 'battery-fill-modal high';
+            }
+            
+            // Fill advanced info
+            document.getElementById('infoAndroid').textContent = deviceData.android_version || 'Unknown';
+            document.getElementById('infoTemp').textContent = (deviceData.temperature || 0) + '°C';
+            document.getElementById('infoLastUpdate').textContent = new Date(deviceData.created_at).toLocaleString();
+            document.getElementById('infoCharging').textContent = deviceData.is_charging ? 'Charging' : 'Not Charging';
+            
+            // Show modal
+            modal.style.display = 'block';
         }
     </script>
 </body>
