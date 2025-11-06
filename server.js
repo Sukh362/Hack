@@ -47,8 +47,8 @@ const authMiddleware = (req, res, next) => {
 // Use the security middleware
 app.use(authMiddleware);
 
-// Website folder serve karega
-app.use(express.static('website'));
+// Website folder server krega 
+app.use(express.static(path.join(__dirname, 'website')));
 
 // Data storage file
 const DATA_FILE = './app_data.json';
