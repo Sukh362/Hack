@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sukh Guard - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 🔐 SECURITY CHECK -->
+    <script>
+        // ✅ Authentication check
+        if (!sessionStorage.getItem('sukh_guard_authenticated')) {
+            window.location.href = 'login.html';
+        }
+        
+        // ✅ Auto logout after 24 hours
+        const loginTime = new Date(sessionStorage.getItem('sukh_guard_login_time'));
+        const currentTime = new Date();
+        const hoursDiff = (currentTime - loginTime) / (1000 * 60 * 60);
+        
+        if (hoursDiff > 24) {
+            sessionStorage.removeItem('sukh_guard_authenticated');
+            sessionStorage.removeItem('sukh_guard_login_time');
+            sessionStorage.removeItem('sukh_guard_username');
+            window.location.href = 'login.html';
+        }
+    </script>
+
+    <div class="container">
+        <!-- Header with Logout -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1>Sukh Guard Dashboard</h1>
+            <p>Multi-Device Battery Monitoring System</p>
+            <div class="user-info">
+                <span>Welcome, <strong id="usernameDisplay">Sukh</strong></span>
+                <button onclick="logout()" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-number" id="totalDevices">0</div>
+                    <div class="stat-label">Total Devices</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-number" id="totalUsers">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-battery-half"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-number" id="avgBattery">0%</div>
+                    <div class="stat-label">Avg Battery</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Device Grid Section -->
+        <div class="devices-section">
+            <div class="section-header">
+                <h2><i class="fas fa-list"></i> All Devices</h2>
+                <div class="device-count" id="deviceCount">
+                    Loading devices...
+                </div>
+            </div>
+            
+            <div class="loading" id="loadingDevices">
+                <i class="fas fa-spinner fa-spin"></i>
+                <div>Loading devices...</div>
+            </div>
+            
+            <div class="devices-grid" id="devicesGrid">
+                <!-- Device boxes dynamically load honge -->
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn" onclick="app.loadAllDevices()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh All Devices
+            </button>
+            <button class="btn btn-secondary" onclick="app.toggleView()" id="viewToggleBtn">
+                <i class="fas fa-th"></i>
+                Grid View
+            </button>
+            <button class="btn" onclick="app.toggleAutoRefresh()" id="autoRefreshBtn">
+                <i class="fas fa-clock"></i>
+                Auto Refresh: ON
+            </button>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>&copy; 2024 Sukh Guard - Multi-Device Battery Protection | Secure Access</p>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Username display
+        document.getElementById('usernameDisplay').textContent = sessionStorage.getItem('sukh_guard_username') || 'Sukh';
+        
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('sukh_guard_authenticated');
+                sessionStorage.removeItem('sukh_guard_login_time');
+                sessionStorage.removeItem('sukh_guard_username');
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>
