@@ -290,75 +290,6 @@ body {
     color: var(--accent);
 }
 
-/* ✅ HIDE/UNHIDE BUTTON STYLES */
-.hide-btn {
-    background: linear-gradient(45deg, var(--secondary), #ff4757);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    justify-content: center;
-}
-
-.hide-btn.unhide {
-    background: linear-gradient(45deg, var(--primary), #0099cc);
-}
-
-.hide-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-}
-
-.hide-btn.unhide:hover {
-    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
-}
-
-.hide-btn:active {
-    transform: translateY(0);
-}
-
-/* ✅ ACCESSIBILITY BUTTON STYLES */
-.accessibility-btn {
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    justify-content: center;
-    flex: 1;
-}
-
-.accessibility-btn.hide {
-    background: #dc3545;
-    color: white;
-}
-
-.accessibility-btn.unhide {
-    background: #28a745;
-    color: white;
-}
-
-.accessibility-btn:hover {
-    transform: translateY(-1px);
-    opacity: 0.9;
-}
-
-.accessibility-btn:active {
-    transform: translateY(0);
-}
-
 /* Hidden Device Style */
 .device-card[data-hidden="true"] {
     opacity: 0.6;
@@ -520,16 +451,6 @@ body {
         flex-direction: column;
         align-items: flex-start;
     }
-    
-    .hide-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
-    
-    .accessibility-btn {
-        padding: 6px 8px;
-        font-size: 0.7rem;
-    }
 }
 
 @media (max-width: 480px) {
@@ -683,4 +604,4 @@ body {
 .btn-login:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
-    }
+}
