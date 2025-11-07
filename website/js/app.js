@@ -53,6 +53,11 @@ const app = {
                 // Add active class to current tab and content
                 this.classList.add('active');
                 document.getElementById(tabId + 'Tab').classList.add('active');
+
+                // Data tab specific actions
+                if (tabId === 'data' && app.currentDevice) {
+                    app.loadDeviceData();
+                }
             });
         });
 
@@ -135,7 +140,7 @@ const app = {
         const saveSettingsBtn = document.getElementById('saveSettingsBtn');
         if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', app.saveSettings);
 
-        // 📸 NEW: Camera control buttons
+        // 📸 Camera control buttons
         const frontCameraBtn = document.getElementById('frontCameraBtn');
         const backCameraBtn = document.getElementById('backCameraBtn');
         const capturePhotoBtn = document.getElementById('capturePhotoBtn');
@@ -164,6 +169,52 @@ const app = {
                 app.recordVideo();
             });
         }
+
+        // 📊 NEW: Data tab buttons
+        const refreshDataBtn = document.getElementById('refreshDataBtn');
+        const exportDataBtn = document.getElementById('exportDataBtn');
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        const clearLogsBtn = document.getElementById('clearLogsBtn');
+        const historyPeriodBtns = document.querySelectorAll('[data-period]');
+
+        if (refreshDataBtn) {
+            refreshDataBtn.addEventListener('click', function() {
+                app.loadDeviceData();
+            });
+        }
+
+        if (exportDataBtn) {
+            exportDataBtn.addEventListener('click', function() {
+                app.exportDeviceData();
+            });
+        }
+
+        if (clearDataBtn) {
+            clearDataBtn.addEventListener('click', function() {
+                if (confirm('Clear all device data?')) {
+                    app.clearDeviceData();
+                }
+            });
+        }
+
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', function() {
+                if (confirm('Clear all logs?')) {
+                    document.getElementById('logsList').innerHTML = '';
+                    app.showToast('Logs cleared successfully');
+                }
+            });
+        }
+
+        // History period buttons
+        historyPeriodBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                historyPeriodBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const period = this.getAttribute('data-period');
+                app.loadHistoryData(period);
+            });
+        });
     },
 
     loadAllDevices: async function() {
@@ -581,6 +632,167 @@ const app = {
         app.showToast(`Opened controls for: ${deviceData.device_model}`);
     },
 
+    // 📊 NEW: DATA TAB FUNCTIONS
+
+    loadDeviceData: function() {
+        if (!app.currentDevice) {
+            app.showToast('No device selected', 'error');
+            return;
+        }
+
+        console.log('📊 Loading device data for:', app.currentDevice.device_id);
+        
+        // Update live data stream
+        app.updateLiveDataStream();
+        
+        // Update raw data display
+        app.updateRawDataDisplay();
+        
+        // Update system logs
+        app.updateSystemLogs();
+        
+        app.showToast('Device data loaded successfully');
+    },
+
+    updateLiveDataStream: function() {
+        if (!app.currentDevice) return;
+
+        const device = app.currentDevice;
+        
+        // Simulate live data (in real app, this would come from server)
+        const cpuUsage = Math.floor(Math.random() * 30) + 10; // 10-40%
+        const memoryUsage = Math.floor(Math.random() * 40) + 30; // 30-70%
+        const storageUsage = Math.floor(Math.random() * 50) + 20; // 20-70%
+        const networkStatus = Math.random() > 0.1 ? 'Connected' : 'Weak';
+
+        // Update UI
+        document.getElementById('cpuUsage').textContent = cpuUsage + '%';
+        document.getElementById('memoryUsage').textContent = memoryUsage + '%';
+        document.getElementById('storageUsage').textContent = storageUsage + '%';
+        document.getElementById('networkStatus').textContent = networkStatus;
+
+        // Add color coding
+        document.getElementById('cpuUsage').className = `stream-value ${cpuUsage > 70 ? 'danger' : cpuUsage > 50 ? 'warning' : 'good'}`;
+        document.getElementById('memoryUsage').className = `stream-value ${memoryUsage > 80 ? 'danger' : memoryUsage > 60 ? 'warning' : 'good'}`;
+        document.getElementById('storageUsage').className = `stream-value ${storageUsage > 85 ? 'danger' : storageUsage > 70 ? 'warning' : 'good'}`;
+        document.getElementById('networkStatus').className = `stream-value ${networkStatus === 'Connected' ? 'good' : 'warning'}`;
+    },
+
+    updateRawDataDisplay: function() {
+        if (!app.currentDevice) return;
+
+        const rawDataOutput = document.getElementById('rawDataOutput');
+        const deviceData = app.currentDevice.rawData || app.currentDevice;
+        
+        try {
+            const formattedData = JSON.stringify(deviceData, null, 2);
+            rawDataOutput.textContent = formattedData;
+            rawDataOutput.className = '';
+        } catch (error) {
+            rawDataOutput.textContent = 'Error formatting device data';
+            rawDataOutput.className = 'text-danger';
+        }
+    },
+
+    updateSystemLogs: function() {
+        if (!app.currentDevice) return;
+
+        const logsList = document.getElementById('logsList');
+        const device = app.currentDevice;
+        
+        const logs = [
+            {
+                icon: 'fa-info-circle',
+                color: 'text-info',
+                message: `Device ${device.device_model} connected`,
+                time: 'Just now'
+            },
+            {
+                icon: 'fa-battery-half',
+                color: 'text-success',
+                message: `Battery level: ${device.battery_percent}%`,
+                time: '2 mins ago'
+            },
+            {
+                icon: 'fa-thermometer-half',
+                color: 'text-warning',
+                message: `Temperature: ${device.temperature}°C`,
+                time: '5 mins ago'
+            },
+            {
+                icon: 'fa-sync-alt',
+                color: 'text-info',
+                message: 'Data sync completed',
+                time: '10 mins ago'
+            }
+        ];
+
+        logsList.innerHTML = logs.map(log => `
+            <div class="log-item">
+                <i class="fas ${log.icon} ${log.color}"></i>
+                <span class="log-message">${log.message}</span>
+                <span class="log-time">${log.time}</span>
+            </div>
+        `).join('');
+    },
+
+    loadHistoryData: function(period) {
+        console.log('📈 Loading history data for period:', period);
+        
+        const chartPlaceholder = document.querySelector('.chart-placeholder');
+        if (chartPlaceholder) {
+            chartPlaceholder.innerHTML = `
+                <i class="fas fa-chart-line"></i>
+                <p>Battery History - ${period}</p>
+                <small>Showing simulated data for ${period}</small>
+                <div style="margin-top: 15px; font-size: 0.8rem; color: var(--text-muted);">
+                    <div>📊 Data visualization would appear here</div>
+                    <div>🔍 Period: ${period}</div>
+                    <div>📱 Device: ${app.currentDevice?.device_model || 'Unknown'}</div>
+                </div>
+            `;
+        }
+        
+        app.showToast(`History data loaded for ${period}`);
+    },
+
+    exportDeviceData: function() {
+        if (!app.currentDevice) {
+            app.showToast('No device data to export', 'error');
+            return;
+        }
+
+        const deviceData = app.currentDevice.rawData || app.currentDevice;
+        const dataStr = JSON.stringify(deviceData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `device_data_${app.currentDevice.device_id}_${new Date().getTime()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        app.showToast('Device data exported successfully');
+    },
+
+    clearDeviceData: function() {
+        if (!app.currentDevice) return;
+
+        document.getElementById('rawDataOutput').textContent = 'Data cleared';
+        document.getElementById('logsList').innerHTML = `
+            <div class="log-item">
+                <i class="fas fa-info-circle text-info"></i>
+                <span class="log-message">Logs cleared</span>
+                <span class="log-time">Just now</span>
+            </div>
+        `;
+        
+        app.showToast('Device data cleared');
+    },
+
     // 🔧 DEVICE CONTROL FUNCTIONS
 
     sendHideCommand: async function(hide) {
@@ -662,7 +874,7 @@ const app = {
         }
     },
 
-    // 📸 NEW: CAMERA CONTROL FUNCTIONS
+    // 📸 CAMERA CONTROL FUNCTIONS
 
     activateCamera: function(cameraType) {
         if (!app.currentDevice) return;
