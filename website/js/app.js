@@ -892,11 +892,9 @@ const app = {
         if (cameraType === 'front' && frontCameraBtn) {
             frontCameraBtn.classList.add('active');
             app.currentCamera = 'front';
-            app.showToast('Front camera activated', 'info');
         } else if (cameraType === 'back' && backCameraBtn) {
             backCameraBtn.classList.add('active');
             app.currentCamera = 'back';
-            app.showToast('Back camera activated', 'info');
         }
         
         // Send camera activation command to server
@@ -925,8 +923,6 @@ const app = {
             return;
         }
         
-        app.showToast(`Capturing photo with ${app.currentCamera} camera...`, 'info');
-        
         // Send capture command to server
         app.sendCameraCommand('capture', app.currentCamera);
     },
@@ -950,13 +946,11 @@ const app = {
             // Stop recording
             recordVideoBtn.classList.remove('recording');
             recordVideoBtn.innerHTML = '<i class="fas fa-video"></i> Record Video';
-            app.showToast('Video recording stopped', 'info');
             app.sendCameraCommand('stop_record', app.currentCamera);
         } else {
             // Start recording
             recordVideoBtn.classList.add('recording');
             recordVideoBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
-            app.showToast('Video recording started...', 'info');
             app.sendCameraCommand('record', app.currentCamera);
         }
     },
@@ -981,6 +975,7 @@ const app = {
             const result = await response.json();
             
             if (result.success) {
+                // Server se message show karo
                 app.showToast(result.message, 'success');
                 console.log('📷 Camera command successful:', result);
             } else {
