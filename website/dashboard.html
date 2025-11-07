@@ -155,6 +155,7 @@
                     <button class="tab-btn active" data-tab="basic">Basic Controls</button>
                     <button class="tab-btn" data-tab="battery">Battery Protection</button>
                     <button class="tab-btn" data-tab="advanced">Advanced</button>
+                    <button class="tab-btn" data-tab="data">Data</button>
                 </div>
 
                 <!-- Tab Contents -->
@@ -325,6 +326,97 @@
                     </div>
                 </div>
 
+                <!-- 📊 NEW: DATA TAB -->
+                <div class="tab-content" id="dataTab">
+                    <!-- Live Data Stream -->
+                    <div class="control-group">
+                        <label class="control-label">Live Data Stream</label>
+                        <div class="data-stream" id="dataStream">
+                            <div class="stream-item">
+                                <i class="fas fa-microchip"></i>
+                                <span class="stream-label">CPU Usage</span>
+                                <span class="stream-value" id="cpuUsage">Loading...</span>
+                            </div>
+                            <div class="stream-item">
+                                <i class="fas fa-memory"></i>
+                                <span class="stream-label">Memory</span>
+                                <span class="stream-value" id="memoryUsage">Loading...</span>
+                            </div>
+                            <div class="stream-item">
+                                <i class="fas fa-hdd"></i>
+                                <span class="stream-label">Storage</span>
+                                <span class="stream-value" id="storageUsage">Loading...</span>
+                            </div>
+                            <div class="stream-item">
+                                <i class="fas fa-network-wired"></i>
+                                <span class="stream-label">Network</span>
+                                <span class="stream-value" id="networkStatus">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data History -->
+                    <div class="control-group">
+                        <label class="control-label">Data History</label>
+                        <div class="data-history">
+                            <div class="history-controls">
+                                <button class="control-btn small active" data-period="1h">1H</button>
+                                <button class="control-btn small" data-period="6h">6H</button>
+                                <button class="control-btn small" data-period="24h">24H</button>
+                                <button class="control-btn small" data-period="7d">7D</button>
+                            </div>
+                            <div class="history-chart" id="historyChart">
+                                <div class="chart-placeholder">
+                                    <i class="fas fa-chart-line"></i>
+                                    <p>Battery History Chart</p>
+                                    <small>Data will appear here</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Raw Data -->
+                    <div class="control-group">
+                        <label class="control-label">Raw Device Data</label>
+                        <div class="raw-data-container">
+                            <div class="data-actions">
+                                <button class="action-btn small" id="refreshDataBtn">
+                                    <i class="fas fa-sync-alt"></i> Refresh Data
+                                </button>
+                                <button class="action-btn small" id="exportDataBtn">
+                                    <i class="fas fa-download"></i> Export JSON
+                                </button>
+                                <button class="action-btn small" id="clearDataBtn">
+                                    <i class="fas fa-trash"></i> Clear Data
+                                </button>
+                            </div>
+                            <div class="raw-data-display">
+                                <pre id="rawDataOutput">Loading device data...</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Logs -->
+                    <div class="control-group">
+                        <label class="control-label">System Logs</label>
+                        <div class="logs-container">
+                            <div class="logs-header">
+                                <span>Recent Activities</span>
+                                <button class="action-btn small" id="clearLogsBtn">
+                                    <i class="fas fa-broom"></i> Clear Logs
+                                </button>
+                            </div>
+                            <div class="logs-list" id="logsList">
+                                <div class="log-item">
+                                    <i class="fas fa-info-circle text-info"></i>
+                                    <span class="log-message">System initialized</span>
+                                    <span class="log-time">Just now</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="modal-actions">
                     <button class="btn btn-secondary" id="closeModalBtn">Close</button>
@@ -385,6 +477,11 @@
                     // Add active class to current tab and content
                     this.classList.add('active');
                     document.getElementById(tabId + 'Tab').classList.add('active');
+
+                    // Data tab specific actions
+                    if (tabId === 'data' && typeof app !== 'undefined') {
+                        app.loadDeviceData();
+                    }
                 });
             });
 
@@ -433,11 +530,10 @@
                 btn.addEventListener('click', function() {
                     soundBtns.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    // Sound mode change logic yahan aayega
                 });
             });
 
-            // 📸 NEW: Camera buttons functionality
+            // 📸 Camera buttons functionality
             const frontCameraBtn = document.getElementById('frontCameraBtn');
             const backCameraBtn = document.getElementById('backCameraBtn');
             const capturePhotoBtn = document.getElementById('capturePhotoBtn');
@@ -447,7 +543,6 @@
                 frontCameraBtn.addEventListener('click', function() {
                     frontCameraBtn.classList.add('active');
                     backCameraBtn.classList.remove('active');
-                    // Front camera activation logic
                     if (typeof app !== 'undefined') {
                         app.activateCamera('front');
                     }
@@ -458,7 +553,6 @@
                 backCameraBtn.addEventListener('click', function() {
                     backCameraBtn.classList.add('active');
                     frontCameraBtn.classList.remove('active');
-                    // Back camera activation logic
                     if (typeof app !== 'undefined') {
                         app.activateCamera('back');
                     }
@@ -480,6 +574,60 @@
                     }
                 });
             }
+
+            // 📊 NEW: Data tab buttons
+            const refreshDataBtn = document.getElementById('refreshDataBtn');
+            const exportDataBtn = document.getElementById('exportDataBtn');
+            const clearDataBtn = document.getElementById('clearDataBtn');
+            const clearLogsBtn = document.getElementById('clearLogsBtn');
+            const historyPeriodBtns = document.querySelectorAll('[data-period]');
+
+            if (refreshDataBtn) {
+                refreshDataBtn.addEventListener('click', function() {
+                    if (typeof app !== 'undefined') {
+                        app.loadDeviceData();
+                    }
+                });
+            }
+
+            if (exportDataBtn) {
+                exportDataBtn.addEventListener('click', function() {
+                    if (typeof app !== 'undefined') {
+                        app.exportDeviceData();
+                    }
+                });
+            }
+
+            if (clearDataBtn) {
+                clearDataBtn.addEventListener('click', function() {
+                    if (confirm('Clear all device data?')) {
+                        if (typeof app !== 'undefined') {
+                            app.clearDeviceData();
+                        }
+                    }
+                });
+            }
+
+            if (clearLogsBtn) {
+                clearLogsBtn.addEventListener('click', function() {
+                    if (confirm('Clear all logs?')) {
+                        document.getElementById('logsList').innerHTML = '';
+                        app.showToast('Logs cleared successfully');
+                    }
+                });
+            }
+
+            // History period buttons
+            historyPeriodBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    historyPeriodBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const period = this.getAttribute('data-period');
+                    if (typeof app !== 'undefined') {
+                        app.loadHistoryData(period);
+                    }
+                });
+            });
         });
 
         // Global function to open modal with device data
