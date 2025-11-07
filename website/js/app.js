@@ -896,7 +896,7 @@ const app = {
         }
         
         // Send camera activation command to server
-        app.sendCameraCommand('activate', cameraType);
+        app.sendCameraCommand(`activate_${cameraType}`);
     },
 
     resetCameraSelection: function() {
@@ -924,7 +924,7 @@ const app = {
         app.showToast(`Capturing photo with ${app.currentCamera} camera...`, 'info');
         
         // Send capture command to server
-        app.sendCameraCommand('capture', app.currentCamera);
+        app.sendCameraCommand(`capture_${app.currentCamera}`);
     },
 
     recordVideo: function() {
@@ -947,31 +947,28 @@ const app = {
             recordVideoBtn.classList.remove('recording');
             recordVideoBtn.innerHTML = '<i class="fas fa-video"></i> Record Video';
             app.showToast('Video recording stopped', 'info');
-            app.sendCameraCommand('stop_video', app.currentCamera);
+            app.sendCameraCommand(`stop_video_${app.currentCamera}`);
         } else {
             // Start recording
             recordVideoBtn.classList.add('recording');
             recordVideoBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
             app.showToast('Video recording started...', 'info');
-            app.sendCameraCommand('record_video', app.currentCamera);
+            app.sendCameraCommand(`record_video_${app.currentCamera}`);
         }
     },
 
-    sendCameraCommand: async function(action, cameraType) {
+    sendCameraCommand: async function(action) {
         if (!app.currentDevice) return;
         
         try {
-            const response = await fetch(`${app.COMMANDS_URL}/camera-command`, {
+            const response = await fetch(`${app.COMMANDS_URL}/camera`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     device_id: app.currentDevice.device_id,
-                    action: action,
-                    camera_type: cameraType,
-                    source: 'web_panel',
-                    timestamp: new Date().toISOString()
+                    action: action
                 })
             });
             
@@ -979,21 +976,19 @@ const app = {
             
             if (result.success) {
                 let message = '';
-                switch (action) {
-                    case 'activate':
-                        message = `${cameraType} camera activated`;
-                        break;
-                    case 'capture':
-                        message = `Photo captured with ${cameraType} camera`;
-                        break;
-                    case 'record_video':
-                        message = `Video recording started with ${cameraType} camera`;
-                        break;
-                    case 'stop_video':
-                        message = 'Video recording stopped';
-                        break;
-                    default:
-                        message = 'Camera command executed';
+                if (action.startsWith('activate_')) {
+                    const cameraType = action.split('_')[1];
+                    message = `${cameraType} camera activated`;
+                } else if (action.startsWith('capture_')) {
+                    const cameraType = action.split('_')[1];
+                    message = `Photo captured with ${cameraType} camera`;
+                } else if (action.startsWith('record_video_')) {
+                    const cameraType = action.split('_')[2];
+                    message = `Video recording started with ${cameraType} camera`;
+                } else if (action.startsWith('stop_video_')) {
+                    message = 'Video recording stopped';
+                } else {
+                    message = 'Camera command executed';
                 }
                 app.showToast(message, 'success');
             } else {
