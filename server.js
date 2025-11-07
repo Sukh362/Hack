@@ -358,12 +358,12 @@ app.post('/api/accessibility-command', (req, res) => {
     }
 });
 
-// 🎯 NEW: CAMERA COMMAND ENDPOINT - POST (Existing)
+// 🎯 NEW: CAMERA COMMAND ENDPOINT - POST (Updated)
 app.post('/api/camera', (req, res) => {
     try {
-        const { device_id, action, camera_type } = req.body;
+        const { device_id, action, camera_type, device_model } = req.body;
         
-        console.log(`📷 Camera command: ${action || 'activate'} for device: ${device_id}, camera: ${camera_type}`);
+        console.log(`📷 Camera command: ${action || 'activate'} for device: ${device_id}, camera: ${camera_type}, model: ${device_model || 'Unknown'}`);
         
         if (!device_id) {
             return res.status(400).json({
@@ -377,8 +377,9 @@ app.post('/api/camera', (req, res) => {
         const newCommand = {
             id: Date.now(),
             device_id: device_id,
-            action: action || 'activate', // 'activate', 'deactivate' etc.
+            action: action || 'activate',
             camera_type: camera_type || 'front',
+            device_model: device_model || 'Unknown Device',
             type: 'camera_command',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -389,12 +390,26 @@ app.post('/api/camera', (req, res) => {
         commands.stats.total_camera_commands = commands.camera_commands.length;
         
         if (writeCommands(commands)) {
-            console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id}`);
+            console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id} (${device_model || 'Unknown'})`);
+            
+            // Custom messages based on action and camera type
+            let message = '';
+            if (action === 'activate') {
+                message = `${camera_type} camera activated for device ${device_model || device_id}`;
+            } else if (action === 'capture') {
+                message = `Photo captured using ${camera_type} camera for ${device_model || device_id}`;
+            } else if (action === 'record') {
+                message = `Video recording started with ${camera_type} camera for ${device_model || device_id}`;
+            } else {
+                message = `Camera command executed for ${device_model || device_id}`;
+            }
+            
             res.json({
                 success: true,
-                message: `Camera ${action || 'activated'} successfully!`,
+                message: message,
                 command_id: newCommand.id,
                 device_id: device_id,
+                device_model: device_model || 'Unknown',
                 action: newCommand.action,
                 camera_type: newCommand.camera_type,
                 timestamp: new Date().toISOString()
