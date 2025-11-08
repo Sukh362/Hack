@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parental Control Panel</title>
+    <title>Hackerl</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
@@ -21,6 +21,7 @@
         .tab.active { display: block; }
         .nav { display: flex; margin-bottom: 20px; }
         .nav button { flex: 1; margin: 0 5px; }
+        .login-info { background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0; }
     </style>
 </head>
 <body>
@@ -31,17 +32,27 @@
                 <button onclick="showTab('login')">Login</button>
             </div>
 
-            <div id="register" class="tab active">
+            <div id="register" class="tab">
                 <h2>Parent Registration</h2>
-                <input type="email" id="email" placeholder="Email">
-                <input type="password" id="password" placeholder="Password">
+                <div class="login-info">
+                    <strong>Fixed Login Credentials:</strong><br>
+                    Username: <strong>Sukh</strong><br>
+                    Password: <strong>Sukh hacker</strong>
+                </div>
+                <input type="email" id="email" placeholder="Email (Not required)">
+                <input type="password" id="password" placeholder="Password (Not required)">
                 <button id="registerBtn">Register</button>
             </div>
 
-            <div id="login" class="tab">
+            <div id="login" class="tab active">
                 <h2>Parent Login</h2>
-                <input type="email" id="loginEmail" placeholder="Email">
-                <input type="password" id="loginPassword" placeholder="Password">
+                <div class="login-info">
+                    <strong>Use These Credentials:</strong><br>
+                    Username: <strong>Sukh</strong><br>
+                    Password: <strong>Sukh hacker</strong>
+                </div>
+                <input type="text" id="loginEmail" placeholder="Username (Sukh)">
+                <input type="password" id="loginPassword" placeholder="Password (Sukh hacker)">
                 <button id="loginBtn">Login</button>
             </div>
         </div>
