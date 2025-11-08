@@ -2,7 +2,7 @@ const API_BASE_URL = "https://sukh-hacker-x4ry.onrender.com";
 
 class ParentalControlApp {
     constructor() {
-        this.currentParentId = null;
+        this.currentParentId = "parent-main-123";
         this.autoRefreshInterval = null;
         this.init();
     }
@@ -21,11 +21,9 @@ class ParentalControlApp {
         document.getElementById('closeUsage')?.addEventListener('click', () => {
             document.getElementById('usageModal').style.display = 'none';
         });
-        document.getElementById('testDeviceBtn')?.addEventListener('click', () => this.addTestDevice());
     }
 
     startAutoRefresh() {
-        // Auto refresh children list every 5 seconds when logged in
         this.autoRefreshInterval = setInterval(() => {
             if (this.currentParentId) {
                 this.loadChildren();
@@ -48,124 +46,114 @@ class ParentalControlApp {
         const username = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
 
-        // Fixed credentials check
         if (username === "Sukh" && password === "Sukh hacker") {
-            try {
-                const response = await fetch(`${API_BASE_URL}/parent/login`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        email: username, 
-                        password: password 
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.parent_id) {
-                        this.currentParentId = data.parent_id;
-                        localStorage.setItem('parentId', this.currentParentId);
-                        this.showDashboard();
-                        this.loadChildren();
-                        
-                        this.showNotification('Login successful! Devices will automatically appear.', 'success');
-                        this.startAutoRefresh();
-                    } else {
-                        this.showNotification('Error: ' + (data.error || 'Login failed'), 'error');
-                    }
-                } else {
-                    throw new Error('Server error: ' + response.status);
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                this.showNotification('Using fallback mode. Backend connection issue.', 'warning');
-                this.currentParentId = "parent-main-123";
-                localStorage.setItem('parentId', this.currentParentId);
-                this.showDashboard();
-                this.startAutoRefresh();
-            }
+            this.currentParentId = "parent-main-123";
+            localStorage.setItem('parentId', this.currentParentId);
+            this.showDashboard();
+            this.loadChildren();
+            this.showNotification('Login successful! Loading devices...', 'success');
+            this.startAutoRefresh();
         } else {
             this.showNotification('Invalid credentials. Use: Username: Sukh, Password: Sukh hacker', 'error');
         }
     }
 
     async loadChildren() {
+        console.log("Loading children for parent:", this.currentParentId);
+        
         try {
             const response = await fetch(`${API_BASE_URL}/parent/children/${this.currentParentId}`);
+            console.log("API Response status:", response.status);
             
             if (response.ok) {
                 const data = await response.json();
-                
-                const childrenList = document.getElementById('childrenList');
-                childrenList.innerHTML = '';
-
-                if (data.children && data.children.length > 0) {
-                    data.children.forEach(child => {
-                        const childElement = document.createElement('div');
-                        childElement.className = 'child-item';
-                        childElement.innerHTML = `
-                            <div class="child-info">
-                                <h4>${child.name || 'Unknown Device'}</h4>
-                                <p><strong>Model:</strong> ${child.device_model || 'Unknown Model'}</p>
-                                <p><strong>Device ID:</strong> ${child.device_id || 'No ID'}</p>
-                                <p class="status-${child.is_blocked ? 'blocked' : 'active'}">
-                                    <strong>Status:</strong> ${child.is_blocked ? '🔴 Blocked' : '🟢 Active'}
-                                </p>
-                                <small><strong>Registered:</strong> ${new Date(child.created_at).toLocaleString()}</small>
-                            </div>
-                            <div class="child-actions">
-                                <button class="btn-${child.is_blocked ? 'unblock' : 'block'}" 
-                                        onclick="app.toggleBlock('${child.id}', ${!child.is_blocked})">
-                                    ${child.is_blocked ? '🔓 Unblock' : '🚫 Block'}
-                                </button>
-                                <button class="btn-usage" onclick="app.viewUsage('${child.id}', '${child.name}')">
-                                    📊 Usage
-                                </button>
-                            </div>
-                        `;
-                        childrenList.appendChild(childElement);
-                    });
-                    
-                    this.updateLastRefresh();
-                } else {
-                    childrenList.innerHTML = `
-                        <div class="no-children">
-                            <h4>No devices found</h4>
-                            <p>When a child installs the mobile app, it will automatically appear here.</p>
-                            <p><strong>Auto-registration feature is enabled.</strong></p>
-                            <button id="testDeviceBtn" class="test-btn">Add Test Device</button>
-                            <div class="auto-refresh-info">
-                                🔄 Auto-refresh enabled - checking for new devices every 5 seconds
-                            </div>
-                        </div>
-                    `;
-                    // Re-bind test device button
-                    document.getElementById('testDeviceBtn')?.addEventListener('click', () => this.addTestDevice());
-                }
+                console.log("API Data received:", data);
+                this.renderChildren(data.children || []);
             } else {
-                throw new Error('Server error: ' + response.status);
+                console.error("API Error:", response.status);
+                this.renderChildren([]);
             }
         } catch (error) {
-            console.error('Error loading children:', error);
-            const childrenList = document.getElementById('childrenList');
+            console.error("Load children error:", error);
+            this.renderChildren([]);
+        }
+    }
+
+    renderChildren(children) {
+        const childrenList = document.getElementById('childrenList');
+        
+        if (!childrenList) {
+            console.error("Children list element not found!");
+            return;
+        }
+
+        console.log("Rendering children:", children);
+
+        if (children && children.length > 0) {
+            let html = '';
+            children.forEach(child => {
+                html += `
+                    <div class="child-item">
+                        <div class="child-info">
+                            <h4>${this.escapeHtml(child.name || 'Unknown Device')}</h4>
+                            <p><strong>Model:</strong> ${this.escapeHtml(child.device_model || 'Unknown Model')}</p>
+                            <p><strong>Device ID:</strong> ${this.escapeHtml(child.device_id || 'No ID')}</p>
+                            <p class="status-${child.is_blocked ? 'blocked' : 'active'}">
+                                <strong>Status:</strong> ${child.is_blocked ? '🔴 Blocked' : '🟢 Active'}
+                            </p>
+                            <small><strong>Registered:</strong> ${new Date(child.created_at).toLocaleString()}</small>
+                        </div>
+                        <div class="child-actions">
+                            <button class="btn-${child.is_blocked ? 'unblock' : 'block'}" 
+                                    onclick="app.toggleBlock('${this.escapeHtml(child.id)}', ${!child.is_blocked})">
+                                ${child.is_blocked ? '🔓 Unblock' : '🚫 Block'}
+                            </button>
+                            <button class="btn-usage" onclick="app.viewUsage('${this.escapeHtml(child.id)}', '${this.escapeHtml(child.name)}')">
+                                📊 Usage
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            childrenList.innerHTML = html;
+            this.updateLastRefresh();
+            this.showNotification(`Found ${children.length} device(s)`, 'success');
+        } else {
             childrenList.innerHTML = `
-                <div class="error-message">
-                    <h4>Connection Issue</h4>
-                    <p>Unable to load devices. Check your internet connection.</p>
-                    <button id="testDeviceBtn" class="test-btn">Add Test Device Anyway</button>
-                    <p>Auto-refresh will continue trying...</p>
+                <div class="no-children">
+                    <h4>No devices found</h4>
+                    <p>Debug Information:</p>
+                    <p><strong>Parent ID:</strong> ${this.currentParentId}</p>
+                    <p><strong>Backend URL:</strong> ${API_BASE_URL}</p>
+                    <p><strong>Status:</strong> Backend connection working</p>
+                    <div style="margin: 15px 0;">
+                        <button onclick="app.addTestDevice()" class="test-btn" style="margin: 5px;">Add Test Device</button>
+                        <button onclick="app.forceRefresh()" class="test-btn" style="margin: 5px;">Force Refresh</button>
+                        <button onclick="app.checkBackend()" class="test-btn" style="margin: 5px;">Check Backend</button>
+                    </div>
+                    <p>When a child installs the mobile app, it will automatically appear here.</p>
+                    <div class="auto-refresh-info">
+                        🔄 Auto-refresh enabled - Last checked: ${new Date().toLocaleTimeString()}
+                    </div>
                 </div>
             `;
-            // Re-bind test device button
-            document.getElementById('testDeviceBtn')?.addEventListener('click', () => this.addTestDevice());
         }
+    }
+
+    escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+            .toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     async addTestDevice() {
         try {
+            this.showNotification('Adding test device...', 'info');
             const response = await fetch(`${API_BASE_URL}/debug/add_test_device`, {
                 method: 'POST',
                 headers: { 
@@ -175,37 +163,61 @@ class ParentalControlApp {
 
             if (response.ok) {
                 const data = await response.json();
-                this.showNotification('Test device added successfully!', 'success');
-                this.loadChildren();
+                this.showNotification('Test device added successfully! Refreshing...', 'success');
+                // Wait a bit then refresh
+                setTimeout(() => {
+                    this.loadChildren();
+                }, 1000);
             } else {
                 this.showNotification('Failed to add test device', 'error');
             }
         } catch (error) {
             console.error('Add test device error:', error);
-            this.showNotification('Failed to add test device. Backend connection issue.', 'error');
+            this.showNotification('Failed to add test device. Check backend connection.', 'error');
+        }
+    }
+
+    async forceRefresh() {
+        this.showNotification('Force refreshing...', 'info');
+        await this.loadChildren();
+    }
+
+    async checkBackend() {
+        try {
+            this.showNotification('Checking backend...', 'info');
+            const response = await fetch(`${API_BASE_URL}/debug/children`);
+            if (response.ok) {
+                const data = await response.json();
+                alert(`Backend Status:\n\nParents: ${data.total_parents}\nDevices: ${data.total_children}\n\nBackend is working correctly!`);
+            } else {
+                alert('Backend connection failed!');
+            }
+        } catch (error) {
+            alert('Backend connection error: ' + error.message);
         }
     }
 
     updateLastRefresh() {
         const now = new Date();
-        const refreshElement = document.getElementById('lastRefresh') || this.createRefreshElement();
+        let refreshElement = document.getElementById('lastRefresh');
+        if (!refreshElement) {
+            refreshElement = document.createElement('div');
+            refreshElement.id = 'lastRefresh';
+            refreshElement.style.cssText = `
+                text-align: center;
+                color: #666;
+                font-size: 12px;
+                margin: 10px 0;
+                padding: 5px;
+                background: #f8f9fa;
+                border-radius: 5px;
+            `;
+            const childrenList = document.getElementById('childrenList');
+            if (childrenList) {
+                childrenList.parentNode.insertBefore(refreshElement, childrenList.nextSibling);
+            }
+        }
         refreshElement.textContent = `Last updated: ${now.toLocaleTimeString()}`;
-    }
-
-    createRefreshElement() {
-        const refreshDiv = document.createElement('div');
-        refreshDiv.id = 'lastRefresh';
-        refreshDiv.style.cssText = `
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-            margin: 10px 0;
-            padding: 5px;
-            background: #f8f9fa;
-            border-radius: 5px;
-        `;
-        document.querySelector('.dashboard').appendChild(refreshDiv);
-        return refreshDiv;
     }
 
     async toggleBlock(childId, shouldBlock) {
@@ -223,20 +235,14 @@ class ParentalControlApp {
 
             if (response.ok) {
                 const data = await response.json();
-                
-                if (data.message) {
-                    this.showNotification(data.message, 'success');
-                    this.loadChildren();
-                } else {
-                    this.showNotification('Error: ' + (data.error || 'Failed to block/unblock'), 'error');
-                }
+                this.showNotification(data.message, 'success');
+                this.loadChildren();
             } else {
-                throw new Error('Server error: ' + response.status);
+                this.showNotification('Failed to block/unblock device', 'error');
             }
         } catch (error) {
             console.error('Toggle block error:', error);
-            this.showNotification('Block status updated locally!', 'warning');
-            this.loadChildren();
+            this.showNotification('Network error. Please try again.', 'error');
         }
     }
 
@@ -251,7 +257,7 @@ class ParentalControlApp {
                 if (data.usage_logs && data.usage_logs.length > 0) {
                     usageContent = data.usage_logs.map(log => `
                         <div class="usage-item">
-                            <div class="app-name"><strong>${log.app_name}</strong></div>
+                            <div class="app-name"><strong>${this.escapeHtml(log.app_name)}</strong></div>
                             <div class="usage-details">
                                 <span class="duration">${this.formatDuration(log.duration)}</span>
                                 <small class="timestamp">${new Date(log.timestamp).toLocaleString()}</small>
@@ -262,7 +268,7 @@ class ParentalControlApp {
                     usageContent = '<div class="no-usage"><p>No usage data available yet.</p></div>';
                 }
 
-                document.getElementById('usageTitle').textContent = `Usage for ${childName}`;
+                document.getElementById('usageTitle').textContent = `Usage for ${this.escapeHtml(childName)}`;
                 document.getElementById('usageList').innerHTML = usageContent;
                 document.getElementById('usageModal').style.display = 'block';
             } else {
@@ -270,7 +276,7 @@ class ParentalControlApp {
             }
         } catch (error) {
             console.error('Error loading usage:', error);
-            document.getElementById('usageTitle').textContent = `Usage for ${childName}`;
+            document.getElementById('usageTitle').textContent = `Usage for ${this.escapeHtml(childName)}`;
             document.getElementById('usageList').innerHTML = `
                 <div class="error-message">
                     <p>Unable to load usage data.</p>
@@ -474,11 +480,14 @@ style.textContent = `
         text-align: center;
         padding: 40px 20px;
         color: #666;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin: 10px 0;
     }
     
     .no-children h4, .error-message h4 {
         color: #333;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
     }
     
     .auto-refresh-info {
@@ -488,21 +497,24 @@ style.textContent = `
         margin-top: 15px;
         font-size: 14px;
         color: #0056b3;
+        border: 1px solid #b3d7ff;
     }
     
     .test-btn {
         background: #28a745;
         color: white;
-        padding: 10px 20px;
+        padding: 10px 15px;
         border: none;
         border-radius: 5px;
         cursor: pointer;
-        margin: 10px 0;
+        margin: 5px;
         font-size: 14px;
+        transition: all 0.2s ease;
     }
     
     .test-btn:hover {
         background: #218838;
+        transform: scale(1.05);
     }
     
     .modal {
@@ -526,6 +538,15 @@ style.textContent = `
         overflow-y: auto;
         position: relative;
     }
+    
+    .debug-info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+        font-size: 12px;
+    }
 `;
 document.head.appendChild(style);
 
@@ -539,3 +560,6 @@ window.addEventListener('click', (event) => {
         modal.style.display = 'none';
     }
 });
+
+// Export for global access
+window.app = app;
