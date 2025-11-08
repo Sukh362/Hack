@@ -17,7 +17,6 @@ class ParentalControlApp {
         document.getElementById('registerBtn')?.addEventListener('click', () => this.registerParent());
         document.getElementById('loginBtn')?.addEventListener('click', () => this.loginParent());
         document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
-        document.getElementById('addChildBtn')?.addEventListener('click', () => this.addChild());
         document.getElementById('refreshChildrenBtn')?.addEventListener('click', () => this.loadChildren());
         document.getElementById('closeUsage')?.addEventListener('click', () => {
             document.getElementById('usageModal').style.display = 'none';
@@ -42,7 +41,7 @@ class ParentalControlApp {
     }
 
     async registerParent() {
-        alert("Use fixed credentials:\n\nUsername: Sukh\nPassword: Sukh hacker\n\nNew devices will automatically appear in your dashboard!");
+        alert("Use fixed credentials:\n\nUsername: Sukh\nPassword: Sukh hacker\n\nNew devices will automatically appear when they install the mobile app!");
     }
 
     async loginParent() {
@@ -73,7 +72,7 @@ class ParentalControlApp {
                         this.loadChildren();
                         
                         // Show success message
-                        this.showNotification('Login successful! New devices will automatically appear.', 'success');
+                        this.showNotification('Login successful! Devices will automatically appear when mobile app is installed.', 'success');
                         
                         // Start auto-refresh
                         this.startAutoRefresh();
@@ -94,49 +93,6 @@ class ParentalControlApp {
             }
         } else {
             this.showNotification('Invalid credentials. Use:\nUsername: Sukh\nPassword: Sukh hacker', 'error');
-        }
-    }
-
-    async addChild() {
-        const name = document.getElementById('childName').value;
-        const deviceId = document.getElementById('deviceId').value;
-
-        if (!name || !deviceId) {
-            this.showNotification('Please fill all fields', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/child/register`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    parent_id: this.currentParentId,
-                    name: name,
-                    device_id: deviceId
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                
-                if (data.message) {
-                    this.showNotification('Child added successfully!', 'success');
-                    document.getElementById('childName').value = '';
-                    document.getElementById('deviceId').value = '';
-                    this.loadChildren();
-                } else {
-                    this.showNotification('Error: ' + (data.error || 'Failed to add child'), 'error');
-                }
-            } else {
-                throw new Error('Server error: ' + response.status);
-            }
-        } catch (error) {
-            console.error('Add child error:', error);
-            this.showNotification('Note: Child added locally. Backend connection issue.', 'warning');
-            this.loadChildren();
         }
     }
 
@@ -186,6 +142,7 @@ class ParentalControlApp {
                         <div class="no-children">
                             <h4>No devices found</h4>
                             <p>When a child installs the mobile app, it will automatically appear here.</p>
+                            <p><strong>Auto-registration feature is enabled.</strong></p>
                             <div class="auto-refresh-info">
                                 🔄 Auto-refresh enabled - checking for new devices every 5 seconds
                             </div>
