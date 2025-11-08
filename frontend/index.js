@@ -2,7 +2,7 @@ const API_BASE_URL = "https://sukh-hacker-x4ry.onrender.com";
 
 class ParentalControlApp {
     constructor() {
-        this.currentParentId = "parent-main-123";
+        this.currentParentId = "parent-main-123"; // FIXED PARENT ID
         this.autoRefreshInterval = null;
         this.init();
     }
@@ -28,7 +28,7 @@ class ParentalControlApp {
             if (this.currentParentId) {
                 this.loadChildren();
             }
-        }, 5000);
+        }, 3000); // Faster refresh - 3 seconds
     }
 
     stopAutoRefresh() {
@@ -39,7 +39,7 @@ class ParentalControlApp {
     }
 
     async registerParent() {
-        alert("Use fixed credentials:\n\nUsername: Sukh\nPassword: Sukh hacker\n\nNew devices will automatically appear when they install the mobile app!");
+        alert("Use fixed credentials:\n\nUsername: Sukh\nPassword: Sukh hacker");
     }
 
     async loginParent() {
@@ -47,7 +47,7 @@ class ParentalControlApp {
         const password = document.getElementById('loginPassword').value;
 
         if (username === "Sukh" && password === "Sukh hacker") {
-            this.currentParentId = "parent-main-123";
+            this.currentParentId = "parent-main-123"; // FORCE CORRECT ID
             localStorage.setItem('parentId', this.currentParentId);
             this.showDashboard();
             this.loadChildren();
@@ -338,19 +338,15 @@ class ParentalControlApp {
     }
 
     checkAuth() {
-        const parentId = localStorage.getItem('parentId');
-        if (parentId) {
-            this.currentParentId = parentId;
-            this.showDashboard();
-            this.loadChildren();
-            this.startAutoRefresh();
-        } else {
-            this.showLogin();
-        }
+        // Always use fixed parent ID, ignore localStorage
+        this.currentParentId = "parent-main-123";
+        this.showDashboard();
+        this.loadChildren();
+        this.startAutoRefresh();
     }
 
     logout() {
-        this.currentParentId = null;
+        this.currentParentId = "parent-main-123"; // Reset to fixed ID
         localStorage.removeItem('parentId');
         this.stopAutoRefresh();
         this.showLogin();
@@ -537,15 +533,6 @@ style.textContent = `
         max-height: 80vh;
         overflow-y: auto;
         position: relative;
-    }
-    
-    .debug-info {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 5px;
-        padding: 10px;
-        margin: 10px 0;
-        font-size: 12px;
     }
 `;
 document.head.appendChild(style);
