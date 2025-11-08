@@ -30,6 +30,7 @@ def init_db():
             parent_id TEXT,
             name TEXT,
             device_id TEXT UNIQUE,
+            device_model TEXT,
             is_blocked BOOLEAN DEFAULT 0,
             created_at TEXT
         )
@@ -44,6 +45,15 @@ def init_db():
             timestamp TEXT
         )
     ''')
+    
+    # Insert default parent if not exists
+    cursor.execute("SELECT * FROM parents WHERE email = ?", (FIXED_USERNAME,))
+    if not cursor.fetchone():
+        parent_id = "parent-" + str(uuid.uuid4())
+        cursor.execute(
+            "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
+            (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
+        )
     
     conn.commit()
     conn.close()
@@ -65,31 +75,73 @@ def login_parent():
     
     # Check fixed credentials
     if data.get('email') == FIXED_USERNAME and data.get('password') == FIXED_PASSWORD:
-        # Create or get parent ID
         conn = get_db_connection()
         cursor = conn.cursor()
         
         cursor.execute("SELECT id FROM parents WHERE email = ?", (FIXED_USERNAME,))
-        existing_parent = cursor.fetchone()
-        
-        if existing_parent:
-            parent_id = existing_parent['id']
-        else:
-            parent_id = str(uuid.uuid4())
-            cursor.execute(
-                "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
-                (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
-            )
-            conn.commit()
-        
+        parent = cursor.fetchone()
         conn.close()
+        
+        if parent:
+            return jsonify({
+                "message": "Login successful", 
+                "parent_id": parent['id'],
+                "username": FIXED_USERNAME
+            })
+    
+    return jsonify({"error": "Invalid credentials"}), 401
+
+# AUTO-REGISTER CHILD DEVICE
+@app.route('/child/auto_register', methods=['POST'])
+def auto_register_child():
+    data = request.json
+    
+    # Get device info from mobile app
+    device_id = data.get('device_id')
+    device_model = data.get('device_model', 'Unknown Device')
+    child_name = data.get('child_name', 'Child Device')
+    
+    if not device_id:
+        return jsonify({"error": "Device ID required"}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get the fixed parent
+    cursor.execute("SELECT id FROM parents WHERE email = ?", (FIXED_USERNAME,))
+    parent = cursor.fetchone()
+    
+    if not parent:
+        return jsonify({"error": "Parent not found"}), 404
+    
+    parent_id = parent['id']
+    
+    # Check if device already registered
+    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+    existing_child = cursor.fetchone()
+    
+    if existing_child:
         return jsonify({
-            "message": "Login successful", 
-            "parent_id": parent_id,
-            "username": FIXED_USERNAME
+            "message": "Device already registered",
+            "child_id": existing_child['id'],
+            "is_blocked": bool(existing_child['is_blocked'])
         })
-    else:
-        return jsonify({"error": "Invalid credentials. Use: Username=Sukh, Password=Sukh hacker"}), 401
+    
+    # Register new device
+    child_id = str(uuid.uuid4())
+    cursor.execute(
+        "INSERT INTO children (id, parent_id, name, device_id, device_model, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (child_id, parent_id, child_name, device_id, device_model, datetime.now().isoformat())
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        "message": "Child device auto-registered successfully", 
+        "child_id": child_id,
+        "parent_id": parent_id
+    })
 
 @app.route('/child/register', methods=['POST'])
 def register_child():
@@ -154,7 +206,9 @@ def get_children(parent_id):
             "id": child['id'],
             "name": child['name'],
             "device_id": child['device_id'],
-            "is_blocked": bool(child['is_blocked'])
+            "device_model": child['device_model'],
+            "is_blocked": bool(child['is_blocked']),
+            "created_at": child['created_at']
         })
     
     return jsonify({"children": children_list})
