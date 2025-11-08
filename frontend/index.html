@@ -267,17 +267,10 @@
                     <h3>Managed Children Devices</h3>
                     <button id="refreshChildrenBtn" style="width: auto;">Refresh</button>
                 </div>
-                <div id="childrenList"></div>
+                <div id="childrenList">
+                    <!-- Demo devices will be added here -->
+                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Usage Modal -->
-    <div id="usageModal" class="modal">
-        <div class="modal-content">
-            <button id="closeUsage" class="close-btn">×</button>
-            <h3 id="usageTitle">Usage Details</h3>
-            <div id="usageList"></div>
         </div>
     </div>
 
@@ -292,11 +285,11 @@
             <div class="device-status">
                 <div>
                     <h3 id="fullControlDeviceName">Device: Samsung Galaxy S21</h3>
-                    <p>Last Active: 2 minutes ago</p>
+                    <p>Last Active: <span id="lastActiveTime">2 minutes ago</span></p>
                 </div>
                 <div class="status-indicator">
-                    <div class="status-dot"></div>
-                    <span>Online</span>
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Online</span>
                 </div>
             </div>
             
@@ -394,7 +387,7 @@
             
             <div class="control-history">
                 <h3>Control History</h3>
-                <div class="history-list">
+                <div class="history-list" id="historyList">
                     <div class="history-item">
                         <span>Front camera activated</span>
                         <span class="history-time">2 minutes ago</span>
@@ -416,142 +409,240 @@
         </div>
     </div>
 
-    <script src="index.js"></script>
     <script>
+        // Tab switching function
         function showTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
         }
         
-        // Close modals when clicking outside
-        window.addEventListener('click', (event) => {
-            const usageModal = document.getElementById('usageModal');
-            const controlModal = document.getElementById('controlModal');
-            const fullControlPanel = document.getElementById('fullControlPanel');
+        // Login functionality
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            const username = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
             
-            if (event.target === usageModal) {
-                usageModal.style.display = 'none';
-            }
-            if (event.target === controlModal) {
-                controlModal.style.display = 'none';
-            }
-            if (event.target === fullControlPanel) {
-                fullControlPanel.style.display = 'none';
+            if (username === 'Sukh' && password === 'Sukh hacker') {
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('dashboardSection').style.display = 'block';
+                loadDemoDevices();
+            } else {
+                alert('Invalid credentials! Use Username: Sukh, Password: Sukh hacker');
             }
         });
         
-        // Control functions
-        function openFullControl(deviceId, deviceName) {
+        // Register functionality
+        document.getElementById('registerBtn').addEventListener('click', function() {
+            alert('Registration successful! You can now login with Username: Sukh, Password: Sukh hacker');
+            showTab('login');
+        });
+        
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('authSection').style.display = 'block';
+            document.getElementById('fullControlPanel').style.display = 'none';
+        });
+        
+        // Load demo devices
+        function loadDemoDevices() {
+            const childrenList = document.getElementById('childrenList');
+            childrenList.innerHTML = `
+                <div class="child-item">
+                    <div>
+                        <h4>Samsung Galaxy S21</h4>
+                        <p>Status: <span class="status-active">Active</span></p>
+                        <p>Last seen: 2 minutes ago</p>
+                    </div>
+                    <div class="child-actions">
+                        <button class="btn-control" onclick="openFullControl('Samsung Galaxy S21')">Control</button>
+                        <button class="btn-block">Block</button>
+                    </div>
+                </div>
+                <div class="child-item">
+                    <div>
+                        <h4>iPhone 13</h4>
+                        <p>Status: <span class="status-active">Active</span></p>
+                        <p>Last seen: 5 minutes ago</p>
+                    </div>
+                    <div class="child-actions">
+                        <button class="btn-control" onclick="openFullControl('iPhone 13')">Control</button>
+                        <button class="btn-block">Block</button>
+                    </div>
+                </div>
+                <div class="child-item">
+                    <div>
+                        <h4>iPad Pro</h4>
+                        <p>Status: <span class="status-blocked">Blocked</span></p>
+                        <p>Last seen: 1 hour ago</p>
+                    </div>
+                    <div class="child-actions">
+                        <button class="btn-control" onclick="openFullControl('iPad Pro')">Control</button>
+                        <button class="btn-unblock">Unblock</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Refresh children list
+        document.getElementById('refreshChildrenBtn').addEventListener('click', loadDemoDevices);
+        
+        // Full Control Panel Functions
+        function openFullControl(deviceName) {
+            console.log("Opening control panel for:", deviceName);
             document.getElementById('fullControlPanel').style.display = 'block';
             document.getElementById('fullControlDeviceName').textContent = 'Device: ' + deviceName;
+            
+            // Update status based on device
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            if (deviceName === 'iPad Pro') {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = 'Offline';
+                document.getElementById('lastActiveTime').textContent = '1 hour ago';
+            } else {
+                statusDot.className = 'status-dot';
+                statusText.textContent = 'Online';
+                document.getElementById('lastActiveTime').textContent = '2 minutes ago';
+            }
         }
         
         function closeFullControl() {
             document.getElementById('fullControlPanel').style.display = 'none';
         }
         
+        // Control functions
         function activateCamera(type) {
+            addToHistory(`${type} camera activated`);
             alert(`Activating ${type} camera...`);
-            // Implementation would connect to the device's camera
         }
         
         function stopCamera() {
+            addToHistory('Camera stopped');
             alert('Stopping camera...');
-            // Implementation would stop the device's camera
         }
         
         function getLocation() {
+            addToHistory('Location retrieved');
             alert('Getting device location...');
-            // Implementation would get the device's current location
         }
         
         function startLocationTracking() {
+            addToHistory('Location tracking started');
             alert('Starting location tracking...');
-            // Implementation would start tracking the device's location
         }
         
         function stopLocationTracking() {
+            addToHistory('Location tracking stopped');
             alert('Stopping location tracking...');
-            // Implementation would stop tracking the device's location
         }
         
         function viewApps() {
+            addToHistory('Viewed installed apps');
             alert('Viewing installed apps...');
-            // Implementation would show installed apps on the device
         }
         
         function blockApp(category) {
+            addToHistory(`Blocked ${category} apps`);
             alert(`Blocking ${category} apps...`);
-            // Implementation would block specific app categories
         }
         
         function setAppTimeLimits() {
+            addToHistory('App time limits set');
             alert('Setting app time limits...');
-            // Implementation would set time limits for apps
         }
         
         function takeScreenshot() {
+            addToHistory('Screenshot taken');
             alert('Taking screenshot...');
-            // Implementation would take a screenshot of the device
         }
         
         function recordScreen() {
+            addToHistory('Screen recording started');
             alert('Starting screen recording...');
-            // Implementation would start recording the device screen
         }
         
         function lockDevice() {
+            addToHistory('Device locked');
             alert('Locking device...');
-            // Implementation would lock the device
         }
         
         function enableWebFilter() {
+            addToHistory('Web filter enabled');
             alert('Enabling web filter...');
-            // Implementation would enable web filtering
         }
         
         function blockWebsite() {
-            alert('Blocking website...');
-            // Implementation would block specific websites
+            const website = prompt('Enter website to block:');
+            if (website) {
+                addToHistory(`Blocked website: ${website}`);
+                alert(`Blocking ${website}...`);
+            }
         }
         
         function viewBlockedSites() {
+            addToHistory('Viewed blocked sites');
             alert('Viewing blocked sites...');
-            // Implementation would show blocked websites
         }
         
         function setBedtime() {
-            alert('Setting bedtime schedule...');
-            // Implementation would set device bedtime
+            const time = prompt('Enter bedtime (e.g., 10:00 PM):');
+            if (time) {
+                addToHistory(`Bedtime set to ${time}`);
+                alert(`Setting bedtime to ${time}...`);
+            }
         }
         
         function setDataLimit() {
-            alert('Setting data limit...');
-            // Implementation would set data usage limits
+            const limit = prompt('Enter data limit (e.g., 2GB):');
+            if (limit) {
+                addToHistory(`Data limit set to ${limit}`);
+                alert(`Setting data limit to ${limit}...`);
+            }
         }
         
         function viewDeviceInfo() {
+            addToHistory('Viewed device information');
             alert('Viewing device information...');
-            // Implementation would show device details
         }
         
-        // Add event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('closeFullControl').addEventListener('click', closeFullControl);
+        function addToHistory(action) {
+            const historyList = document.getElementById('historyList');
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
             
-            // For demo purposes, add a sample child with control button
-            document.getElementById('childrenList').innerHTML = `
-                <div class="child-item">
-                    <div>
-                        <h4>Samsung Galaxy S21</h4>
-                        <p>Status: <span class="status-active">Active</span></p>
-                    </div>
-                    <div class="child-actions">
-                        <button class="btn-control" onclick="openFullControl('device1', 'Samsung Galaxy S21')">Control</button>
-                        <button class="btn-block">Block</button>
-                    </div>
-                </div>
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.innerHTML = `
+                <span>${action}</span>
+                <span class="history-time">${timeString}</span>
             `;
+            
+            historyList.insertBefore(historyItem, historyList.firstChild);
+            
+            // Keep only last 10 items
+            if (historyList.children.length > 10) {
+                historyList.removeChild(historyList.lastChild);
+            }
+        }
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            const fullControlPanel = document.getElementById('fullControlPanel');
+            
+            if (event.target === fullControlPanel) {
+                fullControlPanel.style.display = 'none';
+            }
+        });
+        
+        // Add event listener for close button
+        document.getElementById('closeFullControl').addEventListener('click', closeFullControl);
+        
+        // Auto login for demo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto fill login for demo
+            document.getElementById('loginEmail').value = 'Sukh';
+            document.getElementById('loginPassword').value = 'Sukh hacker';
         });
     </script>
 </body>
