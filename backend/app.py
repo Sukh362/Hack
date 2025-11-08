@@ -51,7 +51,7 @@ def init_db():
     # Insert default parent if not exists
     cursor.execute("SELECT * FROM parents WHERE email = ?", (FIXED_USERNAME,))
     if not cursor.fetchone():
-        parent_id = "parent-" + str(uuid.uuid4())
+        parent_id = "parent-main-123"
         cursor.execute(
             "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
             (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
@@ -61,6 +61,7 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Initialize database on startup
 init_db()
 
 def get_db_connection():
@@ -96,6 +97,22 @@ def login_parent():
                 "parent_id": parent['id'],
                 "username": FIXED_USERNAME
             })
+        else:
+            # Create parent if not exists
+            parent_id = "parent-main-123"
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
+                (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
+            )
+            conn.commit()
+            conn.close()
+            return jsonify({
+                "message": "Login successful", 
+                "parent_id": parent_id,
+                "username": FIXED_USERNAME
+            })
     
     return jsonify({"error": "Invalid credentials"}), 401
 
@@ -124,9 +141,15 @@ def auto_register_child():
     parent = cursor.fetchone()
     
     if not parent:
-        return jsonify({"error": "Parent not found"}), 404
-    
-    parent_id = parent['id']
+        # Create parent if not exists
+        parent_id = "parent-main-123"
+        cursor.execute(
+            "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
+            (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
+        )
+        conn.commit()
+    else:
+        parent_id = parent['id']
     
     # Check if device already registered
     cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
@@ -154,7 +177,7 @@ def auto_register_child():
     conn.commit()
     conn.close()
     
-    print(f"New device registered: {child_name} - {device_model} - {device_id}")
+    print(f"New device registered: {child_name} - {device_model} - {device_id} for parent: {parent_id}")
     
     return jsonify({
         "message": "Child device auto-registered successfully", 
@@ -174,7 +197,7 @@ def register_child():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    child_id = str(uuid.uuid4())
+    child_id = "child-" + str(uuid.uuid4())
     cursor.execute(
         "INSERT INTO children (id, parent_id, name, device_id, device_model, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         (child_id, data['parent_id'], data['name'], data['device_id'], 'Manual Entry', datetime.now().isoformat())
@@ -293,9 +316,93 @@ def get_child_status(device_id):
     else:
         return jsonify({"error": "Child device not found"}), 404
 
+# DEBUG ENDPOINTS
+@app.route('/debug/children', methods=['GET'])
+def debug_children():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all children
+    cursor.execute("SELECT * FROM children")
+    children = cursor.fetchall()
+    
+    # Get all parents
+    cursor.execute("SELECT * FROM parents")
+    parents = cursor.fetchall()
+    
+    conn.close()
+    
+    children_list = []
+    for child in children:
+        children_list.append({
+            "id": child['id'],
+            "name": child['name'],
+            "device_id": child['device_id'],
+            "device_model": child['device_model'],
+            "parent_id": child['parent_id'],
+            "is_blocked": bool(child['is_blocked']),
+            "created_at": child['created_at']
+        })
+    
+    parents_list = []
+    for parent in parents:
+        parents_list.append({
+            "id": parent['id'],
+            "email": parent['email'],
+            "created_at": parent['created_at']
+        })
+    
+    return jsonify({
+        "parents": parents_list,
+        "children": children_list,
+        "total_children": len(children_list),
+        "total_parents": len(parents_list)
+    })
+
+@app.route('/debug/add_test_device', methods=['POST'])
+def add_test_device():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get or create parent
+    cursor.execute("SELECT id FROM parents WHERE email = ?", (FIXED_USERNAME,))
+    parent = cursor.fetchone()
+    
+    if not parent:
+        parent_id = "parent-main-123"
+        cursor.execute(
+            "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
+            (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
+        )
+    else:
+        parent_id = parent['id']
+    
+    # Add test device
+    device_id = "test-device-" + str(uuid.uuid4())
+    child_id = "child-" + str(uuid.uuid4())
+    cursor.execute(
+        "INSERT INTO children (id, parent_id, name, device_id, device_model, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (child_id, parent_id, "Test Device", device_id, "Test Phone", datetime.now().isoformat())
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        "message": "Test device added successfully",
+        "child_id": child_id,
+        "device_id": device_id,
+        "parent_id": parent_id
+    })
+
 @app.route('/test', methods=['GET'])
 def test():
-    return jsonify({"status": "Backend is working!", "timestamp": datetime.now().isoformat()})
+    return jsonify({
+        "status": "Backend is working!", 
+        "timestamp": datetime.now().isoformat(),
+        "parent_username": FIXED_USERNAME,
+        "parent_password": FIXED_PASSWORD
+    })
 
 @app.after_request
 def after_request(response):
@@ -309,8 +416,8 @@ def root():
     return jsonify({
         "message": "Parental Control API is running!",
         "login_credentials": {
-            "username": "Sukh",
-            "password": "Sukh hacker"
+            "username": FIXED_USERNAME,
+            "password": FIXED_PASSWORD
         },
         "endpoints": {
             "auto_register": "/child/auto_register",
@@ -318,7 +425,9 @@ def root():
             "get_children": "/parent/children/{parent_id}",
             "block_child": "/child/block",
             "log_usage": "/usage/log",
-            "check_status": "/child/status/{device_id}"
+            "check_status": "/child/status/{device_id}",
+            "debug_info": "/debug/children",
+            "add_test": "/debug/add_test_device"
         }
     })
 
