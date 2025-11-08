@@ -156,13 +156,13 @@ class ParentalControlApp {
                         childElement.className = 'child-item';
                         childElement.innerHTML = `
                             <div class="child-info">
-                                <h4>${child.name}</h4>
-                                <p>Device: ${child.device_model || 'Unknown'}</p>
-                                <p>ID: ${child.device_id}</p>
+                                <h4>${child.name || 'Unknown Device'}</h4>
+                                <p><strong>Model:</strong> ${child.device_model || 'Unknown Model'}</p>
+                                <p><strong>Device ID:</strong> ${child.device_id || 'No ID'}</p>
                                 <p class="status-${child.is_blocked ? 'blocked' : 'active'}">
-                                    Status: ${child.is_blocked ? '🔴 Blocked' : '🟢 Active'}
+                                    <strong>Status:</strong> ${child.is_blocked ? '🔴 Blocked' : '🟢 Active'}
                                 </p>
-                                <small>Added: ${new Date(child.created_at).toLocaleString()}</small>
+                                <small><strong>Registered:</strong> ${new Date(child.created_at).toLocaleString()}</small>
                             </div>
                             <div class="child-actions">
                                 <button class="btn-${child.is_blocked ? 'unblock' : 'block'}" 
@@ -180,14 +180,12 @@ class ParentalControlApp {
                         childrenList.appendChild(childElement);
                     });
                     
-                    // Update last refresh time
                     this.updateLastRefresh();
                 } else {
                     childrenList.innerHTML = `
                         <div class="no-children">
                             <h4>No devices found</h4>
                             <p>When a child installs the mobile app, it will automatically appear here.</p>
-                            <p>You can also manually add a device above.</p>
                             <div class="auto-refresh-info">
                                 🔄 Auto-refresh enabled - checking for new devices every 5 seconds
                             </div>
