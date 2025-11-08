@@ -39,7 +39,7 @@ class ParentalControlApp {
                 alert('Registration successful! Please login.');
                 this.showLogin();
             } else {
-                alert('Error: ' + data.detail);
+                alert('Error: ' + data.error);
             }
         } catch (error) {
             alert('Network error: ' + error.message);
@@ -65,7 +65,7 @@ class ParentalControlApp {
                 this.showDashboard();
                 this.loadChildren();
             } else {
-                alert('Error: ' + data.detail);
+                alert('Error: ' + data.error);
             }
         } catch (error) {
             alert('Network error: ' + error.message);
@@ -100,7 +100,7 @@ class ParentalControlApp {
                 document.getElementById('deviceId').value = '';
                 this.loadChildren();
             } else {
-                alert('Error: ' + data.detail);
+                alert('Error: ' + data.error);
             }
         } catch (error) {
             alert('Network error: ' + error.message);
@@ -157,7 +157,7 @@ class ParentalControlApp {
                 alert(data.message);
                 this.loadChildren();
             } else {
-                alert('Error: ' + data.detail);
+                alert('Error: ' + data.error);
             }
         } catch (error) {
             alert('Network error: ' + error.message);
