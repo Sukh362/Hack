@@ -7,6 +7,10 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
+# Fixed parent credentials
+FIXED_USERNAME = "Sukh"
+FIXED_PASSWORD = "Sukh hacker"
+
 def init_db():
     conn = sqlite3.connect('parental.db')
     cursor = conn.cursor()
@@ -53,40 +57,39 @@ def get_db_connection():
 
 @app.route('/parent/register', methods=['POST'])
 def register_parent():
-    data = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    try:
-        parent_id = str(uuid.uuid4())
-        cursor.execute(
-            "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
-            (parent_id, data['email'], data['password'], datetime.now().isoformat())
-        )
-        conn.commit()
-        return jsonify({"message": "Parent registered successfully", "parent_id": parent_id})
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "Email already exists"}), 400
-    finally:
-        conn.close()
+    return jsonify({"message": "Use fixed credentials: Username=Sukh, Password=Sukh hacker"})
 
 @app.route('/parent/login', methods=['POST'])
 def login_parent():
     data = request.json
-    conn = get_db_connection()
-    cursor = conn.cursor()
     
-    cursor.execute(
-        "SELECT * FROM parents WHERE email = ? AND password = ?",
-        (data['email'], data['password'])
-    )
-    user = cursor.fetchone()
-    conn.close()
-    
-    if user:
-        return jsonify({"message": "Login successful", "parent_id": user['id']})
+    # Check fixed credentials
+    if data.get('email') == FIXED_USERNAME and data.get('password') == FIXED_PASSWORD:
+        # Create or get parent ID
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT id FROM parents WHERE email = ?", (FIXED_USERNAME,))
+        existing_parent = cursor.fetchone()
+        
+        if existing_parent:
+            parent_id = existing_parent['id']
+        else:
+            parent_id = str(uuid.uuid4())
+            cursor.execute(
+                "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
+                (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
+            )
+            conn.commit()
+        
+        conn.close()
+        return jsonify({
+            "message": "Login successful", 
+            "parent_id": parent_id,
+            "username": FIXED_USERNAME
+        })
     else:
-        return jsonify({"error": "Invalid credentials"}), 401
+        return jsonify({"error": "Invalid credentials. Use: Username=Sukh, Password=Sukh hacker"}), 401
 
 @app.route('/child/register', methods=['POST'])
 def register_child():
@@ -198,7 +201,13 @@ def get_child_status(device_id):
 
 @app.route('/')
 def root():
-    return jsonify({"message": "Parental Control API is running!"})
+    return jsonify({
+        "message": "Parental Control API is running!",
+        "login_credentials": {
+            "username": "Sukh",
+            "password": "Sukh hacker"
+        }
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=False)
