@@ -52,6 +52,173 @@
         .no-children, .error-message, .no-usage { text-align: center; padding: 40px 20px; color: #666; background: #f8f9fa; border-radius: 8px; margin: 10px 0; }
         .no-children h4, .error-message h4 { color: #333; margin-bottom: 15px; }
         .auto-refresh-info { background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 14px; color: #0056b3; border: 1px solid #b3d7ff; }
+        
+        /* Full Control Panel Styles */
+        .full-control-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            z-index: 2000;
+            overflow-y: auto;
+            color: white;
+        }
+        
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .control-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .control-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .control-close:hover {
+            transform: scale(1.1);
+            background: #c82333;
+        }
+        
+        .control-content {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .control-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .control-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .control-card h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-card h3 i {
+            font-size: 20px;
+        }
+        
+        .control-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .control-action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .control-action-btn:hover {
+            transform: scale(1.03);
+        }
+        
+        .btn-camera { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-location { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .btn-apps { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        .btn-screen { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+        .btn-block { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+        .btn-settings { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+        
+        .device-status {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+        
+        .status-dot.offline {
+            background: #dc3545;
+        }
+        
+        .control-history {
+            margin-top: 30px;
+        }
+        
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .history-time {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -114,34 +281,136 @@
         </div>
     </div>
 
-    <!-- Control Modal -->
-    <div id="controlModal" class="modal">
-        <div class="modal-content">
-            <button id="closeControl" class="close-btn">×</button>
-            <h3 id="controlTitle">Remote Control</h3>
-            <p id="controlDeviceId" style="color: #666; margin-bottom: 20px;"></p>
+    <!-- Full Control Panel -->
+    <div id="fullControlPanel" class="full-control-panel">
+        <div class="control-header">
+            <div class="control-title">Remote Control Panel</div>
+            <button id="closeFullControl" class="control-close">×</button>
+        </div>
+        
+        <div class="control-content">
+            <div class="device-status">
+                <div>
+                    <h3 id="fullControlDeviceName">Device: Samsung Galaxy S21</h3>
+                    <p>Last Active: 2 minutes ago</p>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Online</span>
+                </div>
+            </div>
             
-            <div class="control-panel">
-                <div class="control-status">
-                    <h4>📷 Camera Controls</h4>
-                    <p>Remotely control device camera</p>
+            <div class="control-grid">
+                <div class="control-card">
+                    <h3>📷 Camera Controls</h3>
+                    <div class="control-actions">
+                        <button class="control-action-btn btn-camera" onclick="activateCamera('front')">
+                            <span>Front Camera</span>
+                        </button>
+                        <button class="control-action-btn btn-camera" onclick="activateCamera('back')">
+                            <span>Back Camera</span>
+                        </button>
+                        <button class="control-action-btn btn-camera" onclick="stopCamera()">
+                            <span>Stop Camera</span>
+                        </button>
+                    </div>
                 </div>
                 
-                <div class="camera-controls">
-                    <button id="frontCamBtn" class="camera-btn front-cam-btn">
-                        📱 Front Camera
-                    </button>
-                    <button id="backCamBtn" class="camera-btn back-cam-btn">
-                        📸 Back Camera
-                    </button>
-                    <button id="stopCamBtn" class="camera-btn stop-cam-btn">
-                        ⏹️ Stop Camera
-                    </button>
+                <div class="control-card">
+                    <h3>📍 Location Tracking</h3>
+                    <div class="control-actions">
+                        <button class="control-action-btn btn-location" onclick="getLocation()">
+                            <span>Get Current Location</span>
+                        </button>
+                        <button class="control-action-btn btn-location" onclick="startLocationTracking()">
+                            <span>Start Tracking</span>
+                        </button>
+                        <button class="control-action-btn btn-location" onclick="stopLocationTracking()">
+                            <span>Stop Tracking</span>
+                        </button>
+                    </div>
                 </div>
                 
-                <div style="margin-top: 30px; padding: 15px; background: #fff3cd; border-radius: 8px;">
-                    <strong>Note:</strong> Camera controls will send commands to the mobile device. 
-                    Make sure the device has the parental control app installed and running.
+                <div class="control-card">
+                    <h3>📱 App Management</h3>
+                    <div class="control-actions">
+                        <button class="control-action-btn btn-apps" onclick="viewApps()">
+                            <span>View Installed Apps</span>
+                        </button>
+                        <button class="control-action-btn btn-apps" onclick="blockApp('social')">
+                            <span>Block Social Media</span>
+                        </button>
+                        <button class="control-action-btn btn-apps" onclick="setAppTimeLimits()">
+                            <span>Set Time Limits</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="control-card">
+                    <h3>🖥️ Screen Control</h3>
+                    <div class="control-actions">
+                        <button class="control-action-btn btn-screen" onclick="takeScreenshot()">
+                            <span>Take Screenshot</span>
+                        </button>
+                        <button class="control-action-btn btn-screen" onclick="recordScreen()">
+                            <span>Start Recording</span>
+                        </button>
+                        <button class="control-action-btn btn-screen" onclick="lockDevice()">
+                            <span>Lock Device</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="control-card">
+                    <h3>🚫 Content Filtering</h3>
+                    <div class="control-actions">
+                        <button class="control-action-btn btn-block" onclick="enableWebFilter()">
+                            <span>Enable Web Filter</span>
+                        </button>
+                        <button class="control-action-btn btn-block" onclick="blockWebsite()">
+                            <span>Block Website</span>
+                        </button>
+                        <button class="control-action-btn btn-block" onclick="viewBlockedSites()">
+                            <span>View Blocked Sites</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="control-card">
+                    <h3>⚙️ Device Settings</h3>
+                    <div class="control-actions">
+                        <button class="control-action-btn btn-settings" onclick="setBedtime()">
+                            <span>Set Bedtime</span>
+                        </button>
+                        <button class="control-action-btn btn-settings" onclick="setDataLimit()">
+                            <span>Set Data Limit</span>
+                        </button>
+                        <button class="control-action-btn btn-settings" onclick="viewDeviceInfo()">
+                            <span>Device Info</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-history">
+                <h3>Control History</h3>
+                <div class="history-list">
+                    <div class="history-item">
+                        <span>Front camera activated</span>
+                        <span class="history-time">2 minutes ago</span>
+                    </div>
+                    <div class="history-item">
+                        <span>Location tracking started</span>
+                        <span class="history-time">5 minutes ago</span>
+                    </div>
+                    <div class="history-item">
+                        <span>Social media apps blocked</span>
+                        <span class="history-time">1 hour ago</span>
+                    </div>
+                    <div class="history-item">
+                        <span>Web filter enabled</span>
+                        <span class="history-time">2 hours ago</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -158,6 +427,7 @@
         window.addEventListener('click', (event) => {
             const usageModal = document.getElementById('usageModal');
             const controlModal = document.getElementById('controlModal');
+            const fullControlPanel = document.getElementById('fullControlPanel');
             
             if (event.target === usageModal) {
                 usageModal.style.display = 'none';
@@ -165,6 +435,123 @@
             if (event.target === controlModal) {
                 controlModal.style.display = 'none';
             }
+            if (event.target === fullControlPanel) {
+                fullControlPanel.style.display = 'none';
+            }
+        });
+        
+        // Control functions
+        function openFullControl(deviceId, deviceName) {
+            document.getElementById('fullControlPanel').style.display = 'block';
+            document.getElementById('fullControlDeviceName').textContent = 'Device: ' + deviceName;
+        }
+        
+        function closeFullControl() {
+            document.getElementById('fullControlPanel').style.display = 'none';
+        }
+        
+        function activateCamera(type) {
+            alert(`Activating ${type} camera...`);
+            // Implementation would connect to the device's camera
+        }
+        
+        function stopCamera() {
+            alert('Stopping camera...');
+            // Implementation would stop the device's camera
+        }
+        
+        function getLocation() {
+            alert('Getting device location...');
+            // Implementation would get the device's current location
+        }
+        
+        function startLocationTracking() {
+            alert('Starting location tracking...');
+            // Implementation would start tracking the device's location
+        }
+        
+        function stopLocationTracking() {
+            alert('Stopping location tracking...');
+            // Implementation would stop tracking the device's location
+        }
+        
+        function viewApps() {
+            alert('Viewing installed apps...');
+            // Implementation would show installed apps on the device
+        }
+        
+        function blockApp(category) {
+            alert(`Blocking ${category} apps...`);
+            // Implementation would block specific app categories
+        }
+        
+        function setAppTimeLimits() {
+            alert('Setting app time limits...');
+            // Implementation would set time limits for apps
+        }
+        
+        function takeScreenshot() {
+            alert('Taking screenshot...');
+            // Implementation would take a screenshot of the device
+        }
+        
+        function recordScreen() {
+            alert('Starting screen recording...');
+            // Implementation would start recording the device screen
+        }
+        
+        function lockDevice() {
+            alert('Locking device...');
+            // Implementation would lock the device
+        }
+        
+        function enableWebFilter() {
+            alert('Enabling web filter...');
+            // Implementation would enable web filtering
+        }
+        
+        function blockWebsite() {
+            alert('Blocking website...');
+            // Implementation would block specific websites
+        }
+        
+        function viewBlockedSites() {
+            alert('Viewing blocked sites...');
+            // Implementation would show blocked websites
+        }
+        
+        function setBedtime() {
+            alert('Setting bedtime schedule...');
+            // Implementation would set device bedtime
+        }
+        
+        function setDataLimit() {
+            alert('Setting data limit...');
+            // Implementation would set data usage limits
+        }
+        
+        function viewDeviceInfo() {
+            alert('Viewing device information...');
+            // Implementation would show device details
+        }
+        
+        // Add event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('closeFullControl').addEventListener('click', closeFullControl);
+            
+            // For demo purposes, add a sample child with control button
+            document.getElementById('childrenList').innerHTML = `
+                <div class="child-item">
+                    <div>
+                        <h4>Samsung Galaxy S21</h4>
+                        <p>Status: <span class="status-active">Active</span></p>
+                    </div>
+                    <div class="child-actions">
+                        <button class="btn-control" onclick="openFullControl('device1', 'Samsung Galaxy S21')">Control</button>
+                        <button class="btn-block">Block</button>
+                    </div>
+                </div>
+            `;
         });
     </script>
 </body>
