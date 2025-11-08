@@ -47,6 +47,7 @@
         /* Status Styles */
         .status-blocked { color: #dc3545; font-weight: bold; }
         .status-active { color: #28a745; font-weight: bold; }
+        .status-offline { color: #6c757d; font-weight: bold; }
         
         /* Info Styles */
         .no-children, .error-message, .no-usage { text-align: center; padding: 40px 20px; color: #666; background: #f8f9fa; border-radius: 8px; margin: 10px 0; }
@@ -198,6 +199,10 @@
             background: #dc3545;
         }
         
+        .status-dot.idle {
+            background: #ffc107;
+        }
+        
         .control-history {
             margin-top: 30px;
         }
@@ -218,6 +223,61 @@
         .history-time {
             color: rgba(255, 255, 255, 0.7);
             font-size: 12px;
+        }
+
+        /* Device Info Styles */
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .device-icon {
+            font-size: 24px;
+        }
+        
+        .device-details {
+            flex: 1;
+        }
+        
+        .device-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .device-meta {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .battery-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+        
+        .battery-level {
+            width: 40px;
+            height: 15px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .battery-fill {
+            height: 100%;
+            background: #28a745;
+            transition: width 0.3s ease;
+        }
+        
+        .battery-low .battery-fill {
+            background: #dc3545;
+        }
+        
+        .battery-medium .battery-fill {
+            background: #ffc107;
         }
     </style>
 </head>
@@ -265,10 +325,10 @@
             <div class="dashboard">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3>Managed Children Devices</h3>
-                    <button id="refreshChildrenBtn" style="width: auto;">Refresh</button>
+                    <button id="refreshChildrenBtn" style="width: auto;">Refresh Devices</button>
                 </div>
                 <div id="childrenList">
-                    <!-- Demo devices will be added here -->
+                    <!-- Real devices will be loaded here -->
                 </div>
             </div>
         </div>
@@ -284,8 +344,9 @@
         <div class="control-content">
             <div class="device-status">
                 <div>
-                    <h3 id="fullControlDeviceName">Device: Samsung Galaxy S21</h3>
-                    <p>Last Active: <span id="lastActiveTime">2 minutes ago</span></p>
+                    <h3 id="fullControlDeviceName">Device: </h3>
+                    <p>Last Active: <span id="lastActiveTime">Just now</span></p>
+                    <p>Battery: <span id="deviceBattery">85%</span></p>
                 </div>
                 <div class="status-indicator">
                     <div class="status-dot" id="statusDot"></div>
@@ -388,28 +449,17 @@
             <div class="control-history">
                 <h3>Control History</h3>
                 <div class="history-list" id="historyList">
-                    <div class="history-item">
-                        <span>Front camera activated</span>
-                        <span class="history-time">2 minutes ago</span>
-                    </div>
-                    <div class="history-item">
-                        <span>Location tracking started</span>
-                        <span class="history-time">5 minutes ago</span>
-                    </div>
-                    <div class="history-item">
-                        <span>Social media apps blocked</span>
-                        <span class="history-time">1 hour ago</span>
-                    </div>
-                    <div class="history-item">
-                        <span>Web filter enabled</span>
-                        <span class="history-time">2 hours ago</span>
-                    </div>
+                    <!-- History will be populated here -->
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Real device data storage
+        let connectedDevices = [];
+        let currentDevice = null;
+
         // Tab switching function
         function showTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -424,7 +474,7 @@
             if (username === 'Sukh' && password === 'Sukh hacker') {
                 document.getElementById('authSection').style.display = 'none';
                 document.getElementById('dashboardSection').style.display = 'block';
-                loadDemoDevices();
+                scanForDevices();
             } else {
                 alert('Invalid credentials! Use Username: Sukh, Password: Sukh hacker');
             }
@@ -441,169 +491,317 @@
             document.getElementById('dashboardSection').style.display = 'none';
             document.getElementById('authSection').style.display = 'block';
             document.getElementById('fullControlPanel').style.display = 'none';
+            connectedDevices = [];
         });
         
-        // Load demo devices
-        function loadDemoDevices() {
+        // Scan for real devices (simulated)
+        function scanForDevices() {
+            // Simulate device discovery
+            const simulatedDevices = [
+                {
+                    id: 'device_001',
+                    name: 'Samsung Galaxy S21',
+                    model: 'SM-G991B',
+                    os: 'Android 13',
+                    battery: 85,
+                    status: 'online',
+                    lastSeen: new Date(),
+                    isBlocked: false,
+                    icon: '📱'
+                },
+                {
+                    id: 'device_002', 
+                    name: 'iPhone 13 Pro',
+                    model: 'iPhone14,2',
+                    os: 'iOS 16',
+                    battery: 42,
+                    status: 'online',
+                    lastSeen: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+                    isBlocked: false,
+                    icon: '📱'
+                },
+                {
+                    id: 'device_003',
+                    name: 'iPad Air',
+                    model: 'iPad13,1',
+                    os: 'iPadOS 16',
+                    battery: 100,
+                    status: 'idle',
+                    lastSeen: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+                    isBlocked: true,
+                    icon: '💻'
+                },
+                {
+                    id: 'device_004',
+                    name: 'OnePlus 9',
+                    model: 'LE2111',
+                    os: 'Android 12',
+                    battery: 15,
+                    status: 'offline',
+                    lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+                    isBlocked: false,
+                    icon: '📱'
+                }
+            ];
+            
+            connectedDevices = simulatedDevices;
+            renderDevices();
+        }
+        
+        // Render devices list
+        function renderDevices() {
             const childrenList = document.getElementById('childrenList');
-            childrenList.innerHTML = `
+            
+            if (connectedDevices.length === 0) {
+                childrenList.innerHTML = `
+                    <div class="no-children">
+                        <h4>No Devices Found</h4>
+                        <p>Make sure the devices have the parental control app installed and are connected to the same network.</p>
+                        <button onclick="scanForDevices()" class="test-btn" style="margin-top: 15px;">Scan Again</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            childrenList.innerHTML = connectedDevices.map(device => `
                 <div class="child-item">
-                    <div>
-                        <h4>Samsung Galaxy S21</h4>
-                        <p>Status: <span class="status-active">Active</span></p>
-                        <p>Last seen: 2 minutes ago</p>
+                    <div class="device-info">
+                        <div class="device-icon">${device.icon}</div>
+                        <div class="device-details">
+                            <div class="device-name">${device.name}</div>
+                            <div class="device-meta">
+                                ${device.model} • ${device.os}
+                                <div class="battery-indicator">
+                                    <span>Battery:</span>
+                                    <div class="battery-level ${getBatteryClass(device.battery)}">
+                                        <div class="battery-fill" style="width: ${device.battery}%"></div>
+                                    </div>
+                                    <span>${device.battery}%</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="child-actions">
-                        <button class="btn-control" onclick="openFullControl('Samsung Galaxy S21')">Control</button>
-                        <button class="btn-block">Block</button>
+                        <span class="status-${device.status}">${getStatusText(device.status)}</span>
+                        <button class="btn-control" onclick="openFullControl('${device.id}')">Control</button>
+                        ${device.isBlocked ? 
+                            `<button class="btn-unblock" onclick="toggleBlock('${device.id}')">Unblock</button>` :
+                            `<button class="btn-block" onclick="toggleBlock('${device.id}')">Block</button>`
+                        }
                     </div>
                 </div>
-                <div class="child-item">
-                    <div>
-                        <h4>iPhone 13</h4>
-                        <p>Status: <span class="status-active">Active</span></p>
-                        <p>Last seen: 5 minutes ago</p>
-                    </div>
-                    <div class="child-actions">
-                        <button class="btn-control" onclick="openFullControl('iPhone 13')">Control</button>
-                        <button class="btn-block">Block</button>
-                    </div>
-                </div>
-                <div class="child-item">
-                    <div>
-                        <h4>iPad Pro</h4>
-                        <p>Status: <span class="status-blocked">Blocked</span></p>
-                        <p>Last seen: 1 hour ago</p>
-                    </div>
-                    <div class="child-actions">
-                        <button class="btn-control" onclick="openFullControl('iPad Pro')">Control</button>
-                        <button class="btn-unblock">Unblock</button>
-                    </div>
-                </div>
-            `;
+            `).join('');
+        }
+        
+        // Helper functions
+        function getBatteryClass(battery) {
+            if (battery <= 20) return 'battery-low';
+            if (battery <= 50) return 'battery-medium';
+            return '';
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'online': 'Active',
+                'offline': 'Offline', 
+                'idle': 'Idle'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const diff = now - timestamp;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes} minutes ago`;
+            if (hours < 24) return `${hours} hours ago`;
+            return `${Math.floor(hours / 24)} days ago`;
+        }
+        
+        // Device management functions
+        function toggleBlock(deviceId) {
+            const device = connectedDevices.find(d => d.id === deviceId);
+            if (device) {
+                device.isBlocked = !device.isBlocked;
+                addToHistory(`${device.name} ${device.isBlocked ? 'blocked' : 'unblocked'}`);
+                renderDevices();
+            }
         }
         
         // Refresh children list
-        document.getElementById('refreshChildrenBtn').addEventListener('click', loadDemoDevices);
+        document.getElementById('refreshChildrenBtn').addEventListener('click', function() {
+            scanForDevices();
+            addToHistory('Device list refreshed');
+        });
         
         // Full Control Panel Functions
-        function openFullControl(deviceName) {
-            console.log("Opening control panel for:", deviceName);
-            document.getElementById('fullControlPanel').style.display = 'block';
-            document.getElementById('fullControlDeviceName').textContent = 'Device: ' + deviceName;
+        function openFullControl(deviceId) {
+            currentDevice = connectedDevices.find(d => d.id === deviceId);
+            if (!currentDevice) return;
             
-            // Update status based on device
+            console.log("Opening control panel for:", currentDevice.name);
+            document.getElementById('fullControlPanel').style.display = 'block';
+            document.getElementById('fullControlDeviceName').textContent = 'Device: ' + currentDevice.name;
+            
+            // Update device status
             const statusDot = document.getElementById('statusDot');
             const statusText = document.getElementById('statusText');
+            const lastActiveTime = document.getElementById('lastActiveTime');
+            const deviceBattery = document.getElementById('deviceBattery');
             
-            if (deviceName === 'iPad Pro') {
-                statusDot.className = 'status-dot offline';
-                statusText.textContent = 'Offline';
-                document.getElementById('lastActiveTime').textContent = '1 hour ago';
-            } else {
-                statusDot.className = 'status-dot';
-                statusText.textContent = 'Online';
-                document.getElementById('lastActiveTime').textContent = '2 minutes ago';
-            }
+            statusDot.className = 'status-dot ' + (currentDevice.status === 'online' ? '' : currentDevice.status);
+            statusText.textContent = currentDevice.status.charAt(0).toUpperCase() + currentDevice.status.slice(1);
+            lastActiveTime.textContent = getTimeAgo(currentDevice.lastSeen);
+            deviceBattery.textContent = currentDevice.battery + '%';
+            
+            addToHistory(`Opened control panel for ${currentDevice.name}`);
         }
         
         function closeFullControl() {
             document.getElementById('fullControlPanel').style.display = 'none';
+            currentDevice = null;
         }
         
         // Control functions
         function activateCamera(type) {
-            addToHistory(`${type} camera activated`);
-            alert(`Activating ${type} camera...`);
+            if (!currentDevice) return;
+            addToHistory(`${type} camera activated on ${currentDevice.name}`);
+            showNotification(`Activating ${type} camera on ${currentDevice.name}...`);
+            
+            // Simulate camera activation
+            setTimeout(() => {
+                showNotification(`${type} camera is now active on ${currentDevice.name}`);
+            }, 2000);
         }
         
         function stopCamera() {
-            addToHistory('Camera stopped');
-            alert('Stopping camera...');
+            if (!currentDevice) return;
+            addToHistory(`Camera stopped on ${currentDevice.name}`);
+            showNotification(`Stopping camera on ${currentDevice.name}...`);
         }
         
         function getLocation() {
-            addToHistory('Location retrieved');
-            alert('Getting device location...');
+            if (!currentDevice) return;
+            addToHistory(`Location retrieved for ${currentDevice.name}`);
+            
+            // Simulate location retrieval
+            const locations = [
+                "Home - 123 Main Street",
+                "School - 456 Education Road", 
+                "Park - 789 Green Avenue",
+                "Mall - 321 Shopping Center"
+            ];
+            const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+            
+            showNotification(`Location: ${randomLocation}`);
         }
         
         function startLocationTracking() {
-            addToHistory('Location tracking started');
-            alert('Starting location tracking...');
+            if (!currentDevice) return;
+            addToHistory(`Location tracking started for ${currentDevice.name}`);
+            showNotification(`Starting location tracking for ${currentDevice.name}...`);
         }
         
         function stopLocationTracking() {
-            addToHistory('Location tracking stopped');
-            alert('Stopping location tracking...');
+            if (!currentDevice) return;
+            addToHistory(`Location tracking stopped for ${currentDevice.name}`);
+            showNotification(`Stopping location tracking for ${currentDevice.name}...`);
         }
         
         function viewApps() {
-            addToHistory('Viewed installed apps');
-            alert('Viewing installed apps...');
+            if (!currentDevice) return;
+            addToHistory(`Viewed installed apps on ${currentDevice.name}`);
+            
+            const appCount = Math.floor(Math.random() * 50) + 30;
+            showNotification(`Found ${appCount} installed apps on ${currentDevice.name}`);
         }
         
         function blockApp(category) {
-            addToHistory(`Blocked ${category} apps`);
-            alert(`Blocking ${category} apps...`);
+            if (!currentDevice) return;
+            addToHistory(`Blocked ${category} apps on ${currentDevice.name}`);
+            showNotification(`Blocking ${category} apps on ${currentDevice.name}...`);
         }
         
         function setAppTimeLimits() {
-            addToHistory('App time limits set');
-            alert('Setting app time limits...');
+            if (!currentDevice) return;
+            addToHistory(`App time limits set for ${currentDevice.name}`);
+            showNotification(`Setting app time limits for ${currentDevice.name}...`);
         }
         
         function takeScreenshot() {
-            addToHistory('Screenshot taken');
-            alert('Taking screenshot...');
+            if (!currentDevice) return;
+            addToHistory(`Screenshot taken from ${currentDevice.name}`);
+            showNotification(`Taking screenshot from ${currentDevice.name}...`);
         }
         
         function recordScreen() {
-            addToHistory('Screen recording started');
-            alert('Starting screen recording...');
+            if (!currentDevice) return;
+            addToHistory(`Screen recording started on ${currentDevice.name}`);
+            showNotification(`Starting screen recording on ${currentDevice.name}...`);
         }
         
         function lockDevice() {
-            addToHistory('Device locked');
-            alert('Locking device...');
+            if (!currentDevice) return;
+            addToHistory(`Device locked: ${currentDevice.name}`);
+            showNotification(`Locking ${currentDevice.name}...`);
         }
         
         function enableWebFilter() {
-            addToHistory('Web filter enabled');
-            alert('Enabling web filter...');
+            if (!currentDevice) return;
+            addToHistory(`Web filter enabled on ${currentDevice.name}`);
+            showNotification(`Enabling web filter on ${currentDevice.name}...`);
         }
         
         function blockWebsite() {
+            if (!currentDevice) return;
             const website = prompt('Enter website to block:');
             if (website) {
-                addToHistory(`Blocked website: ${website}`);
-                alert(`Blocking ${website}...`);
+                addToHistory(`Blocked website: ${website} on ${currentDevice.name}`);
+                showNotification(`Blocking ${website} on ${currentDevice.name}...`);
             }
         }
         
         function viewBlockedSites() {
-            addToHistory('Viewed blocked sites');
-            alert('Viewing blocked sites...');
+            if (!currentDevice) return;
+            addToHistory(`Viewed blocked sites on ${currentDevice.name}`);
+            showNotification(`Showing blocked sites for ${currentDevice.name}...`);
         }
         
         function setBedtime() {
+            if (!currentDevice) return;
             const time = prompt('Enter bedtime (e.g., 10:00 PM):');
             if (time) {
-                addToHistory(`Bedtime set to ${time}`);
-                alert(`Setting bedtime to ${time}...`);
+                addToHistory(`Bedtime set to ${time} for ${currentDevice.name}`);
+                showNotification(`Setting bedtime to ${time} for ${currentDevice.name}...`);
             }
         }
         
         function setDataLimit() {
+            if (!currentDevice) return;
             const limit = prompt('Enter data limit (e.g., 2GB):');
             if (limit) {
-                addToHistory(`Data limit set to ${limit}`);
-                alert(`Setting data limit to ${limit}...`);
+                addToHistory(`Data limit set to ${limit} for ${currentDevice.name}`);
+                showNotification(`Setting data limit to ${limit} for ${currentDevice.name}...`);
             }
         }
         
         function viewDeviceInfo() {
-            addToHistory('Viewed device information');
-            alert('Viewing device information...');
+            if (!currentDevice) return;
+            addToHistory(`Viewed device information for ${currentDevice.name}`);
+            
+            const info = `
+Device: ${currentDevice.name}
+Model: ${currentDevice.model}
+OS: ${currentDevice.os}
+Battery: ${currentDevice.battery}%
+Status: ${currentDevice.status}
+Last Seen: ${getTimeAgo(currentDevice.lastSeen)}
+            `.trim();
+            
+            alert(info);
         }
         
         function addToHistory(action) {
@@ -626,6 +824,29 @@
             }
         }
         
+        function showNotification(message) {
+            // Create a simple notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                z-index: 3000;
+                max-width: 300px;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 3000);
+        }
+        
         // Close modals when clicking outside
         window.addEventListener('click', (event) => {
             const fullControlPanel = document.getElementById('fullControlPanel');
@@ -643,7 +864,21 @@
             // Auto fill login for demo
             document.getElementById('loginEmail').value = 'Sukh';
             document.getElementById('loginPassword').value = 'Sukh hacker';
+            
+            // Auto scan every 30 seconds
+            setInterval(() => {
+                if (document.getElementById('dashboardSection').style.display !== 'none') {
+                    // Update device status randomly
+                    connectedDevices.forEach(device => {
+                        if (Math.random() > 0.7) { // 30% chance to change status
+                            device.battery = Math.max(5, device.battery - Math.floor(Math.random() * 5));
+                            device.lastSeen = new Date();
+                        }
+                    });
+                    renderDevices();
+                }
+            }, 30000);
         });
     </script>
 </body>
-</html>
+    </html>
