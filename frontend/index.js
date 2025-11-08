@@ -21,13 +21,13 @@ class ParentalControlApp {
         document.getElementById('closeUsage')?.addEventListener('click', () => {
             document.getElementById('usageModal').style.display = 'none';
         });
+        document.getElementById('testDeviceBtn')?.addEventListener('click', () => this.addTestDevice());
     }
 
     startAutoRefresh() {
         // Auto refresh children list every 5 seconds when logged in
         this.autoRefreshInterval = setInterval(() => {
             if (this.currentParentId) {
-                console.log("Auto-refreshing children list...");
                 this.loadChildren();
             }
         }, 5000);
@@ -71,10 +71,7 @@ class ParentalControlApp {
                         this.showDashboard();
                         this.loadChildren();
                         
-                        // Show success message
-                        this.showNotification('Login successful! Devices will automatically appear when mobile app is installed.', 'success');
-                        
-                        // Start auto-refresh
+                        this.showNotification('Login successful! Devices will automatically appear.', 'success');
                         this.startAutoRefresh();
                     } else {
                         this.showNotification('Error: ' + (data.error || 'Login failed'), 'error');
@@ -84,15 +81,14 @@ class ParentalControlApp {
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                this.showNotification('Login successful! Using fixed credentials.', 'success');
-                // Fallback: Create a dummy parent ID
-                this.currentParentId = "parent-fixed-123";
+                this.showNotification('Using fallback mode. Backend connection issue.', 'warning');
+                this.currentParentId = "parent-main-123";
                 localStorage.setItem('parentId', this.currentParentId);
                 this.showDashboard();
                 this.startAutoRefresh();
             }
         } else {
-            this.showNotification('Invalid credentials. Use:\nUsername: Sukh\nPassword: Sukh hacker', 'error');
+            this.showNotification('Invalid credentials. Use: Username: Sukh, Password: Sukh hacker', 'error');
         }
     }
 
@@ -128,9 +124,6 @@ class ParentalControlApp {
                                 <button class="btn-usage" onclick="app.viewUsage('${child.id}', '${child.name}')">
                                     📊 Usage
                                 </button>
-                                <button class="btn-delete" onclick="app.deleteChild('${child.id}', '${child.name}')">
-                                    🗑️ Delete
-                                </button>
                             </div>
                         `;
                         childrenList.appendChild(childElement);
@@ -143,11 +136,14 @@ class ParentalControlApp {
                             <h4>No devices found</h4>
                             <p>When a child installs the mobile app, it will automatically appear here.</p>
                             <p><strong>Auto-registration feature is enabled.</strong></p>
+                            <button id="testDeviceBtn" class="test-btn">Add Test Device</button>
                             <div class="auto-refresh-info">
                                 🔄 Auto-refresh enabled - checking for new devices every 5 seconds
                             </div>
                         </div>
                     `;
+                    // Re-bind test device button
+                    document.getElementById('testDeviceBtn')?.addEventListener('click', () => this.addTestDevice());
                 }
             } else {
                 throw new Error('Server error: ' + response.status);
@@ -159,9 +155,34 @@ class ParentalControlApp {
                 <div class="error-message">
                     <h4>Connection Issue</h4>
                     <p>Unable to load devices. Check your internet connection.</p>
+                    <button id="testDeviceBtn" class="test-btn">Add Test Device Anyway</button>
                     <p>Auto-refresh will continue trying...</p>
                 </div>
             `;
+            // Re-bind test device button
+            document.getElementById('testDeviceBtn')?.addEventListener('click', () => this.addTestDevice());
+        }
+    }
+
+    async addTestDevice() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/debug/add_test_device`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.showNotification('Test device added successfully!', 'success');
+                this.loadChildren();
+            } else {
+                this.showNotification('Failed to add test device', 'error');
+            }
+        } catch (error) {
+            console.error('Add test device error:', error);
+            this.showNotification('Failed to add test device. Backend connection issue.', 'error');
         }
     }
 
@@ -219,19 +240,6 @@ class ParentalControlApp {
         }
     }
 
-    async deleteChild(childId, childName) {
-        if (confirm(`Are you sure you want to remove ${childName}? This will delete all usage data.`)) {
-            try {
-                // Note: You'll need to add a delete endpoint in backend
-                this.showNotification(`Removed ${childName} from monitoring`, 'success');
-                this.loadChildren();
-            } catch (error) {
-                console.error('Delete child error:', error);
-                this.showNotification('Error removing device', 'error');
-            }
-        }
-    }
-
     async viewUsage(childId, childName) {
         try {
             const response = await fetch(`${API_BASE_URL}/parent/usage/${childId}`);
@@ -284,7 +292,6 @@ class ParentalControlApp {
     }
 
     showNotification(message, type = 'info') {
-        // Remove existing notification
         const existingNotification = document.querySelector('.notification');
         if (existingNotification) {
             existingNotification.remove();
@@ -307,7 +314,6 @@ class ParentalControlApp {
             animation: slideIn 0.3s ease-out;
         `;
 
-        // Set background color based on type
         const colors = {
             success: '#28a745',
             error: '#dc3545',
@@ -318,7 +324,6 @@ class ParentalControlApp {
 
         document.body.appendChild(notification);
 
-        // Auto remove after 5 seconds
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
@@ -358,7 +363,7 @@ class ParentalControlApp {
     }
 }
 
-// Add CSS for notifications
+// Add CSS for notifications and styles
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -433,16 +438,6 @@ style.textContent = `
         color: white;
     }
     
-    .btn-delete {
-        background: #6c757d;
-        color: white;
-    }
-    
-    .child-actions button:hover {
-        opacity: 0.9;
-        transform: scale(1.05);
-    }
-    
     .usage-item {
         border-bottom: 1px solid #eee;
         padding: 10px 0;
@@ -493,6 +488,21 @@ style.textContent = `
         margin-top: 15px;
         font-size: 14px;
         color: #0056b3;
+    }
+    
+    .test-btn {
+        background: #28a745;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 10px 0;
+        font-size: 14px;
+    }
+    
+    .test-btn:hover {
+        background: #218838;
     }
     
     .modal {
