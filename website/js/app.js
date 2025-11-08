@@ -959,7 +959,11 @@ const app = {
         if (!app.currentDevice) return;
         
         try {
-            console.log('📷 Sending camera command:', { action, cameraType, device: app.currentDevice });
+            console.log('📷 Sending camera command:', { 
+                action, 
+                cameraType, 
+                device: app.currentDevice 
+            });
             
             const response = await fetch(`${app.COMMANDS_URL}/camera`, {
                 method: 'POST',
@@ -968,7 +972,7 @@ const app = {
                 },
                 body: JSON.stringify({
                     device_id: app.currentDevice.device_id,
-                    device_model: app.currentDevice.device_model || 'Samsung Device',
+                    device_model: app.currentDevice.device_model || 'Samsung Galaxy',
                     action: action,
                     camera_type: cameraType
                 })
