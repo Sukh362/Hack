@@ -12,10 +12,10 @@
         input, button { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; }
         button { background: #007bff; color: white; border: none; cursor: pointer; }
         button:hover { background: #0056b3; }
-        .child-item { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .child-item { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; background: white; transition: all 0.3s ease; }
         .child-actions button { width: auto; margin: 0 5px; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-        .modal-content { background: white; margin: 50px auto; padding: 20px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal-content { background: white; margin: 50px auto; padding: 20px; border-radius: 15px; max-width: 500px; max-height: 80vh; overflow-y: auto; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
         .usage-item { border-bottom: 1px solid #eee; padding: 10px 0; }
         .tab { display: none; }
         .tab.active { display: block; }
@@ -23,10 +23,40 @@
         .nav button { flex: 1; margin: 0 5px; }
         .login-info { background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 10px 0; }
         .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        /* Control Panel Styles */
+        .control-panel { text-align: center; padding: 20px; }
+        .camera-controls { display: flex; justify-content: center; gap: 15px; margin: 30px 0; flex-wrap: wrap; }
+        .camera-btn { padding: 15px 25px; border: none; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s ease; min-width: 150px; }
+        .front-cam-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .back-cam-btn { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .stop-cam-btn { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        .camera-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .camera-btn:active { transform: translateY(-1px); }
+        .control-status { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #007bff; }
+        .close-btn { position: absolute; top: 15px; right: 15px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+        
+        /* Button Styles */
+        .btn-block { background: #dc3545; color: white; }
+        .btn-unblock { background: #28a745; color: white; }
+        .btn-control { background: #ff6b00; color: white; }
+        .btn-control:hover { background: #e55a00; transform: scale(1.05); }
+        .test-btn { background: #28a745; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px; transition: all 0.2s ease; }
+        .test-btn:hover { background: #218838; transform: scale(1.05); }
+        
+        /* Status Styles */
+        .status-blocked { color: #dc3545; font-weight: bold; }
+        .status-active { color: #28a745; font-weight: bold; }
+        
+        /* Info Styles */
+        .no-children, .error-message, .no-usage { text-align: center; padding: 40px 20px; color: #666; background: #f8f9fa; border-radius: 8px; margin: 10px 0; }
+        .no-children h4, .error-message h4 { color: #333; margin-bottom: 15px; }
+        .auto-refresh-info { background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 14px; color: #0056b3; border: 1px solid #b3d7ff; }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Authentication Section -->
         <div id="authSection">
             <div class="nav">
                 <button onclick="showTab('register')">Register</button>
@@ -58,6 +88,7 @@
             </div>
         </div>
 
+        <!-- Dashboard Section -->
         <div id="dashboardSection" style="display: none;">
             <div class="dashboard-header">
                 <h2>Parental Control Dashboard</h2>
@@ -74,13 +105,45 @@
         </div>
     </div>
 
+    <!-- Usage Modal -->
     <div id="usageModal" class="modal">
         <div class="modal-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 id="usageTitle">Usage Details</h3>
-                <button id="closeUsage" style="width: auto;">Close</button>
-            </div>
+            <button id="closeUsage" class="close-btn">×</button>
+            <h3 id="usageTitle">Usage Details</h3>
             <div id="usageList"></div>
+        </div>
+    </div>
+
+    <!-- Control Modal -->
+    <div id="controlModal" class="modal">
+        <div class="modal-content">
+            <button id="closeControl" class="close-btn">×</button>
+            <h3 id="controlTitle">Remote Control</h3>
+            <p id="controlDeviceId" style="color: #666; margin-bottom: 20px;"></p>
+            
+            <div class="control-panel">
+                <div class="control-status">
+                    <h4>📷 Camera Controls</h4>
+                    <p>Remotely control device camera</p>
+                </div>
+                
+                <div class="camera-controls">
+                    <button id="frontCamBtn" class="camera-btn front-cam-btn">
+                        📱 Front Camera
+                    </button>
+                    <button id="backCamBtn" class="camera-btn back-cam-btn">
+                        📸 Back Camera
+                    </button>
+                    <button id="stopCamBtn" class="camera-btn stop-cam-btn">
+                        ⏹️ Stop Camera
+                    </button>
+                </div>
+                
+                <div style="margin-top: 30px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                    <strong>Note:</strong> Camera controls will send commands to the mobile device. 
+                    Make sure the device has the parental control app installed and running.
+                </div>
+            </div>
         </div>
     </div>
 
@@ -90,6 +153,19 @@
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
         }
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            const usageModal = document.getElementById('usageModal');
+            const controlModal = document.getElementById('controlModal');
+            
+            if (event.target === usageModal) {
+                usageModal.style.display = 'none';
+            }
+            if (event.target === controlModal) {
+                controlModal.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
