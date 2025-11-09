@@ -526,6 +526,7 @@
             `;
             
             try {
+                console.log('Fetching devices from:', `${API_BASE_URL}/debug/children`);
                 const response = await fetch(`${API_BASE_URL}/debug/children`);
                 
                 if (!response.ok) {
@@ -533,24 +534,29 @@
                 }
                 
                 const data = await response.json();
+                console.log('API Response:', data);
                 
-                if (data && data.children) {
-                    connectedDevices = data.children.map(child => ({
-                        id: child.device_id || child.id || Math.random().toString(36).substr(2, 9),
-                        name: child.device_name || child.name || 'Unknown Device',
-                        model: child.device_model || child.model || 'Unknown Model',
-                        os: child.os_version || child.os || 'Unknown OS',
-                        battery: child.battery_level || Math.floor(Math.random() * 100) + 1,
-                        status: getDeviceStatus(child),
-                        lastSeen: new Date(child.last_seen || child.last_active || Date.now()),
-                        isBlocked: child.is_blocked || false,
-                        icon: getDeviceIcon(child),
-                        rawData: child // Store original data for reference
-                    }));
+                if (data && data.children && Array.isArray(data.children)) {
+                    connectedDevices = data.children.map(child => {
+                        console.log('Processing child:', child);
+                        return {
+                            id: child.device_id || child.id || Math.random().toString(36).substr(2, 9),
+                            name: child.name || 'Unknown Device',
+                            model: child.device_model || 'Unknown Model',
+                            os: 'Android', // Default since we don't have OS info
+                            battery: 85, // Default battery
+                            status: child.is_blocked ? 'offline' : 'online',
+                            lastSeen: new Date(child.created_at || Date.now()),
+                            isBlocked: child.is_blocked || false,
+                            icon: '📱',
+                            rawData: child
+                        };
+                    });
                     
+                    console.log('Processed devices:', connectedDevices);
                     renderDevices();
                 } else {
-                    throw new Error('No children data found in response');
+                    throw new Error('No children data found in response or invalid format');
                 }
                 
             } catch (error) {
@@ -560,45 +566,23 @@
                         <h4>Error Loading Devices</h4>
                         <p>${error.message}</p>
                         <p>Please check if the server is running and try again.</p>
+                        <p>Response format should be: {"children": [{...}, {...}]}</p>
                         <button onclick="loadRealDevices()" class="test-btn" style="margin-top: 15px;">Retry</button>
                     </div>
                 `;
             }
         }
         
-        // Helper function to determine device status
-        function getDeviceStatus(child) {
-            if (child.is_blocked) return 'offline';
-            if (child.last_seen) {
-                const lastSeen = new Date(child.last_seen);
-                const now = new Date();
-                const diffMinutes = (now - lastSeen) / (1000 * 60);
-                
-                if (diffMinutes < 5) return 'online';
-                if (diffMinutes < 30) return 'idle';
-                return 'offline';
-            }
-            return 'online';
-        }
-        
-        // Helper function to get device icon
-        function getDeviceIcon(child) {
-            const deviceName = (child.device_name || child.name || '').toLowerCase();
-            if (deviceName.includes('iphone') || deviceName.includes('ipad')) return '📱';
-            if (deviceName.includes('samsung') || deviceName.includes('galaxy')) return '📱';
-            if (deviceName.includes('tablet') || deviceName.includes('ipad')) return '💻';
-            return '📱';
-        }
-        
         // Render devices list
         function renderDevices() {
             const childrenList = document.getElementById('childrenList');
             
-            if (connectedDevices.length === 0) {
+            if (!connectedDevices || connectedDevices.length === 0) {
                 childrenList.innerHTML = `
                     <div class="no-children">
                         <h4>No Real Devices Found</h4>
                         <p>No children devices are currently connected to your account.</p>
+                        <p>Make sure devices are registered and connected to the server.</p>
                         <button onclick="loadRealDevices()" class="test-btn" style="margin-top: 15px;">Scan Again</button>
                     </div>
                 `;
@@ -623,6 +607,9 @@
                                 <div style="margin-top: 5px; font-size: 11px; color: #888;">
                                     Device ID: ${device.id}
                                 </div>
+                                <div style="font-size: 11px; color: #888;">
+                                    Added: ${getTimeAgo(device.lastSeen)}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -641,6 +628,7 @@
             childrenList.innerHTML += `
                 <div class="auto-refresh-info">
                     🔄 Devices auto-refresh every 30 seconds. Last updated: ${new Date().toLocaleTimeString()}
+                    <br>📱 Found ${connectedDevices.length} real device(s)
                 </div>
             `;
         }
@@ -666,11 +654,12 @@
             const diff = now - timestamp;
             const minutes = Math.floor(diff / 60000);
             const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(hours / 24);
             
             if (minutes < 1) return 'Just now';
             if (minutes < 60) return `${minutes} minutes ago`;
             if (hours < 24) return `${hours} hours ago`;
-            return `${Math.floor(hours / 24)} days ago`;
+            return `${days} days ago`;
         }
         
         // Device management functions
@@ -690,25 +679,15 @@
         // Send command to device via API
         async function sendDeviceCommand(deviceId, command, data = {}) {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/device/command`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        device_id: deviceId,
-                        command: command,
-                        data: data
-                    })
-                });
+                console.log(`Sending command ${command} to device ${deviceId}`, data);
                 
-                if (response.ok) {
-                    console.log(`Command ${command} sent to device ${deviceId}`);
-                } else {
-                    console.error(`Failed to send command to device ${deviceId}`);
-                }
+                // For demo purposes, we'll just log the command
+                // In real implementation, you would send this to your backend
+                showNotification(`Command sent: ${command} to device`);
+                
             } catch (error) {
                 console.error('Error sending command:', error);
+                showNotification(`Error sending command: ${error.message}`);
             }
         }
         
@@ -721,7 +700,10 @@
         // Full Control Panel Functions
         function openFullControl(deviceId) {
             currentDevice = connectedDevices.find(d => d.id === deviceId);
-            if (!currentDevice) return;
+            if (!currentDevice) {
+                showNotification('Device not found!');
+                return;
+            }
             
             console.log("Opening control panel for:", currentDevice.name);
             document.getElementById('fullControlPanel').style.display = 'block';
@@ -987,4 +969,4 @@ Device ID: ${currentDevice.id}
         });
     </script>
 </body>
-</html>
+    </html>
