@@ -18,117 +18,6 @@
             line-height: 1.6;
         }
 
-        /* Data Stream Styles */
-.data-stream {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 15px;
-}
-
-.data-stream-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #333;
-}
-
-.data-stream-title {
-    color: #00ff88;
-    font-size: 1.1rem;
-    font-weight: bold;
-}
-
-.data-stream-status {
-    font-size: 0.8rem;
-    padding: 4px 8px;
-    border-radius: 12px;
-    background: #333;
-}
-
-.status-live {
-    background: #00ff88;
-    color: #000;
-}
-
-.status-offline {
-    background: #ff4444;
-    color: #fff;
-}
-
-.status-connecting {
-    background: #ffcc00;
-    color: #000;
-}
-
-.data-stream-content {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.data-section {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: #252525;
-    border-radius: 6px;
-    border-left: 3px solid #00ff88;
-}
-
-.data-section-title {
-    color: #00ccff;
-    font-size: 0.9rem;
-    margin-bottom: 10px;
-    font-weight: bold;
-}
-
-.data-row {
-    display: flex;
-    justify-content: space-between;
-    margin: 8px 0;
-    padding: 5px 0;
-    border-bottom: 1px solid #333;
-}
-
-.data-key {
-    color: #ccc;
-    min-width: 120px;
-}
-
-.data-value {
-    color: #ffcc00;
-    text-align: right;
-    flex: 1;
-}
-
-.data-value.good { color: #00ff88; }
-.data-value.warning { color: #ffcc00; }
-.data-value.danger { color: #ff4444; }
-
-.raw-data {
-    margin-top: 20px;
-    padding-top: 15px;
-    border-top: 1px solid #333;
-}
-
-.raw-data-title {
-    color: #00ccff;
-    font-size: 0.8rem;
-    margin-bottom: 8px;
-}
-
-.raw-data-content {
-    background: #1a1a1a;
-    padding: 10px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 10px;
-    color: #888;
-    max-height: 100px;
-    overflow-y: auto;
-}
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -513,6 +402,56 @@
         .notification.warning { background: linear-gradient(135deg, #ffcc00, #ffaa00); }
         .notification.error { background: linear-gradient(135deg, #ff4444, #cc0000); }
 
+        /* Data Display */
+        .data-display {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .data-title {
+            color: #00ff88;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .data-status {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: #333;
+        }
+
+        .status-live {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .status-offline {
+            background: #ff4444;
+            color: #fff;
+        }
+
+        .data-content {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #ccc;
+            line-height: 1.4;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -534,6 +473,10 @@
             
             .device-actions {
                 flex-wrap: wrap;
+            }
+            
+            .control-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -621,15 +564,22 @@
                 <div class="control-card">
                     <h3>📷 Camera Controls</h3>
                     <div class="control-actions">
-                        <button class="control-btn" onclick="controlAction('front_camera')">
+                        <button class="control-btn" onclick="controlCamera('front')">
                             📱 Activate Front Camera
                         </button>
-                        <button class="control-btn" onclick="controlAction('back_camera')">
+                        <button class="control-btn" onclick="controlCamera('back')">
                             📸 Activate Back Camera
                         </button>
-                        <button class="control-btn" onclick="controlAction('stop_camera')">
+                        <button class="control-btn" onclick="controlCamera('capture')">
+                            🖼️ Capture Photo
+                        </button>
+                        <button class="control-btn" onclick="controlCamera('stop')">
                             ⏹️ Stop Camera
                         </button>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: #252525; border-radius: 5px;">
+                        <div style="color: #00ccff; font-size: 0.9rem;">Current Device:</div>
+                        <div style="color: #fff; font-weight: bold;" id="currentDeviceName">None selected</div>
                     </div>
                 </div>
 
@@ -680,36 +630,21 @@
                         </button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Content Filtering -->
-                <div class="control-card">
-                    <h3>🚫 Content Filtering</h3>
-                    <div class="control-actions">
-                        <button class="control-btn" onclick="controlAction('enable_filter')">
-                            ✅ Enable Web Filter
-                        </button>
-                        <button class="control-btn" onclick="controlAction('block_website')">
-                            🌐 Block Website
-                        </button>
-                        <button class="control-btn" onclick="controlAction('view_blocked')">
-                            📋 View Blocked Sites
-                        </button>
+            <!-- Live Data Stream -->
+            <div class="control-card">
+                <h3>📊 Live Device Data</h3>
+                <div class="data-display">
+                    <div class="data-header">
+                        <div class="data-title">📡 Real-time Data Stream</div>
+                        <div class="data-status status-offline" id="dataStatus">Offline</div>
                     </div>
-                </div>
-
-                <!-- Device Settings -->
-                <div class="control-card">
-                    <h3>⚙️ Device Settings</h3>
-                    <div class="control-actions">
-                        <button class="control-btn" onclick="controlAction('set_bedtime')">
-                            🛌 Set Bedtime
-                        </button>
-                        <button class="control-btn" onclick="controlAction('set_data_limit')">
-                            📊 Set Data Limit
-                        </button>
-                        <button class="control-btn" onclick="controlAction('device_info')">
-                            ℹ️ Device Information
-                        </button>
+                    <div class="data-content" id="dataContent">
+                        <div style="text-align: center; padding: 20px; color: #666;">
+                            <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                            Select a device and open control panel to see live data...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -724,26 +659,6 @@
                         <div style="text-align: center; padding: 20px; color: #666;">
                             No control actions yet
                         </div>
-                        <!-- Data Tab Section - Control Panel ke andar add karo -->
-<div class="control-card">
-    <h3>📊 Live Device Data</h3>
-    
-    <!-- Data Display Area - Direct show hoga -->
-    <div id="dataDisplay" style="margin-top: 15px;">
-        <div style="background: #252525; padding: 15px; border-radius: 8px; border: 1px solid #333; min-height: 200px;">
-            <h4 style="color: #00ff88; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                <span>📡 Real-time Data Stream</span>
-                <span id="dataStatus" style="font-size: 0.8rem; color: #ffcc00;">Loading...</span>
-            </h4>
-            <div id="dataContent" style="max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #ccc; line-height: 1.4;">
-                <div style="text-align: center; padding: 20px; color: #666;">
-                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
-                    Connecting to device data stream...
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
                     </div>
                 </div>
             </div>
@@ -757,227 +672,8 @@
         let uniqueDevices = [];
         let currentDevice = null;
         let controlHistory = [];
-// Control panel open hote hi auto data load
-function openControlPanel(deviceId, deviceName) {
-    currentDevice = { id: deviceId, name: deviceName };
-    document.getElementById('controlPanelTitle').textContent = `Remote Control - ${deviceName}`;
-    document.getElementById('controlPanel').style.display = 'block';
-    
-    // Auto-start data streaming
-    startDataStream(deviceId);
-    
-    showNotification(`🎮 Control panel opened for ${deviceName}`, 'success');
-}
+        let dataRefreshInterval = null;
 
-// Real-time data stream function
-async function startDataStream(deviceId) {
-    const dataContent = document.getElementById('dataContent');
-    const dataStatus = document.getElementById('dataStatus');
-    
-    // Initial loading state
-    dataStatus.textContent = 'Connecting...';
-    dataStatus.style.color = '#ffcc00';
-    
-    try {
-        // Fetch data from API
-        const response = await fetch(`${API_BASE}/data/${deviceId}`);
-        const data = await response.json();
-        
-        // Update status
-        dataStatus.textContent = 'Live';
-        dataStatus.style.color = '#00ff88';
-        
-        // Display data
-        dataContent.innerHTML = formatDataForDisplay(data);
-        
-    } catch (error) {
-        console.error('Data stream error:', error);
-        dataStatus.textContent = 'Offline';
-        dataStatus.style.color = '#ff4444';
-        dataContent.innerHTML = `
-            <div style="text-align: center; padding: 20px; color: #ff4444;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">❌</div>
-                <strong>Connection Failed</strong><br>
-                <span style="color: #888; font-size: 0.9rem;">${error.message}</span>
-            </div>
-        `;
-    }
-    
-    // Auto-refresh data every 5 seconds
-    const refreshInterval = setInterval(async () => {
-        if (!document.getElementById('controlPanel').style.display === 'block') {
-            clearInterval(refreshInterval);
-            return;
-        }
-        
-        try {
-            const response = await fetch(`${API_BASE}/data/${deviceId}`);
-            const newData = await response.json();
-            
-            dataStatus.textContent = `Live • ${new Date().toLocaleTimeString()}`;
-            dataContent.innerHTML = formatDataForDisplay(newData);
-            
-        } catch (error) {
-            dataStatus.textContent = 'Update Failed';
-            dataStatus.style.color = '#ff4444';
-        }
-    }, 5000);
-}
-
-// Data format function (better version)
-function formatDataForDisplay(data) {
-    if (!data || Object.keys(data).length === 0) {
-        return `
-            <div style="text-align: center; padding: 20px; color: #888;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
-                <strong>No Data Available</strong><br>
-                <span style="font-size: 0.9rem;">Device is not sending data</span>
-            </div>
-        `;
-    }
-    
-    let html = '';
-    
-    // Battery Data Section
-    if (data.battery_level !== undefined || data.battery) {
-        html += createDataSection('🔋 Battery', {
-            'Level': data.battery_level || data.battery?.level,
-            'Status': data.is_charging ? '⚡ Charging' : '🔋 Not Charging',
-            'Health': data.battery_health || data.battery?.health,
-            'Temperature': data.temperature || data.battery?.temperature,
-            'Voltage': data.voltage || data.battery?.voltage
-        });
-    }
-    
-    // Location Data Section
-    if (data.location || data.latitude) {
-        html += createDataSection('📍 Location', {
-            'Latitude': data.latitude || data.location?.lat,
-            'Longitude': data.longitude || data.location?.lng,
-            'Accuracy': data.accuracy || data.location?.accuracy,
-            'Last Update': data.location_timestamp || data.timestamp
-        });
-    }
-    
-    // Usage Data Section
-    if (data.usage || data.screen_time) {
-        html += createDataSection('📊 Usage', {
-            'Screen Time': data.screen_time || data.usage?.screen_time,
-            'Data Used': data.data_usage || data.usage?.data_used,
-            'App Usage': data.app_usage_count || data.usage?.app_count,
-            'Battery Usage': data.battery_usage || data.usage?.battery_used
-        });
-    }
-    
-    // Network Data Section
-    if (data.network || data.connection_type) {
-        html += createDataSection('📡 Network', {
-            'Connection': data.connection_type || data.network?.type,
-            'Signal': data.signal_strength || data.network?.signal,
-            'IP Address': data.ip_address || data.network?.ip,
-            'Data Speed': data.network_speed || data.network?.speed
-        });
-    }
-    
-    // Device Info Section
-    html += createDataSection('📱 Device Info', {
-        'Device ID': currentDevice.id,
-        'Device Name': currentDevice.name,
-        'Last Online': data.last_updated || data.timestamp,
-        'Data Points': data.data_count || 'N/A',
-        'App Version': data.app_version || 'N/A'
-    });
-    
-    // Raw Data Section (for developers)
-    html += `
-        <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
-            <div style="color: #00ccff; margin-bottom: 10px; font-size: 0.9rem;">
-                🔧 Raw Data (JSON)
-            </div>
-            <div style="background: #1a1a1a; padding: 10px; border-radius: 5px; font-size: 10px; color: #888; max-height: 100px; overflow-y: auto;">
-                ${JSON.stringify(data, null, 2)}
-            </div>
-        </div>
-    `;
-    
-    return html;
-}
-
-// Helper function to create data sections
-function createDataSection(title, data) {
-    let sectionHtml = `
-        <div style="margin-bottom: 20px;">
-            <div style="color: #00ccff; margin-bottom: 10px; font-size: 0.9rem;">
-                ${title}
-            </div>
-    `;
-    
-    for (const [key, value] of Object.entries(data)) {
-        if (value !== undefined && value !== null) {
-            const displayValue = formatValue(value);
-            sectionHtml += `
-                <div style="display: flex; justify-content: space-between; margin: 5px 0; padding: 3px 0;">
-                    <span style="color: #ccc; min-width: 120px;">${key}:</span>
-                    <span style="color: ${getValueColor(value)}; text-align: right; flex: 1;">${displayValue}</span>
-                </div>
-            `;
-        }
-    }
-    
-    sectionHtml += `</div>`;
-    return sectionHtml;
-}
-
-// Value formatting helper
-function formatValue(value) {
-    if (value === null || value === undefined) return 'N/A';
-    if (typeof value === 'boolean') return value ? '✅ Yes' : '❌ No';
-    if (typeof value === 'number') {
-        // Battery percentage
-        if (value <= 100 && value >= 0) return `${value}%`;
-        // Temperature
-        if (value > 30 && value < 50) return `${value}°C`;
-        // Voltage
-        if (value > 3 && value < 5) return `${value}V`;
-        return value.toString();
-    }
-    if (typeof value === 'string') {
-        // Timestamp detection
-        if (value.includes('T') || value.includes(':')) {
-            try {
-                return new Date(value).toLocaleString();
-            } catch {
-                return value;
-            }
-        }
-        return value;
-    }
-    return String(value);
-}
-
-// Value color based on type and value
-function getValueColor(value) {
-    if (typeof value === 'number') {
-        if (value <= 20) return '#ff4444'; // Red for low values
-        if (value <= 50) return '#ffcc00'; // Yellow for medium values
-        return '#00ff88'; // Green for good values
-    }
-    if (typeof value === 'boolean') {
-        return value ? '#00ff88' : '#ff4444';
-    }
-    return '#ffcc00'; // Default yellow
-}
-
-// Control panel close hone par cleanup
-function closeControlPanel() {
-    document.getElementById('controlPanel').style.display = 'none';
-    currentDevice = null;
-    
-    // Clear any intervals
-    const intervals = window.dataIntervals || [];
-    intervals.forEach(clearInterval);
-    window.dataIntervals = [];
-        }
         // Show notification
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
@@ -1011,11 +707,31 @@ function closeControlPanel() {
                     updateStatistics();
                     showNotification(`✅ Loaded ${uniqueDevices.length} devices`, 'success');
                 } else {
+                    document.getElementById('batteryDataList').innerHTML = `
+                        <div class="no-data">
+                            <div style="font-size: 4rem; margin-bottom: 20px;">🔋</div>
+                            <h3>No Devices Connected</h3>
+                            <p>No devices are currently sending battery data</p>
+                            <button class="btn btn-primary" onclick="loadRealBatteryData()" style="margin-top: 20px;">
+                                🔄 Try Again
+                            </button>
+                        </div>
+                    `;
                     showNotification('⚠️ No battery data available', 'warning');
                 }
                 
             } catch (error) {
                 console.error('Error:', error);
+                document.getElementById('batteryDataList').innerHTML = `
+                    <div class="no-data">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">❌</div>
+                        <h3>Connection Error</h3>
+                        <p>Failed to connect to Sukh Guard API</p>
+                        <button class="btn btn-primary" onclick="loadRealBatteryData()" style="margin-top: 20px;">
+                            🔄 Retry Connection
+                        </button>
+                    </div>
+                `;
                 showNotification(`❌ Error: ${error.message}`, 'error');
             }
         }
@@ -1132,17 +848,268 @@ function closeControlPanel() {
         function openControlPanel(deviceId, deviceName) {
             currentDevice = { id: deviceId, name: deviceName };
             document.getElementById('controlPanelTitle').textContent = `Remote Control - ${deviceName}`;
+            document.getElementById('currentDeviceName').textContent = deviceName;
             document.getElementById('controlPanel').style.display = 'block';
+            
+            // Start data streaming
+            startDataStream(deviceId);
+            
             showNotification(`🎮 Control panel opened for ${deviceName}`, 'success');
         }
 
         function closeControlPanel() {
             document.getElementById('controlPanel').style.display = 'none';
             currentDevice = null;
+            
+            // Clear refresh interval
+            if (dataRefreshInterval) {
+                clearInterval(dataRefreshInterval);
+                dataRefreshInterval = null;
+            }
+            
+            // Reset data display
+            document.getElementById('dataStatus').textContent = 'Offline';
+            document.getElementById('dataStatus').className = 'data-status status-offline';
+            document.getElementById('dataContent').innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #666;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                    Select a device and open control panel to see live data...
+                </div>
+            `;
         }
 
+        // Camera Control Functions
+        async function controlCamera(command) {
+            if (!currentDevice) {
+                showNotification('❌ Please select a device first', 'error');
+                return;
+            }
+
+            const payload = {
+                device_id: currentDevice.id,
+                command: command,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                showNotification(`📷 Sending ${command} camera command...`, 'warning');
+                
+                const response = await fetch(`${API_BASE}/camera/control`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification(`✅ Camera ${command} command sent successfully!`, 'success');
+                    
+                    // Add to control history
+                    addToControlHistory(`Camera ${command} command`, data);
+                    
+                    // Update data display with camera status
+                    updateCameraStatus(command, data);
+                } else {
+                    showNotification(`❌ Failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Camera control error:', error);
+                showNotification(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Update camera status in display
+        function updateCameraStatus(command, responseData) {
+            const dataContent = document.getElementById('dataContent');
+            const now = new Date().toLocaleTimeString();
+            
+            let statusHTML = `
+                <div style="background: #1a1a1a; padding: 10px; border-radius: 5px; margin: 10px 0; border-left: 3px solid #00ff88;">
+                    <strong>📷 Camera Command Executed</strong><br>
+                    <span style="color: #00ccff;">Command:</span> ${command}<br>
+                    <span style="color: #00ccff;">Time:</span> ${now}<br>
+                    <span style="color: #00ccff;">Device:</span> ${currentDevice.name}<br>
+                    <span style="color: #00ccff;">Command ID:</span> ${responseData.command_id}
+                </div>
+            `;
+            
+            // Add to existing content
+            dataContent.innerHTML = statusHTML + dataContent.innerHTML;
+        }
+
+        // Real-time data stream function
+        async function startDataStream(deviceId) {
+            const dataContent = document.getElementById('dataContent');
+            const dataStatus = document.getElementById('dataStatus');
+            
+            // Initial loading state
+            dataStatus.textContent = 'Connecting...';
+            dataStatus.className = 'data-status status-offline';
+            
+            // Initial data load
+            await updateDataDisplay(deviceId, dataContent, dataStatus);
+            
+            // Set up auto-refresh every 3 seconds
+            dataRefreshInterval = setInterval(async () => {
+                if (!document.getElementById('controlPanel').style.display === 'block') {
+                    clearInterval(dataRefreshInterval);
+                    return;
+                }
+                await updateDataDisplay(deviceId, dataContent, dataStatus);
+            }, 3000);
+        }
+
+        // Update data display
+        async function updateDataDisplay(deviceId, dataContent, dataStatus) {
+            try {
+                // Fetch battery data
+                const batteryResponse = await fetch(`${API_BASE}/battery/${deviceId}`);
+                const batteryData = await batteryResponse.json();
+                
+                // Fetch camera status
+                const cameraResponse = await fetch(`${API_BASE}/camera/status/${deviceId}`);
+                const cameraData = await cameraResponse.ok ? await cameraResponse.json() : null;
+                
+                // Update status
+                dataStatus.textContent = `Live • ${new Date().toLocaleTimeString()}`;
+                dataStatus.className = 'data-status status-live';
+                
+                // Display data
+                dataContent.innerHTML = formatDataForDisplay(batteryData, cameraData);
+                
+            } catch (error) {
+                console.error('Data stream error:', error);
+                dataStatus.textContent = 'Offline';
+                dataStatus.className = 'data-status status-offline';
+                dataContent.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #ff4444;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">❌</div>
+                        <strong>Connection Failed</strong><br>
+                        <span style="color: #888; font-size: 0.9rem;">${error.message}</span>
+                    </div>
+                `;
+            }
+        }
+
+        // Format data for display
+        function formatDataForDisplay(batteryData, cameraData) {
+            let html = '';
+            
+            // Battery Data Section
+            if (batteryData && !batteryData.error) {
+                html += `
+                    <div style="margin-bottom: 20px; padding: 15px; background: #252525; border-radius: 5px; border-left: 3px solid #00ff88;">
+                        <div style="color: #00ff88; margin-bottom: 10px; font-weight: bold;">🔋 Battery Information</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>Level:</div>
+                            <div style="color: ${getBatteryColor(batteryData.battery_level)}; text-align: right;">${batteryData.battery_level}%</div>
+                            
+                            <div>Status:</div>
+                            <div style="color: #ffcc00; text-align: right;">${batteryData.is_charging ? '⚡ Charging' : '🔋 Not Charging'}</div>
+                            
+                            <div>Health:</div>
+                            <div style="color: #00ccff; text-align: right;">${batteryData.battery_health || 'N/A'}%</div>
+                            
+                            <div>Last Update:</div>
+                            <div style="color: #888; text-align: right;">${formatTime(batteryData.last_updated)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Camera Data Section
+            if (cameraData) {
+                html += `
+                    <div style="margin-bottom: 20px; padding: 15px; background: #252525; border-radius: 5px; border-left: 3px solid #00ccff;">
+                        <div style="color: #00ccff; margin-bottom: 10px; font-weight: bold;">📷 Camera Status</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>Status:</div>
+                            <div style="color: #00ff88; text-align: right;">${cameraData.camera_available ? 'Available' : 'Unavailable'}</div>
+                            
+                            <div>Last Command:</div>
+                            <div style="color: #ffcc00; text-align: right;">${cameraData.last_command || 'None'}</div>
+                            
+                            <div>Command Time:</div>
+                            <div style="color: #888; text-align: right;">${cameraData.last_command_time ? formatTime(cameraData.last_command_time) : 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Device Info Section
+            html += `
+                <div style="padding: 15px; background: #252525; border-radius: 5px; border-left: 3px solid #ffcc00;">
+                    <div style="color: #ffcc00; margin-bottom: 10px; font-weight: bold;">📱 Device Information</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div>Device ID:</div>
+                        <div style="color: #888; text-align: right; font-family: monospace; font-size: 10px;">${currentDevice.id}</div>
+                        
+                        <div>Device Name:</div>
+                        <div style="color: #fff; text-align: right;">${currentDevice.name}</div>
+                        
+                        <div>Current Time:</div>
+                        <div style="color: #888; text-align: right;">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        function getBatteryColor(level) {
+            if (level > 70) return '#00ff88';
+            if (level > 30) return '#ffcc00';
+            return '#ff4444';
+        }
+
+        // Add to control history
+        function addToControlHistory(action, responseData) {
+            const timestamp = new Date().toLocaleTimeString();
+            
+            controlHistory.unshift({
+                device: currentDevice.name,
+                action: action,
+                timestamp: timestamp,
+                response: responseData
+            });
+            
+            updateControlHistory();
+        }
+
+        // Update control history display
+        function updateControlHistory() {
+            const historyElement = document.getElementById('controlHistory');
+            
+            if (controlHistory.length === 0) {
+                historyElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No control actions yet</div>';
+                return;
+            }
+            
+            historyElement.innerHTML = controlHistory.slice(0, 10).map(item => `
+                <div style="padding: 15px; border-bottom: 1px solid #333; background: #1a1a1a; margin: 5px 0; border-radius: 5px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            <strong style="color: #00ff88;">${item.device}</strong>
+                            <div style="color: #fff; margin: 5px 0;">${item.action}</div>
+                            <div style="color: #888; font-size: 0.8rem;">Command ID: ${item.response.command_id}</div>
+                        </div>
+                        <div style="color: #666; font-size: 0.8rem; text-align: right; min-width: 80px;">
+                            ${item.timestamp}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Other control actions
         function controlAction(action) {
-            if (!currentDevice) return;
+            if (!currentDevice) {
+                showNotification('❌ Please select a device first', 'error');
+                return;
+            }
             
             const actionText = getActionText(action);
             const timestamp = new Date().toLocaleTimeString();
@@ -1151,7 +1118,8 @@ function closeControlPanel() {
             controlHistory.unshift({
                 device: currentDevice.name,
                 action: actionText,
-                timestamp: timestamp
+                timestamp: timestamp,
+                response: { message: "Command sent successfully" }
             });
             
             // Update history display
@@ -1188,24 +1156,6 @@ function closeControlPanel() {
             return actions[action] || action;
         }
 
-        function updateControlHistory() {
-            const historyElement = document.getElementById('controlHistory');
-            if (controlHistory.length === 0) {
-                historyElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No control actions yet</div>';
-                return;
-            }
-            
-            historyElement.innerHTML = controlHistory.slice(0, 10).map(item => `
-                <div style="padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <strong>${item.device}</strong>
-                        <div style="color: #888; font-size: 0.9rem;">${item.action}</div>
-                    </div>
-                    <div style="color: #666; font-size: 0.8rem;">${item.timestamp}</div>
-                </div>
-            `).join('');
-        }
-
         // Other functions
         function loadAllDevices() {
             showNotification('📱 Loading all registered devices...', 'warning');
@@ -1229,7 +1179,7 @@ function closeControlPanel() {
 
         function refreshDevice(deviceId) {
             showNotification(`🔄 Refreshing device data...`, 'success');
-            // Implement this function
+            loadRealBatteryData();
         }
 
         // Auto-load on page load
