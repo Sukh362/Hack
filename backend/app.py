@@ -122,6 +122,68 @@ def get_all_battery_data():
         "battery_data": result
     })
 
+@app.route('/camera', methods=['POST', 'OPTIONS'])
+def camera_capture():
+    """Camera capture endpoint for mobile app"""
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    print(f"Camera data received: {data}")
+    
+    # Basic validation
+    if not data or 'device_id' not in data:
+        return jsonify({"error": "Device ID is required"}), 400
+    
+    device_id = data.get('device_id')
+    image_data = data.get('image_data', '')  # Base64 encoded image data
+    timestamp = data.get('timestamp', datetime.now().isoformat())
+    
+    # Here you can process the image data as needed
+    # For now, just log the receipt of camera data
+    
+    print(f"Camera capture from device: {device_id}")
+    print(f"Image data length: {len(image_data) if image_data else 0}")
+    print(f"Timestamp: {timestamp}")
+    
+    # You can save the image to disk or database here
+    # Example: save to filesystem
+    if image_data:
+        try:
+            # Create camera directory if not exists
+            import os
+            if not os.path.exists('camera_captures'):
+                os.makedirs('camera_captures')
+            
+            # Save image with device_id and timestamp
+            filename = f"camera_captures/{device_id}_{timestamp.replace(':', '-')}.txt"
+            with open(filename, 'w') as f:
+                f.write(f"Device: {device_id}\n")
+                f.write(f"Timestamp: {timestamp}\n")
+                f.write(f"Image Data: {image_data[:100]}...\n")  # Save first 100 chars only
+            
+            print(f"Camera data saved to: {filename}")
+            
+        except Exception as e:
+            print(f"Error saving camera data: {e}")
+    
+    return jsonify({
+        "message": "Camera data received successfully",
+        "device_id": device_id,
+        "timestamp": timestamp,
+        "image_received": bool(image_data),
+        "status": "success"
+    })
+
+@app.route('/camera/status', methods=['GET'])
+def camera_status():
+    """Check camera service status"""
+    return jsonify({
+        "message": "Camera service is active",
+        "status": "running",
+        "timestamp": datetime.now().isoformat()
+    })
+
 @app.route('/battery/<device_id>', methods=['GET'])
 def get_battery_status(device_id):
     """Get battery status for specific device"""
