@@ -122,12 +122,22 @@ def get_all_battery_data():
         "battery_data": result
     })
 
-@app.route('/camera', methods=['POST', 'OPTIONS'])
+@app.route('/camera', methods=['GET', 'POST', 'OPTIONS'])
 def camera_capture():
     """Camera capture endpoint for mobile app"""
     if request.method == 'OPTIONS':
         return '', 200
+    elif request.method == 'GET':
+        # GET request ke liye response
+        return jsonify({
+            "message": "Camera endpoint is working!",
+            "endpoint": "/camera",
+            "supported_methods": ["GET", "POST", "OPTIONS"],
+            "usage": "Send POST request with device_id and image_data",
+            "timestamp": datetime.now().isoformat()
+        })
         
+    # POST request handling (same as before)
     data = request.json
     print(f"Camera data received: {data}")
     
