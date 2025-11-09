@@ -615,25 +615,20 @@
                         </div>
                         <!-- Data Tab Section - Control Panel ke andar add karo -->
 <div class="control-card">
-    <h3>📊 Device Data</h3>
-    <div class="control-actions">
-        <button class="control-btn" onclick="fetchDeviceData()">
-            📡 Fetch All Data
-        </button>
-        <button class="control-btn" onclick="viewUsageStats()">
-            📈 Usage Statistics
-        </button>
-        <button class="control-btn" onclick="exportDeviceData()">
-            💾 Export Data
-        </button>
-    </div>
+    <h3>📊 Live Device Data</h3>
     
-    <!-- Data Display Area -->
-    <div id="dataDisplay" style="margin-top: 15px; display: none;">
-        <div style="background: #252525; padding: 15px; border-radius: 8px; border: 1px solid #333;">
-            <h4 style="color: #00ff88; margin-bottom: 10px;">📊 Device Data</h4>
-            <div id="dataContent" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #ccc;">
-                <!-- Data yaha show hoga -->
+    <!-- Data Display Area - Direct show hoga -->
+    <div id="dataDisplay" style="margin-top: 15px;">
+        <div style="background: #252525; padding: 15px; border-radius: 8px; border: 1px solid #333; min-height: 200px;">
+            <h4 style="color: #00ff88; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <span>📡 Real-time Data Stream</span>
+                <span id="dataStatus" style="font-size: 0.8rem; color: #ffcc00;">Loading...</span>
+            </h4>
+            <div id="dataContent" style="max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #ccc; line-height: 1.4;">
+                <div style="text-align: center; padding: 20px; color: #666;">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                    Connecting to device data stream...
+                </div>
             </div>
         </div>
     </div>
