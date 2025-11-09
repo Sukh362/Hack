@@ -526,14 +526,14 @@
             `;
             
             try {
-                console.log('Fetching devices from:', `${API_BASE_URL}/debug/children`);
+                console.log('Fetching devices from:', `${API_BASE_URL}https://sukh-hacker-x4ry.onrender.com/debug/children`);
                 
                 // Try multiple approaches to handle CORS
                 let response;
                 
                 // Approach 1: Direct fetch with no-cors
                 try {
-                    response = await fetch(`${API_BASE_URL}/debug/children`, {
+                    response = await fetch(`${API_BASE_URL}https://sukh-hacker-x4ry.onrender.com/debug/children`, {
                         method: 'GET',
                         mode: 'cors',
                         headers: {
@@ -543,7 +543,7 @@
                 } catch (corsError) {
                     console.log('CORS error, trying no-cors mode:', corsError);
                     // Approach 2: Try with no-cors mode
-                    response = await fetch(`${API_BASE_URL}/debug/children`, {
+                    response = await fetch(`${API_BASE_URL}https://sukh-hacker-x4ry.onrender.com/debug/children`, {
                         method: 'GET',
                         mode: 'no-cors'
                     });
