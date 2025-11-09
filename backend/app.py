@@ -48,6 +48,21 @@ def init_db():
         )
     ''')
     
+    # NEW: Battery data table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS battery_data (
+            id TEXT PRIMARY KEY,
+            device_id TEXT,
+            battery_level INTEGER,
+            is_charging BOOLEAN,
+            battery_health INTEGER,
+            temperature REAL,
+            voltage REAL,
+            timestamp TEXT,
+            FOREIGN KEY (device_id) REFERENCES children (device_id)
+        )
+    ''')
+    
     # Insert default parent if not exists
     cursor.execute("SELECT * FROM parents WHERE email = ?", (FIXED_USERNAME,))
     if not cursor.fetchone():
@@ -68,6 +83,226 @@ def get_db_connection():
     conn = sqlite3.connect('parental.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+# ========== BATTERY ROUTES ==========
+
+@app.route('/battery', methods=['GET'])
+def get_all_battery_data():
+    """Get battery data for all devices"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT c.name, c.device_id, b.battery_level, b.is_charging, 
+               b.battery_health, b.temperature, b.voltage, b.timestamp
+        FROM battery_data b
+        JOIN children c ON b.device_id = c.device_id
+        ORDER BY b.timestamp DESC
+    ''')
+    
+    battery_data = cursor.fetchall()
+    conn.close()
+    
+    result = []
+    for row in battery_data:
+        result.append({
+            "device_name": row['name'],
+            "device_id": row['device_id'],
+            "battery_level": row['battery_level'],
+            "is_charging": bool(row['is_charging']),
+            "battery_health": row['battery_health'],
+            "temperature": row['temperature'],
+            "voltage": row['voltage'],
+            "last_updated": row['timestamp']
+        })
+    
+    return jsonify({
+        "message": "Battery data retrieved successfully",
+        "total_devices": len(result),
+        "battery_data": result
+    })
+
+@app.route('/battery/<device_id>', methods=['GET'])
+def get_battery_status(device_id):
+    """Get battery status for specific device"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT b.*, c.name as device_name 
+        FROM battery_data b
+        JOIN children c ON b.device_id = c.device_id
+        WHERE b.device_id = ?
+        ORDER BY b.timestamp DESC
+        LIMIT 1
+    ''', (device_id,))
+    
+    battery_data = cursor.fetchone()
+    conn.close()
+    
+    if battery_data:
+        return jsonify({
+            "device_id": battery_data['device_id'],
+            "device_name": battery_data['device_name'],
+            "battery_level": battery_data['battery_level'],
+            "is_charging": bool(battery_data['is_charging']),
+            "battery_health": battery_data['battery_health'],
+            "temperature": battery_data['temperature'],
+            "voltage": battery_data['voltage'],
+            "last_updated": battery_data['timestamp'],
+            "status": "success"
+        })
+    else:
+        return jsonify({
+            "error": "No battery data found for this device",
+            "device_id": device_id,
+            "status": "not_found"
+        }), 404
+
+@app.route('/battery/update', methods=['POST', 'OPTIONS'])
+def update_battery_data():
+    """Update battery data from mobile app"""
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    print(f"Battery update received: {data}")
+    
+    device_id = data.get('device_id')
+    battery_level = data.get('battery_level')
+    
+    if not device_id or battery_level is None:
+        return jsonify({"error": "Device ID and battery level are required"}), 400
+    
+    # Validate battery level
+    if not (0 <= battery_level <= 100):
+        return jsonify({"error": "Battery level must be between 0 and 100"}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if device exists
+    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+    device = cursor.fetchone()
+    
+    if not device:
+        return jsonify({"error": "Device not registered"}), 404
+    
+    # Insert or update battery data
+    battery_id = str(uuid.uuid4())
+    cursor.execute('''
+        INSERT INTO battery_data (id, device_id, battery_level, is_charging, 
+                                battery_health, temperature, voltage, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        battery_id,
+        device_id,
+        battery_level,
+        data.get('is_charging', False),
+        data.get('battery_health', 100),
+        data.get('temperature', 25.0),
+        data.get('voltage', 3.8),
+        datetime.now().isoformat()
+    ))
+    
+    conn.commit()
+    conn.close()
+    
+    print(f"Battery data updated for device {device_id}: {battery_level}%")
+    
+    return jsonify({
+        "message": "Battery data updated successfully",
+        "device_id": device_id,
+        "battery_level": battery_level,
+        "timestamp": datetime.now().isoformat()
+    })
+
+@app.route('/battery/history/<device_id>', methods=['GET'])
+def get_battery_history(device_id):
+    """Get battery history for a device"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT battery_level, is_charging, timestamp
+        FROM battery_data 
+        WHERE device_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 50
+    ''', (device_id,))
+    
+    history = cursor.fetchall()
+    conn.close()
+    
+    history_list = []
+    for row in history:
+        history_list.append({
+            "battery_level": row['battery_level'],
+            "is_charging": bool(row['is_charging']),
+            "timestamp": row['timestamp']
+        })
+    
+    return jsonify({
+        "device_id": device_id,
+        "history": history_list,
+        "total_records": len(history_list)
+    })
+
+@app.route('/battery/stats', methods=['GET'])
+def get_battery_stats():
+    """Get battery statistics for all devices"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get latest battery data for each device
+    cursor.execute('''
+        SELECT c.name, c.device_id, b.battery_level, b.is_charging, b.timestamp
+        FROM battery_data b
+        JOIN children c ON b.device_id = c.device_id
+        WHERE b.timestamp = (
+            SELECT MAX(timestamp) FROM battery_data WHERE device_id = b.device_id
+        )
+    ''')
+    
+    latest_data = cursor.fetchall()
+    conn.close()
+    
+    if not latest_data:
+        return jsonify({
+            "message": "No battery data available",
+            "stats": {
+                "total_devices": 0,
+                "average_battery": 0,
+                "charging_count": 0,
+                "low_battery_count": 0
+            }
+        })
+    
+    total_battery = sum(row['battery_level'] for row in latest_data)
+    charging_count = sum(1 for row in latest_data if row['is_charging'])
+    low_battery_count = sum(1 for row in latest_data if row['battery_level'] <= 20)
+    
+    return jsonify({
+        "message": "Battery statistics retrieved successfully",
+        "stats": {
+            "total_devices": len(latest_data),
+            "average_battery": round(total_battery / len(latest_data), 1),
+            "charging_count": charging_count,
+            "low_battery_count": low_battery_count,
+            "last_updated": datetime.now().isoformat()
+        },
+        "devices": [
+            {
+                "name": row['name'],
+                "device_id": row['device_id'],
+                "battery_level": row['battery_level'],
+                "is_charging": bool(row['is_charging']),
+                "last_updated": row['timestamp']
+            } for row in latest_data
+        ]
+    })
+
+# ========== EXISTING ROUTES (SAME AS BEFORE) ==========
 
 @app.route('/parent/register', methods=['POST', 'OPTIONS'])
 def register_parent():
@@ -427,7 +662,13 @@ def root():
             "log_usage": "/usage/log",
             "check_status": "/child/status/{device_id}",
             "debug_info": "/debug/children",
-            "add_test": "/debug/add_test_device"
+            "add_test": "/debug/add_test_device",
+            # NEW BATTERY ENDPOINTS
+            "battery_all": "/battery",
+            "battery_device": "/battery/{device_id}",
+            "battery_update": "/battery/update",
+            "battery_history": "/battery/history/{device_id}",
+            "battery_stats": "/battery/stats"
         }
     })
 
