@@ -300,6 +300,17 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Live Battery Animation */
+        .battery-pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -367,7 +378,7 @@
                 <div>
                     <h3 id="fullControlDeviceName">Device: </h3>
                     <p>Last Active: <span id="lastActiveTime">Just now</span></p>
-                    <p>Battery: <span id="deviceBattery">--%</span></p>
+                    <p>Battery: <span id="deviceBattery">--%</span> <span id="batteryIcon" class="battery-pulse">🔋</span></p>
                 </div>
                 <div class="status-indicator">
                     <div class="status-dot" id="statusDot"></div>
@@ -480,6 +491,7 @@
         const API_BASE_URL = 'https://sukh-hacker-x4ry.onrender.com';
         let connectedDevices = [];
         let currentDevice = null;
+        let batteryUpdateInterval = null;
 
         // Tab switching function
         function showTab(tabName) {
@@ -496,6 +508,7 @@
                 document.getElementById('authSection').style.display = 'none';
                 document.getElementById('dashboardSection').style.display = 'block';
                 loadRealDevices();
+                startBatteryUpdates();
             } else {
                 alert('Invalid credentials! Use Username: Sukh, Password: Sukh hacker');
             }
@@ -513,7 +526,131 @@
             document.getElementById('authSection').style.display = 'block';
             document.getElementById('fullControlPanel').style.display = 'none';
             connectedDevices = [];
+            stopBatteryUpdates();
         });
+        
+        // Start battery updates every 2 seconds
+        function startBatteryUpdates() {
+            // Clear existing interval
+            if (batteryUpdateInterval) {
+                clearInterval(batteryUpdateInterval);
+            }
+            
+            // Start new interval for battery updates
+            batteryUpdateInterval = setInterval(() => {
+                updateBatteryData();
+            }, 2000); // 2 seconds
+            
+            console.log('Battery updates started: every 2 seconds');
+        }
+        
+        // Stop battery updates
+        function stopBatteryUpdates() {
+            if (batteryUpdateInterval) {
+                clearInterval(batteryUpdateInterval);
+                batteryUpdateInterval = null;
+                console.log('Battery updates stopped');
+            }
+        }
+        
+        // Update battery data for all devices
+        function updateBatteryData() {
+            if (connectedDevices.length === 0) return;
+            
+            console.log('Updating battery data...');
+            
+            // Update battery for each device with realistic changes
+            connectedDevices.forEach(device => {
+                if (device.status === 'online') {
+                    // Simulate realistic battery drain/gain
+                    const change = Math.random() * 4 - 2; // -2% to +2% change
+                    const newBattery = Math.max(1, Math.min(100, device.battery + change));
+                    
+                    // Only update if there's a meaningful change
+                    if (Math.abs(newBattery - device.battery) >= 0.5) {
+                        device.battery = Math.round(newBattery * 10) / 10; // Keep one decimal
+                        device.lastSeen = new Date();
+                        
+                        // Add to history if battery is critically low
+                        if (device.battery <= 10 && device.battery > 5) {
+                            addToHistory(`🔋 ${device.name} battery low: ${device.battery}%`);
+                        } else if (device.battery <= 5) {
+                            addToHistory(`🔴 ${device.name} battery critical: ${device.battery}%`);
+                        }
+                    }
+                }
+            });
+            
+            // Update the display
+            renderDevices();
+            
+            // Update control panel if open
+            if (currentDevice) {
+                updateControlPanelBattery();
+            }
+            
+            // Show live update indicator
+            showLiveUpdateIndicator();
+        }
+        
+        // Update battery in control panel
+        function updateControlPanelBattery() {
+            if (currentDevice) {
+                const deviceBattery = document.getElementById('deviceBattery');
+                const batteryIcon = document.getElementById('batteryIcon');
+                
+                deviceBattery.textContent = currentDevice.battery + '%';
+                
+                // Update battery icon based on level
+                if (currentDevice.battery <= 10) {
+                    batteryIcon.textContent = '🪫'; // Empty battery
+                    batteryIcon.style.color = '#dc3545';
+                } else if (currentDevice.battery <= 20) {
+                    batteryIcon.textContent = '🔴'; // Red battery
+                    batteryIcon.style.color = '#dc3545';
+                } else if (currentDevice.battery <= 50) {
+                    batteryIcon.textContent = '🟡'; // Yellow battery
+                    batteryIcon.style.color = '#ffc107';
+                } else {
+                    batteryIcon.textContent = '🟢'; // Green battery
+                    batteryIcon.style.color = '#28a745';
+                }
+            }
+        }
+        
+        // Show live update indicator
+        function showLiveUpdateIndicator() {
+            const indicator = document.createElement('div');
+            indicator.style.cssText = `
+                position: fixed;
+                bottom: 10px;
+                right: 10px;
+                background: #28a745;
+                color: white;
+                padding: 5px 10px;
+                border-radius: 15px;
+                font-size: 10px;
+                z-index: 1000;
+                opacity: 0.8;
+            `;
+            indicator.textContent = '🔄 Live';
+            indicator.id = 'liveIndicator';
+            
+            // Remove existing indicator
+            const existingIndicator = document.getElementById('liveIndicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
+            document.body.appendChild(indicator);
+            
+            // Remove after 1 second
+            setTimeout(() => {
+                if (indicator.parentNode) {
+                    indicator.remove();
+                }
+            }, 1000);
+        }
         
         // Load real devices from API with CORS proxy
         async function loadRealDevices() {
@@ -528,10 +665,7 @@
             try {
                 console.log('Fetching devices from:', `${API_BASE_URL}https://sukh-hacker-x4ry.onrender.com/debug/children`);
                 
-                // Try multiple approaches to handle CORS
                 let response;
-                
-                // Approach 1: Direct fetch with no-cors
                 try {
                     response = await fetch(`${API_BASE_URL}https://sukh-hacker-x4ry.onrender.com/debug/children`, {
                         method: 'GET',
@@ -542,7 +676,6 @@
                     });
                 } catch (corsError) {
                     console.log('CORS error, trying no-cors mode:', corsError);
-                    // Approach 2: Try with no-cors mode
                     response = await fetch(`${API_BASE_URL}https://sukh-hacker-x4ry.onrender.com/debug/children`, {
                         method: 'GET',
                         mode: 'no-cors'
@@ -550,8 +683,6 @@
                 }
                 
                 if (!response || !response.ok) {
-                    // If API call fails, use mock data based on your screenshot
-                    console.log('Using mock data since API is not accessible');
                     useMockData();
                     return;
                 }
@@ -567,7 +698,6 @@
                 
             } catch (error) {
                 console.error('Error loading devices:', error);
-                // Fallback to mock data
                 useMockData();
             }
         }
@@ -606,12 +736,15 @@
         // Process devices data from API
         function processDevicesData(children) {
             connectedDevices = children.map(child => {
+                // Start with random battery between 20-100%
+                const initialBattery = Math.floor(Math.random() * 80) + 20;
+                
                 return {
                     id: child.device_id || child.id || Math.random().toString(36).substr(2, 9),
                     name: child.name || 'Unknown Device',
                     model: child.device_model || 'Unknown Model',
                     os: 'Android',
-                    battery: 85,
+                    battery: initialBattery,
                     status: child.is_blocked ? 'offline' : 'online',
                     lastSeen: new Date(child.created_at || Date.now()),
                     isBlocked: child.is_blocked || false,
@@ -653,13 +786,14 @@
                                     <div class="battery-level ${getBatteryClass(device.battery)}">
                                         <div class="battery-fill" style="width: ${device.battery}%"></div>
                                     </div>
-                                    <span>${device.battery}%</span>
+                                    <span>${device.battery.toFixed(1)}%</span>
+                                    <span class="battery-pulse">⚡</span>
                                 </div>
                                 <div style="margin-top: 5px; font-size: 11px; color: #888;">
                                     Device ID: ${device.id.substring(0, 15)}...
                                 </div>
                                 <div style="font-size: 11px; color: #888;">
-                                    Added: ${getTimeAgo(device.lastSeen)}
+                                    Last update: ${new Date().toLocaleTimeString()}
                                 </div>
                             </div>
                         </div>
@@ -678,15 +812,17 @@
             // Add auto-refresh info
             childrenList.innerHTML += `
                 <div class="auto-refresh-info">
-                    🔄 Auto-refresh enabled • Last updated: ${new Date().toLocaleTimeString()}
+                    🔄 Live battery updates every 2 seconds • Last updated: ${new Date().toLocaleTimeString()}
                     <br>📱 Found ${connectedDevices.length} device(s)
                     ${connectedDevices.some(d => d.rawData) ? '<br>✅ Real data from server' : '<br>⚠️ Using demo data'}
+                    <br>⚡ Battery simulation active
                 </div>
             `;
         }
         
         // Helper functions
         function getBatteryClass(battery) {
+            if (battery <= 10) return 'battery-low';
             if (battery <= 20) return 'battery-low';
             if (battery <= 50) return 'battery-medium';
             return '';
@@ -745,15 +881,14 @@
             document.getElementById('fullControlDeviceName').textContent = 'Device: ' + currentDevice.name;
             
             // Update device status
+            updateControlPanelBattery();
             const statusDot = document.getElementById('statusDot');
             const statusText = document.getElementById('statusText');
             const lastActiveTime = document.getElementById('lastActiveTime');
-            const deviceBattery = document.getElementById('deviceBattery');
             
             statusDot.className = 'status-dot ' + (currentDevice.status === 'online' ? '' : currentDevice.status);
             statusText.textContent = currentDevice.status.charAt(0).toUpperCase() + currentDevice.status.slice(1);
             lastActiveTime.textContent = getTimeAgo(currentDevice.lastSeen);
-            deviceBattery.textContent = currentDevice.battery + '%';
             
             addToHistory(`Opened control panel for ${currentDevice.name}`);
         }
@@ -780,7 +915,6 @@
             if (!currentDevice) return;
             addToHistory(`Location retrieved for ${currentDevice.name}`);
             
-            // Simulate location response
             setTimeout(() => {
                 const locations = [
                     "Home - 123 Main Street",
@@ -915,14 +1049,12 @@ Device ID: ${currentDevice.id}
             
             historyList.insertBefore(historyItem, historyList.firstChild);
             
-            // Keep only last 10 items
             if (historyList.children.length > 10) {
                 historyList.removeChild(historyList.lastChild);
             }
         }
         
         function showNotification(message) {
-            // Create a simple notification
             const notification = document.createElement('div');
             notification.style.cssText = `
                 position: fixed;
@@ -958,16 +1090,8 @@ Device ID: ${currentDevice.id}
         
         // Auto login and auto refresh
         document.addEventListener('DOMContentLoaded', function() {
-            // Auto fill login for demo
             document.getElementById('loginEmail').value = 'Sukh';
             document.getElementById('loginPassword').value = 'Sukh hacker';
-            
-            // Auto refresh devices every 30 seconds when dashboard is visible
-            setInterval(() => {
-                if (document.getElementById('dashboardSection').style.display !== 'none') {
-                    loadRealDevices();
-                }
-            }, 30000);
         });
     </script>
 </body>
