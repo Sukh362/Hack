@@ -613,6 +613,31 @@
                         <div style="text-align: center; padding: 20px; color: #666;">
                             No control actions yet
                         </div>
+                        <!-- Data Tab Section - Control Panel ke andar add karo -->
+<div class="control-card">
+    <h3>📊 Device Data</h3>
+    <div class="control-actions">
+        <button class="control-btn" onclick="fetchDeviceData()">
+            📡 Fetch All Data
+        </button>
+        <button class="control-btn" onclick="viewUsageStats()">
+            📈 Usage Statistics
+        </button>
+        <button class="control-btn" onclick="exportDeviceData()">
+            💾 Export Data
+        </button>
+    </div>
+    
+    <!-- Data Display Area -->
+    <div id="dataDisplay" style="margin-top: 15px; display: none;">
+        <div style="background: #252525; padding: 15px; border-radius: 8px; border: 1px solid #333;">
+            <h4 style="color: #00ff88; margin-bottom: 10px;">📊 Device Data</h4>
+            <div id="dataContent" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #ccc;">
+                <!-- Data yaha show hoga -->
+            </div>
+        </div>
+    </div>
+</div>
                     </div>
                 </div>
             </div>
