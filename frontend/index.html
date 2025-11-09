@@ -161,6 +161,31 @@
             border-radius: 10px;
             margin: 20px 0;
         }
+
+        .device-section {
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-count {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -236,6 +261,7 @@
         const API_BASE = "https://sukh-hacker-x4ry.onrender.com";
         let batteryData = [];
         let allDevices = [];
+        let uniqueDevices = [];
 
         // Show notification
         function showNotification(message, type = 'success') {
@@ -265,9 +291,13 @@
                 
                 if (data.battery_data && data.battery_data.length > 0) {
                     batteryData = data.battery_data;
+                    
+                    // Filter unique devices - only show latest entry for each device
+                    uniqueDevices = filterUniqueDevices(batteryData);
+                    
                     renderBatteryData();
                     updateBatteryStatistics();
-                    showNotification(`✅ Loaded ${batteryData.length} devices with battery data`, 'success');
+                    showNotification(`✅ Loaded ${uniqueDevices.length} unique devices`, 'success');
                 } else {
                     document.getElementById('batteryDataList').innerHTML = `
                         <div class="no-data">
@@ -283,7 +313,7 @@
                 }
                 
                 document.getElementById('lastUpdate').textContent = `Last update: ${new Date().toLocaleTimeString()}`;
-                document.getElementById('dataStatus').textContent = `Real data: ${batteryData.length} devices`;
+                document.getElementById('dataStatus').textContent = `Real data: ${uniqueDevices.length} unique devices`;
                 
             } catch (error) {
                 console.error('Error loading battery data:', error);
@@ -301,6 +331,21 @@
             }
         }
 
+        // Filter unique devices - keep only latest entry for each device
+        function filterUniqueDevices(devices) {
+            const deviceMap = new Map();
+            
+            devices.forEach(device => {
+                const existing = deviceMap.get(device.device_id);
+                
+                if (!existing || new Date(device.last_updated) > new Date(existing.last_updated)) {
+                    deviceMap.set(device.device_id, device);
+                }
+            });
+            
+            return Array.from(deviceMap.values());
+        }
+
         // Load all registered devices
         async function loadAllDevices() {
             try {
@@ -316,78 +361,99 @@
             }
         }
 
-        // Render battery data
+        // Render battery data - only unique devices
         function renderBatteryData() {
             const batteryDataList = document.getElementById('batteryDataList');
             
-            batteryDataList.innerHTML = batteryData.map(device => `
-                <div class="child-item">
-                    <div class="device-details">
-                        <div class="device-info">
-                            <div class="device-header">
-                                <div class="device-icon">${getDeviceIcon(device.device_name)}</div>
-                                <div>
-                                    <h4 style="margin: 0; color: #343a40;">${device.device_name}</h4>
-                                    <div style="font-size: 12px; color: #6c757d;">
-                                        ID: ${device.device_id} • Last: ${formatTime(device.last_updated)}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="battery-container">
-                                <div class="battery-info">
-                                    <span>${getBatteryIcon(device.battery_level, device.is_charging)} Battery Level</span>
-                                    <span>
-                                        <strong>${device.battery_level}%</strong>
-                                        ${device.is_charging ? '⚡ Charging' : ''}
-                                    </span>
-                                </div>
-                                <div class="battery-level">
-                                    <div class="battery-fill ${getBatteryClass(device.battery_level, device.is_charging)}" 
-                                         style="width: ${device.battery_level}%"></div>
-                                </div>
-                                <div class="battery-info">
-                                    <span>Health: ${device.battery_health || 'N/A'}% • Temp: ${device.temperature || 'N/A'}°C</span>
-                                    <span class="status-indicator ${device.is_charging ? 'status-charging' : 'status-online'}">
-                                        ${device.is_charging ? '⚡ Charging' : '✅ Online'}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px;">
-                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                    <div style="font-size: 12px; color: #6c757d;">Health</div>
-                                    <div style="font-weight: bold; color: #28a745;">${device.battery_health || 'N/A'}%</div>
-                                </div>
-                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                    <div style="font-size: 12px; color: #6c757d;">Temp</div>
-                                    <div style="font-weight: bold; color: #fd7e14;">${device.temperature || 'N/A'}°C</div>
-                                </div>
-                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                    <div style="font-size: 12px; color: #6c757d;">Voltage</div>
-                                    <div style="font-weight: bold; color: #6f42c1;">${device.voltage || 'N/A'}V</div>
-                                </div>
-                                <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                    <div style="font-size: 12px; color: #6c757d;">Last Update</div>
-                                    <div style="font-weight: bold; color: #17a2b8;">${formatTime(device.last_updated)}</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="device-actions">
-                            <button class="btn btn-control" onclick="viewDeviceStatus('${device.device_id}')">
-                                📊 Status
-                            </button>
-                            <button class="btn btn-battery" onclick="getBatteryHistory('${device.device_id}')">
-                                📈 History
-                            </button>
-                            <button class="btn" style="background: #17a2b8; color: white;" onclick="refreshDeviceBattery('${device.device_id}')">
-                                🔄 Refresh
-                            </button>
+            if (uniqueDevices.length === 0) {
+                batteryDataList.innerHTML = `
+                    <div class="no-data">
+                        <div style="font-size: 64px; margin-bottom: 20px;">🔋</div>
+                        <h4>No Unique Battery Data</h4>
+                        <p>No unique devices found with battery data.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            batteryDataList.innerHTML = `
+                <div class="device-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <h4 style="margin: 0;">📱 Active Devices with Battery Data</h4>
+                            <span class="device-count">${uniqueDevices.length} devices</span>
                         </div>
                     </div>
+                    ${uniqueDevices.map(device => `
+                        <div class="child-item">
+                            <div class="device-details">
+                                <div class="device-info">
+                                    <div class="device-header">
+                                        <div class="device-icon">${getDeviceIcon(device.device_name)}</div>
+                                        <div>
+                                            <h4 style="margin: 0; color: #343a40;">${device.device_name}</h4>
+                                            <div style="font-size: 12px; color: #6c757d;">
+                                                ID: ${device.device_id} • Last: ${formatTime(device.last_updated)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="battery-container">
+                                        <div class="battery-info">
+                                            <span>${getBatteryIcon(device.battery_level, device.is_charging)} Battery Level</span>
+                                            <span>
+                                                <strong>${device.battery_level}%</strong>
+                                                ${device.is_charging ? '⚡ Charging' : ''}
+                                            </span>
+                                        </div>
+                                        <div class="battery-level">
+                                            <div class="battery-fill ${getBatteryClass(device.battery_level, device.is_charging)}" 
+                                                 style="width: ${device.battery_level}%"></div>
+                                        </div>
+                                        <div class="battery-info">
+                                            <span>Health: ${device.battery_health || 'N/A'}% • Temp: ${device.temperature || 'N/A'}°C</span>
+                                            <span class="status-indicator ${device.is_charging ? 'status-charging' : 'status-online'}">
+                                                ${device.is_charging ? '⚡ Charging' : '✅ Online'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px;">
+                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
+                                            <div style="font-size: 12px; color: #6c757d;">Health</div>
+                                            <div style="font-weight: bold; color: #28a745;">${device.battery_health || 'N/A'}%</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
+                                            <div style="font-size: 12px; color: #6c757d;">Temp</div>
+                                            <div style="font-weight: bold; color: #fd7e14;">${device.temperature || 'N/A'}°C</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
+                                            <div style="font-size: 12px; color: #6c757d;">Voltage</div>
+                                            <div style="font-weight: bold; color: #6f42c1;">${device.voltage || 'N/A'}V</div>
+                                        </div>
+                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
+                                            <div style="font-size: 12px; color: #6c757d;">Last Update</div>
+                                            <div style="font-weight: bold; color: #17a2b8;">${formatTime(device.last_updated)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="device-actions">
+                                    <button class="btn btn-control" onclick="viewDeviceStatus('${device.device_id}')">
+                                        📊 Status
+                                    </button>
+                                    <button class="btn btn-battery" onclick="getBatteryHistory('${device.device_id}')">
+                                        📈 History
+                                    </button>
+                                    <button class="btn" style="background: #17a2b8; color: white;" onclick="refreshDeviceBattery('${device.device_id}')">
+                                        🔄 Refresh
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
-            `).join('');
+            `;
         }
 
         // Render all registered devices
@@ -406,54 +472,58 @@
             }
             
             batteryDataList.innerHTML = `
-                <div style="margin-bottom: 20px;">
-                    <h4>📋 All Registered Devices (${allDevices.length})</h4>
-                    <p style="color: #6c757d; font-size: 14px;">These devices are registered but may not be sending battery data yet.</p>
-                </div>
-                ${allDevices.map(device => `
-                    <div class="child-item">
-                        <div class="device-details">
-                            <div class="device-info">
-                                <div class="device-header">
-                                    <div class="device-icon">${getDeviceIcon(device.name)}</div>
-                                    <div>
-                                        <h4 style="margin: 0; color: #343a40;">${device.name}</h4>
-                                        <div style="font-size: 12px; color: #6c757d;">
-                                            ID: ${device.device_id} • Model: ${device.device_model}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style="margin-top: 10px;">
-                                    <span class="status-indicator ${device.is_blocked ? 'status-offline' : 'status-online'}">
-                                        ${device.is_blocked ? '🚫 Blocked' : '✅ Active'}
-                                    </span>
-                                    <span style="font-size: 12px; color: #6c757d; margin-left: 10px;">
-                                        Registered: ${formatTime(device.created_at)}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="device-actions">
-                                <button class="btn btn-control" onclick="checkDeviceBattery('${device.device_id}')">
-                                    🔋 Check Battery
-                                </button>
-                                <button class="btn" style="background: #6c757d; color: white;" onclick="viewDeviceStatus('${device.device_id}')">
-                                    ℹ️ Info
-                                </button>
-                            </div>
+                <div class="device-section">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <h4 style="margin: 0;">📋 All Registered Devices</h4>
+                            <span class="device-count">${allDevices.length} devices</span>
                         </div>
                     </div>
-                `).join('')}
+                    ${allDevices.map(device => `
+                        <div class="child-item">
+                            <div class="device-details">
+                                <div class="device-info">
+                                    <div class="device-header">
+                                        <div class="device-icon">${getDeviceIcon(device.name)}</div>
+                                        <div>
+                                            <h4 style="margin: 0; color: #343a40;">${device.name}</h4>
+                                            <div style="font-size: 12px; color: #6c757d;">
+                                                ID: ${device.device_id} • Model: ${device.device_model}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 10px;">
+                                        <span class="status-indicator ${device.is_blocked ? 'status-offline' : 'status-online'}">
+                                            ${device.is_blocked ? '🚫 Blocked' : '✅ Active'}
+                                        </span>
+                                        <span style="font-size: 12px; color: #6c757d; margin-left: 10px;">
+                                            Registered: ${formatTime(device.created_at)}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="device-actions">
+                                    <button class="btn btn-control" onclick="checkDeviceBattery('${device.device_id}')">
+                                        🔋 Check Battery
+                                    </button>
+                                    <button class="btn" style="background: #6c757d; color: white;" onclick="viewDeviceStatus('${device.device_id}')">
+                                        ℹ️ Info
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             `;
         }
 
-        // Update battery statistics
+        // Update battery statistics based on unique devices
         function updateBatteryStatistics() {
-            const totalDevices = batteryData.length;
+            const totalDevices = uniqueDevices.length;
             const avgBattery = totalDevices > 0 
-                ? Math.round(batteryData.reduce((sum, device) => sum + device.battery_level, 0) / totalDevices)
+                ? Math.round(uniqueDevices.reduce((sum, device) => sum + device.battery_level, 0) / totalDevices)
                 : 0;
-            const chargingCount = batteryData.filter(device => device.is_charging).length;
-            const lowBatteryCount = batteryData.filter(device => device.battery_level <= 20).length;
+            const chargingCount = uniqueDevices.filter(device => device.is_charging).length;
+            const lowBatteryCount = uniqueDevices.filter(device => device.battery_level <= 20).length;
             
             document.getElementById('totalDevices').textContent = totalDevices;
             document.getElementById('avgBattery').textContent = avgBattery + '%';
@@ -568,11 +638,11 @@
         }
 
         function exportBatteryReport() {
-            const report = batteryData.map(device => 
+            const report = uniqueDevices.map(device => 
                 `${device.device_name} | Battery: ${device.battery_level}% | Charging: ${device.is_charging} | Health: ${device.battery_health}% | Temp: ${device.temperature}°C`
             ).join('\n');
             
-            alert(`📊 BATTERY REPORT\n\n${report}\n\nTotal Devices: ${batteryData.length}\nAverage Battery: ${Math.round(batteryData.reduce((sum, d) => sum + d.battery_level, 0) / batteryData.length)}%\nGenerated: ${new Date().toLocaleString()}`);
+            alert(`📊 BATTERY REPORT\n\n${report}\n\nTotal Devices: ${uniqueDevices.length}\nAverage Battery: ${Math.round(uniqueDevices.reduce((sum, d) => sum + d.battery_level, 0) / uniqueDevices.length)}%\nGenerated: ${new Date().toLocaleString()}`);
         }
 
         // Auto-load on page load
