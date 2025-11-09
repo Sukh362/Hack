@@ -1,6 +1,9 @@
+# railway.toml mein ye dalo
 [build]
-builder = "nixpacks"
-buildCommand = "pip install -r requirements.txt"
+builder = "DOCKERFILE"
 
 [deploy]
 startCommand = "python app.py"
+
+[service]
+httpPort = 8000
