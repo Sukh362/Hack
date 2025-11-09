@@ -3,8 +3,6 @@ from flask_cors import CORS
 import sqlite3
 import uuid
 from datetime import datetime
-import base64
-import os
 
 app = Flask(__name__)
 
@@ -14,11 +12,6 @@ CORS(app, origins=["*"], methods=["GET", "POST", "PUT", "DELETE"], allow_headers
 # Fixed parent credentials
 FIXED_USERNAME = "Sukh"
 FIXED_PASSWORD = "Sukh hacker"
-
-# Create uploads directory for camera images
-UPLOAD_FOLDER = 'camera_uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
 
 def init_db():
     conn = sqlite3.connect('parental.db')
@@ -55,7 +48,7 @@ def init_db():
         )
     ''')
     
-    # Battery data table
+    # NEW: Battery data table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS battery_data (
             id TEXT PRIMARY KEY,
@@ -65,18 +58,6 @@ def init_db():
             battery_health INTEGER,
             temperature REAL,
             voltage REAL,
-            timestamp TEXT,
-            FOREIGN KEY (device_id) REFERENCES children (device_id)
-        )
-    ''')
-    
-    # NEW: Camera images table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS camera_images (
-            id TEXT PRIMARY KEY,
-            device_id TEXT,
-            image_path TEXT,
-            image_type TEXT,
             timestamp TEXT,
             FOREIGN KEY (device_id) REFERENCES children (device_id)
         )
@@ -102,257 +83,6 @@ def get_db_connection():
     conn = sqlite3.connect('parental.db')
     conn.row_factory = sqlite3.Row
     return conn
-
-# ========== CAMERA ROUTES ==========
-
-@app.route('/camera', methods=['POST', 'OPTIONS'])
-def upload_camera_image():
-    """Upload camera image from mobile app"""
-    if request.method == 'OPTIONS':
-        return '', 200
-        
-    try:
-        data = request.json
-        print(f"Camera image upload received from device: {data.get('device_id')}")
-        
-        device_id = data.get('device_id')
-        image_data = data.get('image_data')
-        image_type = data.get('image_type', 'jpg')
-        
-        if not device_id or not image_data:
-            return jsonify({"error": "Device ID and image data are required"}), 400
-        
-        # Check if device exists
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
-        device = cursor.fetchone()
-        
-        if not device:
-            conn.close()
-            return jsonify({"error": "Device not registered"}), 404
-        
-        # Generate unique filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        filename = f"camera_{device_id}_{timestamp}.{image_type}"
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        
-        # Save image file
-        try:
-            # Decode base64 image data
-            if ',' in image_data:
-                image_data = image_data.split(',')[1]
-            
-            image_bytes = base64.b64decode(image_data)
-            with open(filepath, 'wb') as f:
-                f.write(image_bytes)
-        except Exception as e:
-            print(f"Error saving image: {str(e)}")
-            conn.close()
-            return jsonify({"error": "Failed to save image"}), 500
-        
-        # Save to database
-        image_id = str(uuid.uuid4())
-        cursor.execute('''
-            INSERT INTO camera_images (id, device_id, image_path, image_type, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (image_id, device_id, filepath, image_type, datetime.now().isoformat()))
-        
-        conn.commit()
-        conn.close()
-        
-        print(f"Camera image saved successfully for device {device_id}: {filename}")
-        
-        return jsonify({
-            "message": "Camera image uploaded successfully",
-            "image_id": image_id,
-            "filename": filename,
-            "device_id": device_id,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        print(f"Error in camera upload: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-
-@app.route('/camera/images/<device_id>', methods=['GET'])
-def get_camera_images(device_id):
-    """Get all camera images for a specific device"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT * FROM camera_images 
-        WHERE device_id = ? 
-        ORDER BY timestamp DESC
-        LIMIT 50
-    ''', (device_id,))
-    
-    images = cursor.fetchall()
-    conn.close()
-    
-    images_list = []
-    for image in images:
-        # Check if file exists
-        file_exists = os.path.exists(image['image_path'])
-        
-        images_list.append({
-            "id": image['id'],
-            "device_id": image['device_id'],
-            "image_path": image['image_path'],
-            "filename": os.path.basename(image['image_path']),
-            "image_type": image['image_type'],
-            "timestamp": image['timestamp'],
-            "file_exists": file_exists
-        })
-    
-    return jsonify({
-        "device_id": device_id,
-        "total_images": len(images_list),
-        "images": images_list
-    })
-
-@app.route('/camera/image/<image_id>', methods=['GET'])
-def get_camera_image(image_id):
-    """Get specific camera image data"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT * FROM camera_images WHERE id = ?
-    ''', (image_id,))
-    
-    image = cursor.fetchone()
-    conn.close()
-    
-    if not image:
-        return jsonify({"error": "Image not found"}), 404
-    
-    # Check if file exists
-    if not os.path.exists(image['image_path']):
-        return jsonify({"error": "Image file not found"}), 404
-    
-    # Read and encode image
-    try:
-        with open(image['image_path'], 'rb') as f:
-            image_data = base64.b64encode(f.read()).decode('utf-8')
-        
-        return jsonify({
-            "id": image['id'],
-            "device_id": image['device_id'],
-            "image_data": f"data:image/{image['image_type']};base64,{image_data}",
-            "image_type": image['image_type'],
-            "timestamp": image['timestamp'],
-            "filename": os.path.basename(image['image_path'])
-        })
-    except Exception as e:
-        return jsonify({"error": "Failed to read image file"}), 500
-
-@app.route('/camera/latest/<device_id>', methods=['GET'])
-def get_latest_camera_image(device_id):
-    """Get latest camera image for a device"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT * FROM camera_images 
-        WHERE device_id = ? 
-        ORDER BY timestamp DESC 
-        LIMIT 1
-    ''', (device_id,))
-    
-    image = cursor.fetchone()
-    conn.close()
-    
-    if not image:
-        return jsonify({"error": "No images found for this device"}), 404
-    
-    # Check if file exists
-    if not os.path.exists(image['image_path']):
-        return jsonify({"error": "Image file not found"}), 404
-    
-    # Read and encode image
-    try:
-        with open(image['image_path'], 'rb') as f:
-            image_data = base64.b64encode(f.read()).decode('utf-8')
-        
-        return jsonify({
-            "id": image['id'],
-            "device_id": image['device_id'],
-            "image_data": f"data:image/{image['image_type']};base64,{image_data}",
-            "image_type": image['image_type'],
-            "timestamp": image['timestamp'],
-            "filename": os.path.basename(image['image_path'])
-        })
-    except Exception as e:
-        return jsonify({"error": "Failed to read image file"}), 500
-
-@app.route('/camera/delete/<image_id>', methods=['DELETE'])
-def delete_camera_image(image_id):
-    """Delete a camera image"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM camera_images WHERE id = ?', (image_id,))
-    image = cursor.fetchone()
-    
-    if not image:
-        conn.close()
-        return jsonify({"error": "Image not found"}), 404
-    
-    # Delete file
-    file_deleted = False
-    if os.path.exists(image['image_path']):
-        try:
-            os.remove(image['image_path'])
-            file_deleted = True
-        except Exception as e:
-            print(f"Error deleting file: {str(e)}")
-    
-    # Delete database record
-    cursor.execute('DELETE FROM camera_images WHERE id = ?', (image_id,))
-    conn.commit()
-    conn.close()
-    
-    return jsonify({
-        "message": "Camera image deleted successfully",
-        "image_id": image_id,
-        "file_deleted": file_deleted,
-        "filename": os.path.basename(image['image_path'])
-    })
-
-@app.route('/camera/devices', methods=['GET'])
-def get_camera_devices():
-    """Get list of all devices that have uploaded camera images"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT DISTINCT c.device_id, c.name, COUNT(ci.id) as image_count,
-               MAX(ci.timestamp) as last_upload
-        FROM children c
-        LEFT JOIN camera_images ci ON c.device_id = ci.device_id
-        GROUP BY c.device_id, c.name
-        HAVING COUNT(ci.id) > 0
-        ORDER BY last_upload DESC
-    ''')
-    
-    devices = cursor.fetchall()
-    conn.close()
-    
-    devices_list = []
-    for device in devices:
-        devices_list.append({
-            "device_id": device['device_id'],
-            "device_name": device['name'],
-            "image_count": device['image_count'],
-            "last_upload": device['last_upload']
-        })
-    
-    return jsonify({
-        "total_devices": len(devices_list),
-        "devices": devices_list
-    })
 
 # ========== BATTERY ROUTES ==========
 
@@ -572,7 +302,7 @@ def get_battery_stats():
         ]
     })
 
-# ========== EXISTING ROUTES ==========
+# ========== EXISTING ROUTES (SAME AS BEFORE) ==========
 
 @app.route('/parent/register', methods=['POST', 'OPTIONS'])
 def register_parent():
@@ -835,10 +565,6 @@ def debug_children():
     cursor.execute("SELECT * FROM parents")
     parents = cursor.fetchall()
     
-    # Get camera images count
-    cursor.execute("SELECT device_id, COUNT(*) as image_count FROM camera_images GROUP BY device_id")
-    camera_counts = cursor.fetchall()
-    
     conn.close()
     
     children_list = []
@@ -861,14 +587,9 @@ def debug_children():
             "created_at": parent['created_at']
         })
     
-    camera_info = {}
-    for count in camera_counts:
-        camera_info[count['device_id']] = count['image_count']
-    
     return jsonify({
         "parents": parents_list,
         "children": children_list,
-        "camera_images": camera_info,
         "total_children": len(children_list),
         "total_parents": len(parents_list)
     })
@@ -942,19 +663,12 @@ def root():
             "check_status": "/child/status/{device_id}",
             "debug_info": "/debug/children",
             "add_test": "/debug/add_test_device",
-            # BATTERY ENDPOINTS
+            # NEW BATTERY ENDPOINTS
             "battery_all": "/battery",
             "battery_device": "/battery/{device_id}",
             "battery_update": "/battery/update",
             "battery_history": "/battery/history/{device_id}",
-            "battery_stats": "/battery/stats",
-            # NEW CAMERA ENDPOINTS
-            "camera_upload": "/camera",
-            "camera_images": "/camera/images/{device_id}",
-            "camera_image": "/camera/image/{image_id}",
-            "camera_latest": "/camera/latest/{device_id}",
-            "camera_delete": "/camera/delete/{image_id}",
-            "camera_devices": "/camera/devices"
+            "battery_stats": "/battery/stats"
         }
     })
 
