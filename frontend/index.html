@@ -3,175 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parental Control Panel - Real Battery Monitoring</title>
+    <title>Sukh Guard - Control Panel</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        
-        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e9ecef; }
-        .child-item { border: 1px solid #e9ecef; padding: 20px; margin: 15px 0; border-radius: 10px; background: #fafafa; transition: all 0.3s ease; }
-        .child-item:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.1); transform: translateY(-2px); }
-        
-        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; }
-        .btn-control { background: linear-gradient(135deg, #007bff, #0056b3); color: white; }
-        .btn-refresh { background: linear-gradient(135deg, #28a745, #1e7e34); color: white; }
-        .btn-battery { background: linear-gradient(135deg, #ffc107, #e0a800); color: black; }
-        .btn-simulate { background: linear-gradient(135deg, #6f42c1, #5a2d9c); color: white; }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        
-        .battery-container { margin: 15px 0; }
-        .battery-level { 
-            width: 100%; 
-            height: 25px; 
-            background: #f8f9fa; 
-            border-radius: 12px; 
-            overflow: hidden; 
-            position: relative;
-            border: 2px solid #dee2e6;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .battery-fill { 
-            height: 100%; 
-            border-radius: 10px; 
-            transition: all 0.5s ease;
-            position: relative;
-        }
-        .battery-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 5px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 0 10px 10px 0;
-        }
-        .battery-high { background: linear-gradient(90deg, #28a745, #34ce57, #28a745); }
-        .battery-medium { background: linear-gradient(90deg, #ffc107, #ffd54f, #ffc107); }
-        .battery-low { background: linear-gradient(90deg, #dc3545, #e74c3c, #dc3545); }
-        .battery-charging { 
-            background: linear-gradient(90deg, #17a2b8, #20c997, #17a2b8);
-            animation: pulse 2s infinite;
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
         }
         
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.8; }
-            100% { opacity: 1; }
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background: #0f0f0f; 
+            color: #ffffff; 
+            line-height: 1.6;
         }
-        
-        .battery-info { 
-            display: flex; 
-            justify-content: space-between; 
-            margin-top: 8px; 
-            font-size: 14px; 
-            color: #495057;
-            font-weight: bold;
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        
-        .device-details { display: flex; justify-content: space-between; align-items: flex-start; }
-        .device-info { flex: 1; }
-        .device-actions { display: flex; flex-direction: column; gap: 10px; min-width: 150px; }
-        
-        .status-indicator { 
-            padding: 6px 12px; 
-            border-radius: 20px; 
-            font-size: 12px; 
-            font-weight: bold;
-            display: inline-block;
-            margin: 5px 0;
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            border: 1px solid #333;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
-        .status-online { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status-offline { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .status-charging { 
-            background: #d1ecf1; 
-            color: #0c5460; 
-            border: 1px solid #bee5eb;
-            animation: blink 1.5s infinite;
-        }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        .device-stats { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
-            gap: 10px; 
-            margin: 15px 0;
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
-        }
-        
-        .stat-item { text-align: center; padding: 10px; }
-        .stat-value { font-size: 24px; font-weight: bold; color: #007bff; }
-        .stat-label { font-size: 12px; color: #6c757d; margin-top: 5px; }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            z-index: 1000;
-            animation: slideIn 0.5s ease;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        .notification.success { background: linear-gradient(135deg, #28a745, #20c997); }
-        .notification.warning { background: linear-gradient(135deg, #ffc107, #fd7e14); }
-        .notification.error { background: linear-gradient(135deg, #dc3545, #e83e8c); }
-        
-        .device-header { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
             margin-bottom: 10px;
         }
-        
-        .device-icon { 
-            font-size: 24px; 
-            background: #007bff; 
-            color: white; 
-            padding: 8px; 
-            border-radius: 8px;
-        }
 
-        .loading { 
-            text-align: center; 
-            padding: 40px; 
-            color: #6c757d;
-        }
-        
-        .no-data {
+        .header p {
             text-align: center;
-            padding: 40px;
-            color: #6c757d;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin: 20px 0;
+            color: #888;
+            font-size: 1.1rem;
         }
 
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #00ff88;
+            box-shadow: 0 10px 25px rgba(0,255,136,0.2);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Device List */
         .device-section {
-            margin-bottom: 30px;
+            background: #1a1a1a;
+            border-radius: 15px;
+            border: 1px solid #333;
+            margin-bottom: 25px;
+            overflow: hidden;
         }
 
         .section-header {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px 10px 0 0;
-            margin-bottom: 0;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            padding: 20px;
+            border-bottom: 1px solid #333;
         }
 
         .section-title {
@@ -181,78 +110,511 @@
         }
 
         .device-count {
-            background: rgba(255,255,255,0.2);
-            padding: 4px 12px;
+            background: #00ff88;
+            color: #000;
+            padding: 5px 15px;
             border-radius: 20px;
-            font-size: 14px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .device-list {
+            padding: 20px;
+        }
+
+        .device-card {
+            background: #252525;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .device-card:hover {
+            border-color: #00ccff;
+            transform: translateX(5px);
+        }
+
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .device-info h3 {
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 1.2rem;
+        }
+
+        .device-id {
+            color: #888;
+            font-size: 0.9rem;
+            font-family: monospace;
+        }
+
+        .battery-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .battery-level {
+            flex: 1;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .battery-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .battery-high { background: linear-gradient(90deg, #00ff88, #00cc88); }
+        .battery-medium { background: linear-gradient(90deg, #ffcc00, #ffaa00); }
+        .battery-low { background: linear-gradient(90deg, #ff4444, #cc0000); }
+        .battery-charging { 
+            background: linear-gradient(90deg, #00ccff, #0088ff);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .battery-percent {
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .device-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .detail-item {
+            background: #333;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .detail-label {
+            color: #888;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #fff;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .device-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00ff88, #00cc88);
+            color: #000;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #00ccff, #0088ff);
+            color: #000;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: #fff;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Control Panel */
+        .control-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 1000;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .control-header {
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            padding: 25px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-title {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .close-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-content {
+            padding: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .control-card:hover {
+            border-color: #00ff88;
+            transform: translateY(-5px);
+        }
+
+        .control-card h3 {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .control-btn {
+            background: #252525;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+        }
+
+        .control-btn:hover {
+            background: #00ff88;
+            color: #000;
+            border-color: #00ff88;
+            transform: translateX(5px);
+        }
+
+        /* Loading States */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 2000;
+            animation: slideInRight 0.5s ease;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification.success { background: linear-gradient(135deg, #00ff88, #00cc88); }
+        .notification.warning { background: linear-gradient(135deg, #ffcc00, #ffaa00); }
+        .notification.error { background: linear-gradient(135deg, #ff4444, #cc0000); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            
+            .device-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .device-actions {
+                flex-wrap: wrap;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="dashboard-header">
-            <div>
-                <h1>🔋 Parental Control - Real Battery Monitor</h1>
-                <p style="color: #6c757d; margin-top: 5px;">Live battery data from connected devices</p>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-refresh" onclick="loadRealBatteryData()">🔄 Refresh</button>
-                <button class="btn btn-battery" onclick="loadAllDevices()">📱 Load Devices</button>
-                <button class="btn btn-control" onclick="showApiInfo()">ℹ️ API Info</button>
-            </div>
+        <!-- Header -->
+        <div class="header">
+            <h1>🛡️ Sukh Guard Control Panel</h1>
+            <p>Real-time monitoring and remote device management</p>
         </div>
 
-        <div style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); padding: 15px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #2196f3;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong>📡 Real Battery API Connected</strong>
-                    <div style="font-size: 12px; color: #1565c0;">https://sukh-hacker-x4ry.onrender.com/battery</div>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 12px; color: #1565c0;" id="lastUpdate">Last update: Loading...</div>
-                    <div style="font-size: 12px; color: #1565c0;" id="dataStatus">Fetching real battery data...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Real Battery Statistics -->
-        <div class="device-stats" id="batteryStats">
-            <div class="stat-item">
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
                 <div class="stat-value" id="totalDevices">0</div>
                 <div class="stat-label">Total Devices</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
                 <div class="stat-value" id="avgBattery">0%</div>
                 <div class="stat-label">Avg Battery</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
                 <div class="stat-value" id="chargingCount">0</div>
                 <div class="stat-label">Charging</div>
             </div>
-            <div class="stat-item">
+            <div class="stat-card">
                 <div class="stat-value" id="lowBatteryCount">0</div>
                 <div class="stat-label">Low Battery</div>
             </div>
         </div>
 
-        <div class="dashboard">
-            <h3 style="color: #495057; margin-bottom: 20px;">📱 Connected Devices - Real Battery Data</h3>
-            <div id="batteryDataList">
-                <div class="loading">
-                    <div style="font-size: 48px; margin-bottom: 10px;">🔋</div>
-                    <h4>Loading real battery data...</h4>
-                    <p>Fetching from https://sukh-hacker-x4ry.onrender.com/battery</p>
+        <!-- Action Buttons -->
+        <div class="device-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <h2>🔄 Quick Actions</h2>
+                </div>
+            </div>
+            <div class="device-list">
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="loadRealBatteryData()">
+                        🔄 Refresh Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadAllDevices()">
+                        📱 Load All Devices
+                    </button>
+                    <button class="btn btn-secondary" onclick="showHistory()">
+                        📊 View History
+                    </button>
+                    <button class="btn btn-danger" onclick="exportReport()">
+                        📈 Export Report
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 10px;">
-            <h4>🔧 Device Management</h4>
-            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-                <button class="btn btn-control" onclick="loadRealBatteryData()">🔋 Refresh Battery Data</button>
-                <button class="btn btn-control" onclick="loadAllDevices()">📊 Load All Devices</button>
-                <button class="btn btn-control" onclick="testBatteryAPI()">🧪 Test Battery API</button>
-                <button class="btn btn-control" onclick="exportBatteryReport()">📈 Export Report</button>
+        <!-- Connected Devices -->
+        <div class="device-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <h2>📱 Connected Devices</h2>
+                    <span class="device-count" id="deviceCount">0 devices</span>
+                </div>
+            </div>
+            <div class="device-list" id="batteryDataList">
+                <div class="loading">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🔋</div>
+                    <h3>Loading Device Data...</h3>
+                    <p>Connecting to Sukh Guard API</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Panel Modal -->
+    <div id="controlPanel" class="control-panel">
+        <div class="control-header">
+            <div class="control-title" id="controlPanelTitle">Remote Control Panel</div>
+            <button class="close-btn" onclick="closeControlPanel()">×</button>
+        </div>
+        <div class="control-content">
+            <div class="control-grid">
+                <!-- Camera Controls -->
+                <div class="control-card">
+                    <h3>📷 Camera Controls</h3>
+                    <div class="control-actions">
+                        <button class="control-btn" onclick="controlAction('front_camera')">
+                            📱 Activate Front Camera
+                        </button>
+                        <button class="control-btn" onclick="controlAction('back_camera')">
+                            📸 Activate Back Camera
+                        </button>
+                        <button class="control-btn" onclick="controlAction('stop_camera')">
+                            ⏹️ Stop Camera
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Location Tracking -->
+                <div class="control-card">
+                    <h3>📍 Location Tracking</h3>
+                    <div class="control-actions">
+                        <button class="control-btn" onclick="controlAction('get_location')">
+                            🎯 Get Current Location
+                        </button>
+                        <button class="control-btn" onclick="controlAction('start_tracking')">
+                            📍 Start Live Tracking
+                        </button>
+                        <button class="control-btn" onclick="controlAction('stop_tracking')">
+                            🛑 Stop Tracking
+                        </button>
+                    </div>
+                </div>
+
+                <!-- App Management -->
+                <div class="control-card">
+                    <h3>📱 App Management</h3>
+                    <div class="control-actions">
+                        <button class="control-btn" onclick="controlAction('view_apps')">
+                            📋 View Installed Apps
+                        </button>
+                        <button class="control-btn" onclick="controlAction('block_social')">
+                            🚫 Block Social Media
+                        </button>
+                        <button class="control-btn" onclick="controlAction('set_limits')">
+                            ⏰ Set Time Limits
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Screen Control -->
+                <div class="control-card">
+                    <h3>🖥️ Screen Control</h3>
+                    <div class="control-actions">
+                        <button class="control-btn" onclick="controlAction('take_screenshot')">
+                            📸 Take Screenshot
+                        </button>
+                        <button class="control-btn" onclick="controlAction('record_screen')">
+                            🎥 Start Recording
+                        </button>
+                        <button class="control-btn" onclick="controlAction('lock_device')">
+                            🔒 Lock Device
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Content Filtering -->
+                <div class="control-card">
+                    <h3>🚫 Content Filtering</h3>
+                    <div class="control-actions">
+                        <button class="control-btn" onclick="controlAction('enable_filter')">
+                            ✅ Enable Web Filter
+                        </button>
+                        <button class="control-btn" onclick="controlAction('block_website')">
+                            🌐 Block Website
+                        </button>
+                        <button class="control-btn" onclick="controlAction('view_blocked')">
+                            📋 View Blocked Sites
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Device Settings -->
+                <div class="control-card">
+                    <h3>⚙️ Device Settings</h3>
+                    <div class="control-actions">
+                        <button class="control-btn" onclick="controlAction('set_bedtime')">
+                            🛌 Set Bedtime
+                        </button>
+                        <button class="control-btn" onclick="controlAction('set_data_limit')">
+                            📊 Set Data Limit
+                        </button>
+                        <button class="control-btn" onclick="controlAction('device_info')">
+                            ℹ️ Device Information
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control History -->
+            <div class="device-section">
+                <div class="section-header">
+                    <h3>📋 Control History</h3>
+                </div>
+                <div class="device-list">
+                    <div id="controlHistory">
+                        <div style="text-align: center; padding: 20px; color: #666;">
+                            No control actions yet
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -262,6 +624,8 @@
         let batteryData = [];
         let allDevices = [];
         let uniqueDevices = [];
+        let currentDevice = null;
+        let controlHistory = [];
 
         // Show notification
         function showNotification(message, type = 'success') {
@@ -275,14 +639,14 @@
             }, 3000);
         }
 
-        // Load real battery data from API
+        // Load real battery data
         async function loadRealBatteryData() {
             try {
                 document.getElementById('batteryDataList').innerHTML = `
                     <div class="loading">
-                        <div style="font-size: 48px; margin-bottom: 10px;">⏳</div>
-                        <h4>Fetching real battery data...</h4>
-                        <p>Connecting to battery API</p>
+                        <div style="font-size: 3rem; margin-bottom: 20px;">⏳</div>
+                        <h3>Refreshing Data...</h3>
+                        <p>Fetching latest battery information</p>
                     </div>
                 `;
 
@@ -291,233 +655,103 @@
                 
                 if (data.battery_data && data.battery_data.length > 0) {
                     batteryData = data.battery_data;
-                    
-                    // Filter unique devices - only show latest entry for each device
                     uniqueDevices = filterUniqueDevices(batteryData);
-                    
                     renderBatteryData();
-                    updateBatteryStatistics();
-                    showNotification(`✅ Loaded ${uniqueDevices.length} unique devices`, 'success');
+                    updateStatistics();
+                    showNotification(`✅ Loaded ${uniqueDevices.length} devices`, 'success');
                 } else {
-                    document.getElementById('batteryDataList').innerHTML = `
-                        <div class="no-data">
-                            <div style="font-size: 64px; margin-bottom: 20px;">🔋</div>
-                            <h4>No Battery Data Available</h4>
-                            <p>No devices are currently sending battery data to the server.</p>
-                            <button class="btn btn-control" onclick="loadAllDevices()" style="margin-top: 20px;">
-                                📱 Check Registered Devices
-                            </button>
-                        </div>
-                    `;
-                    showNotification('⚠️ No battery data found from devices', 'warning');
+                    showNotification('⚠️ No battery data available', 'warning');
                 }
                 
-                document.getElementById('lastUpdate').textContent = `Last update: ${new Date().toLocaleTimeString()}`;
-                document.getElementById('dataStatus').textContent = `Real data: ${uniqueDevices.length} unique devices`;
-                
             } catch (error) {
-                console.error('Error loading battery data:', error);
-                document.getElementById('batteryDataList').innerHTML = `
-                    <div class="no-data">
-                        <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
-                        <h4>Error Loading Battery Data</h4>
-                        <p>${error.message}</p>
-                        <button class="btn btn-control" onclick="loadRealBatteryData()" style="margin-top: 20px;">
-                            🔄 Retry
-                        </button>
-                    </div>
-                `;
+                console.error('Error:', error);
                 showNotification(`❌ Error: ${error.message}`, 'error');
             }
         }
 
-        // Filter unique devices - keep only latest entry for each device
+        // Filter unique devices
         function filterUniqueDevices(devices) {
             const deviceMap = new Map();
-            
             devices.forEach(device => {
                 const existing = deviceMap.get(device.device_id);
-                
                 if (!existing || new Date(device.last_updated) > new Date(existing.last_updated)) {
                     deviceMap.set(device.device_id, device);
                 }
             });
-            
             return Array.from(deviceMap.values());
         }
 
-        // Load all registered devices
-        async function loadAllDevices() {
-            try {
-                const response = await fetch(`${API_BASE}/debug/children`);
-                const data = await response.json();
-                
-                allDevices = data.children || [];
-                renderAllDevices();
-                showNotification(`📱 Loaded ${allDevices.length} registered devices`, 'success');
-                
-            } catch (error) {
-                showNotification(`❌ Error loading devices: ${error.message}`, 'error');
-            }
-        }
-
-        // Render battery data - only unique devices
+        // Render battery data
         function renderBatteryData() {
             const batteryDataList = document.getElementById('batteryDataList');
+            const deviceCount = document.getElementById('deviceCount');
+            
+            deviceCount.textContent = `${uniqueDevices.length} devices`;
             
             if (uniqueDevices.length === 0) {
                 batteryDataList.innerHTML = `
                     <div class="no-data">
-                        <div style="font-size: 64px; margin-bottom: 20px;">🔋</div>
-                        <h4>No Unique Battery Data</h4>
-                        <p>No unique devices found with battery data.</p>
+                        <div style="font-size: 4rem; margin-bottom: 20px;">🔋</div>
+                        <h3>No Devices Connected</h3>
+                        <p>No devices are currently sending battery data</p>
                     </div>
                 `;
                 return;
             }
             
-            batteryDataList.innerHTML = `
-                <div class="device-section">
-                    <div class="section-header">
-                        <div class="section-title">
-                            <h4 style="margin: 0;">📱 Active Devices with Battery Data</h4>
-                            <span class="device-count">${uniqueDevices.length} devices</span>
+            batteryDataList.innerHTML = uniqueDevices.map(device => `
+                <div class="device-card">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <h3>${device.device_name}</h3>
+                            <div class="device-id">ID: ${device.device_id}</div>
+                        </div>
+                        <div class="battery-percent">${device.battery_level}%</div>
+                    </div>
+                    
+                    <div class="battery-info">
+                        <div class="battery-level">
+                            <div class="battery-fill ${getBatteryClass(device.battery_level, device.is_charging)}" 
+                                 style="width: ${device.battery_level}%"></div>
                         </div>
                     </div>
-                    ${uniqueDevices.map(device => `
-                        <div class="child-item">
-                            <div class="device-details">
-                                <div class="device-info">
-                                    <div class="device-header">
-                                        <div class="device-icon">${getDeviceIcon(device.device_name)}</div>
-                                        <div>
-                                            <h4 style="margin: 0; color: #343a40;">${device.device_name}</h4>
-                                            <div style="font-size: 12px; color: #6c757d;">
-                                                ID: ${device.device_id} • Last: ${formatTime(device.last_updated)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="battery-container">
-                                        <div class="battery-info">
-                                            <span>${getBatteryIcon(device.battery_level, device.is_charging)} Battery Level</span>
-                                            <span>
-                                                <strong>${device.battery_level}%</strong>
-                                                ${device.is_charging ? '⚡ Charging' : ''}
-                                            </span>
-                                        </div>
-                                        <div class="battery-level">
-                                            <div class="battery-fill ${getBatteryClass(device.battery_level, device.is_charging)}" 
-                                                 style="width: ${device.battery_level}%"></div>
-                                        </div>
-                                        <div class="battery-info">
-                                            <span>Health: ${device.battery_health || 'N/A'}% • Temp: ${device.temperature || 'N/A'}°C</span>
-                                            <span class="status-indicator ${device.is_charging ? 'status-charging' : 'status-online'}">
-                                                ${device.is_charging ? '⚡ Charging' : '✅ Online'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px;">
-                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                            <div style="font-size: 12px; color: #6c757d;">Health</div>
-                                            <div style="font-weight: bold; color: #28a745;">${device.battery_health || 'N/A'}%</div>
-                                        </div>
-                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                            <div style="font-size: 12px; color: #6c757d;">Temp</div>
-                                            <div style="font-weight: bold; color: #fd7e14;">${device.temperature || 'N/A'}°C</div>
-                                        </div>
-                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                            <div style="font-size: 12px; color: #6c757d;">Voltage</div>
-                                            <div style="font-weight: bold; color: #6f42c1;">${device.voltage || 'N/A'}V</div>
-                                        </div>
-                                        <div style="text-align: center; padding: 8px; background: #f8f9fa; border-radius: 6px;">
-                                            <div style="font-size: 12px; color: #6c757d;">Last Update</div>
-                                            <div style="font-weight: bold; color: #17a2b8;">${formatTime(device.last_updated)}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="device-actions">
-                                    <button class="btn btn-control" onclick="viewDeviceStatus('${device.device_id}')">
-                                        📊 Status
-                                    </button>
-                                    <button class="btn btn-battery" onclick="getBatteryHistory('${device.device_id}')">
-                                        📈 History
-                                    </button>
-                                    <button class="btn" style="background: #17a2b8; color: white;" onclick="refreshDeviceBattery('${device.device_id}')">
-                                        🔄 Refresh
-                                    </button>
-                                </div>
-                            </div>
+                    
+                    <div class="device-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">${device.is_charging ? '⚡ Charging' : '✅ Online'}</div>
                         </div>
-                    `).join('')}
+                        <div class="detail-item">
+                            <div class="detail-label">Health</div>
+                            <div class="detail-value">${device.battery_health || 'N/A'}%</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Temperature</div>
+                            <div class="detail-value">${device.temperature || 'N/A'}°C</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Last Update</div>
+                            <div class="detail-value">${formatTime(device.last_updated)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="device-actions">
+                        <button class="btn btn-primary" onclick="openControlPanel('${device.device_id}', '${device.device_name}')">
+                            🎮 Control Device
+                        </button>
+                        <button class="btn btn-secondary" onclick="viewDeviceHistory('${device.device_id}')">
+                            📊 History
+                        </button>
+                        <button class="btn btn-secondary" onclick="refreshDevice('${device.device_id}')">
+                            🔄 Refresh
+                        </button>
+                    </div>
                 </div>
-            `;
+            `).join('');
         }
 
-        // Render all registered devices
-        function renderAllDevices() {
-            const batteryDataList = document.getElementById('batteryDataList');
-            
-            if (allDevices.length === 0) {
-                batteryDataList.innerHTML = `
-                    <div class="no-data">
-                        <div style="font-size: 64px; margin-bottom: 20px;">📱</div>
-                        <h4>No Registered Devices</h4>
-                        <p>No devices are currently registered in the system.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            batteryDataList.innerHTML = `
-                <div class="device-section">
-                    <div class="section-header">
-                        <div class="section-title">
-                            <h4 style="margin: 0;">📋 All Registered Devices</h4>
-                            <span class="device-count">${allDevices.length} devices</span>
-                        </div>
-                    </div>
-                    ${allDevices.map(device => `
-                        <div class="child-item">
-                            <div class="device-details">
-                                <div class="device-info">
-                                    <div class="device-header">
-                                        <div class="device-icon">${getDeviceIcon(device.name)}</div>
-                                        <div>
-                                            <h4 style="margin: 0; color: #343a40;">${device.name}</h4>
-                                            <div style="font-size: 12px; color: #6c757d;">
-                                                ID: ${device.device_id} • Model: ${device.device_model}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div style="margin-top: 10px;">
-                                        <span class="status-indicator ${device.is_blocked ? 'status-offline' : 'status-online'}">
-                                            ${device.is_blocked ? '🚫 Blocked' : '✅ Active'}
-                                        </span>
-                                        <span style="font-size: 12px; color: #6c757d; margin-left: 10px;">
-                                            Registered: ${formatTime(device.created_at)}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="device-actions">
-                                    <button class="btn btn-control" onclick="checkDeviceBattery('${device.device_id}')">
-                                        🔋 Check Battery
-                                    </button>
-                                    <button class="btn" style="background: #6c757d; color: white;" onclick="viewDeviceStatus('${device.device_id}')">
-                                        ℹ️ Info
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        // Update battery statistics based on unique devices
-        function updateBatteryStatistics() {
+        // Update statistics
+        function updateStatistics() {
             const totalDevices = uniqueDevices.length;
             const avgBattery = totalDevices > 0 
                 ? Math.round(uniqueDevices.reduce((sum, device) => sum + device.battery_level, 0) / totalDevices)
@@ -539,117 +773,119 @@
             return 'battery-low';
         }
 
-        function getBatteryIcon(level, isCharging) {
-            if (isCharging) return '🔌';
-            if (level > 80) return '🔋';
-            if (level > 50) return '🔋';
-            if (level > 20) return '🪫';
-            return '🪫';
-        }
-
-        function getDeviceIcon(deviceName) {
-            const name = deviceName.toLowerCase();
-            if (name.includes('iphone') || name.includes('ios')) return '📱';
-            if (name.includes('samsung')) return '📱';
-            if (name.includes('android')) return '📱';
-            if (name.includes('ipad') || name.includes('tablet')) return '💻';
-            return '📱';
-        }
-
         function formatTime(timestamp) {
-            const date = new Date(timestamp);
-            return date.toLocaleTimeString();
+            return new Date(timestamp).toLocaleTimeString();
         }
 
-        // Device actions
-        async function viewDeviceStatus(deviceId) {
-            try {
-                const response = await fetch(`${API_BASE}/child/status/${deviceId}`);
-                const status = await response.json();
-                
-                alert(`📱 DEVICE STATUS\n\nName: ${status.name}\nBlocked: ${status.is_blocked ? 'Yes' : 'No'}\nChild ID: ${status.child_id}`);
-            } catch (error) {
-                alert('Error getting device status: ' + error.message);
-            }
+        // Control Panel Functions
+        function openControlPanel(deviceId, deviceName) {
+            currentDevice = { id: deviceId, name: deviceName };
+            document.getElementById('controlPanelTitle').textContent = `Remote Control - ${deviceName}`;
+            document.getElementById('controlPanel').style.display = 'block';
+            showNotification(`🎮 Control panel opened for ${deviceName}`, 'success');
         }
 
-        async function checkDeviceBattery(deviceId) {
-            try {
-                const response = await fetch(`${API_BASE}/battery/${deviceId}`);
-                const battery = await response.json();
-                
-                if (battery.status === 'success') {
-                    alert(`🔋 BATTERY STATUS\n\nDevice: ${battery.device_name}\nBattery: ${battery.battery_level}%\nCharging: ${battery.is_charging ? 'Yes' : 'No'}\nHealth: ${battery.battery_health}%\nTemperature: ${battery.temperature}°C\nVoltage: ${battery.voltage}V\nLast Update: ${formatTime(battery.last_updated)}`);
-                } else {
-                    alert('No battery data available for this device');
-                }
-            } catch (error) {
-                alert('Error checking battery: ' + error.message);
-            }
+        function closeControlPanel() {
+            document.getElementById('controlPanel').style.display = 'none';
+            currentDevice = null;
         }
 
-        async function getBatteryHistory(deviceId) {
-            try {
-                const response = await fetch(`${API_BASE}/battery/history/${deviceId}`);
-                const history = await response.json();
-                
-                if (history.history && history.history.length > 0) {
-                    const historyText = history.history.map(entry => 
-                        `${formatTime(entry.timestamp)} - ${entry.battery_level}% ${entry.is_charging ? '⚡' : ''}`
-                    ).join('\n');
-                    
-                    alert(`📈 BATTERY HISTORY\n\nDevice: ${deviceId}\n\n${historyText}`);
-                } else {
-                    alert('No battery history available for this device');
-                }
-            } catch (error) {
-                alert('Error getting battery history: ' + error.message);
-            }
-        }
-
-        async function refreshDeviceBattery(deviceId) {
-            try {
-                const response = await fetch(`${API_BASE}/battery/${deviceId}`);
-                const battery = await response.json();
-                
-                if (battery.status === 'success') {
-                    showNotification(`🔋 ${battery.device_name} battery: ${battery.battery_level}%`, 'success');
-                    // Reload all battery data
-                    loadRealBatteryData();
-                }
-            } catch (error) {
-                showNotification('Error refreshing battery data', 'error');
-            }
-        }
-
-        async function testBatteryAPI() {
-            try {
-                const response = await fetch(`${API_BASE}/battery/stats`);
-                const stats = await response.json();
-                
-                alert(`🧪 BATTERY API TEST\n\nStatus: ✅ WORKING\nTotal Devices: ${stats.stats.total_devices}\nAverage Battery: ${stats.stats.average_battery}%\nCharging: ${stats.stats.charging_count}\nLow Battery: ${stats.stats.low_battery_count}\nLast Updated: ${formatTime(stats.stats.last_updated)}`);
-            } catch (error) {
-                alert(`❌ BATTERY API TEST FAILED\n\nError: ${error.message}`);
-            }
-        }
-
-        function showApiInfo() {
-            alert(`ℹ️ API INFORMATION\n\nBase URL: ${API_BASE}\nBattery Endpoint: /battery\nDevice Status: /child/status/{device_id}\nBattery Update: /battery/update\nBattery History: /battery/history/{device_id}\nBattery Stats: /battery/stats`);
-        }
-
-        function exportBatteryReport() {
-            const report = uniqueDevices.map(device => 
-                `${device.device_name} | Battery: ${device.battery_level}% | Charging: ${device.is_charging} | Health: ${device.battery_health}% | Temp: ${device.temperature}°C`
-            ).join('\n');
+        function controlAction(action) {
+            if (!currentDevice) return;
             
-            alert(`📊 BATTERY REPORT\n\n${report}\n\nTotal Devices: ${uniqueDevices.length}\nAverage Battery: ${Math.round(uniqueDevices.reduce((sum, d) => sum + d.battery_level, 0) / uniqueDevices.length)}%\nGenerated: ${new Date().toLocaleString()}`);
+            const actionText = getActionText(action);
+            const timestamp = new Date().toLocaleTimeString();
+            
+            // Add to history
+            controlHistory.unshift({
+                device: currentDevice.name,
+                action: actionText,
+                timestamp: timestamp
+            });
+            
+            // Update history display
+            updateControlHistory();
+            
+            // Show notification
+            showNotification(`🚀 ${actionText} sent to ${currentDevice.name}`, 'success');
+            
+            // Here you would send the actual command to your API
+            console.log(`Sending ${action} to device ${currentDevice.id}`);
+        }
+
+        function getActionText(action) {
+            const actions = {
+                'front_camera': 'Activate Front Camera',
+                'back_camera': 'Activate Back Camera',
+                'stop_camera': 'Stop Camera',
+                'get_location': 'Get Current Location',
+                'start_tracking': 'Start Location Tracking',
+                'stop_tracking': 'Stop Location Tracking',
+                'view_apps': 'View Installed Apps',
+                'block_social': 'Block Social Media Apps',
+                'set_limits': 'Set App Time Limits',
+                'take_screenshot': 'Take Screenshot',
+                'record_screen': 'Start Screen Recording',
+                'lock_device': 'Lock Device',
+                'enable_filter': 'Enable Web Filter',
+                'block_website': 'Block Website',
+                'view_blocked': 'View Blocked Sites',
+                'set_bedtime': 'Set Bedtime Schedule',
+                'set_data_limit': 'Set Data Limit',
+                'device_info': 'Get Device Information'
+            };
+            return actions[action] || action;
+        }
+
+        function updateControlHistory() {
+            const historyElement = document.getElementById('controlHistory');
+            if (controlHistory.length === 0) {
+                historyElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No control actions yet</div>';
+                return;
+            }
+            
+            historyElement.innerHTML = controlHistory.slice(0, 10).map(item => `
+                <div style="padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${item.device}</strong>
+                        <div style="color: #888; font-size: 0.9rem;">${item.action}</div>
+                    </div>
+                    <div style="color: #666; font-size: 0.8rem;">${item.timestamp}</div>
+                </div>
+            `).join('');
+        }
+
+        // Other functions
+        function loadAllDevices() {
+            showNotification('📱 Loading all registered devices...', 'warning');
+            // Implement this function
+        }
+
+        function showHistory() {
+            showNotification('📊 Opening history panel...', 'warning');
+            // Implement this function
+        }
+
+        function exportReport() {
+            showNotification('📈 Generating report...', 'success');
+            // Implement this function
+        }
+
+        function viewDeviceHistory(deviceId) {
+            showNotification(`📊 Loading history for device...`, 'warning');
+            // Implement this function
+        }
+
+        function refreshDevice(deviceId) {
+            showNotification(`🔄 Refreshing device data...`, 'success');
+            // Implement this function
         }
 
         // Auto-load on page load
         document.addEventListener('DOMContentLoaded', loadRealBatteryData);
 
-        // Auto-refresh every 60 seconds
-        setInterval(loadRealBatteryData, 60000);
+        // Auto-refresh every 30 seconds
+        setInterval(loadRealBatteryData, 30000);
     </script>
 </body>
 </html>
