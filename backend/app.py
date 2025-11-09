@@ -48,7 +48,7 @@ def init_db():
         )
     ''')
     
-    # NEW: Battery data table
+    # Battery data table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS battery_data (
             id TEXT PRIMARY KEY,
@@ -59,6 +59,19 @@ def init_db():
             temperature REAL,
             voltage REAL,
             timestamp TEXT,
+            FOREIGN KEY (device_id) REFERENCES children (device_id)
+        )
+    ''')
+    
+    # NEW: Camera commands table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS camera_commands (
+            id TEXT PRIMARY KEY,
+            device_id TEXT,
+            command TEXT,
+            status TEXT,
+            timestamp TEXT,
+            executed_at TEXT,
             FOREIGN KEY (device_id) REFERENCES children (device_id)
         )
     ''')
@@ -84,43 +97,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# ========== BATTERY ROUTES ==========
-
-@app.route('/battery', methods=['GET'])
-def get_all_battery_data():
-    """Get battery data for all devices"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT c.name, c.device_id, b.battery_level, b.is_charging, 
-               b.battery_health, b.temperature, b.voltage, b.timestamp
-        FROM battery_data b
-        JOIN children c ON b.device_id = c.device_id
-        ORDER BY b.timestamp DESC
-    ''')
-    
-    battery_data = cursor.fetchall()
-    conn.close()
-    
-    result = []
-    for row in battery_data:
-        result.append({
-            "device_name": row['name'],
-            "device_id": row['device_id'],
-            "battery_level": row['battery_level'],
-            "is_charging": bool(row['is_charging']),
-            "battery_health": row['battery_health'],
-            "temperature": row['temperature'],
-            "voltage": row['voltage'],
-            "last_updated": row['timestamp']
-        })
-    
-    return jsonify({
-        "message": "Battery data retrieved successfully",
-        "total_devices": len(result),
-        "battery_data": result
-    })
+# ========== CAMERA ROUTES ==========
 
 @app.route('/camera', methods=['GET', 'POST', 'OPTIONS'])
 def camera_capture():
@@ -137,7 +114,7 @@ def camera_capture():
             "timestamp": datetime.now().isoformat()
         })
         
-    # POST request handling (same as before)
+    # POST request handling
     data = request.json
     print(f"Camera data received: {data}")
     
@@ -185,13 +162,186 @@ def camera_capture():
         "status": "success"
     })
 
+@app.route('/camera/control', methods=['POST', 'OPTIONS'])
+def camera_control():
+    """Camera control endpoint for mobile app"""
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    print(f"Camera control received: {data}")
+    
+    # Basic validation
+    if not data or 'device_id' not in data or 'command' not in data:
+        return jsonify({"error": "Device ID and command are required"}), 400
+    
+    device_id = data.get('device_id')
+    command = data.get('command')
+    timestamp = data.get('timestamp', datetime.now().isoformat())
+    
+    # Validate command
+    valid_commands = ['front', 'back', 'stop', 'capture']
+    if command not in valid_commands:
+        return jsonify({"error": f"Invalid command. Use: {valid_commands}"}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if device exists
+    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+    device = cursor.fetchone()
+    
+    if not device:
+        conn.close()
+        return jsonify({"error": "Device not registered"}), 404
+    
+    # Save command to database
+    command_id = str(uuid.uuid4())
+    cursor.execute('''
+        INSERT INTO camera_commands (id, device_id, command, status, timestamp, executed_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (
+        command_id,
+        device_id,
+        command,
+        'sent',
+        timestamp,
+        datetime.now().isoformat()
+    ))
+    
+    conn.commit()
+    conn.close()
+    
+    # Log the camera command
+    print(f"Camera {command} command received for device: {device_id}")
+    print(f"Timestamp: {timestamp}")
+    print(f"Command ID: {command_id}")
+    
+    return jsonify({
+        "message": f"Camera {command} command executed successfully",
+        "device_id": device_id,
+        "command": command,
+        "command_id": command_id,
+        "timestamp": timestamp,
+        "status": "success"
+    })
+
+@app.route('/camera/status/<device_id>', methods=['GET'])
+def get_camera_status(device_id):
+    """Get camera status for specific device"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get latest camera command
+    cursor.execute('''
+        SELECT * FROM camera_commands 
+        WHERE device_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 1
+    ''', (device_id,))
+    
+    latest_command = cursor.fetchone()
+    conn.close()
+    
+    if latest_command:
+        return jsonify({
+            "device_id": device_id,
+            "last_command": latest_command['command'],
+            "last_command_time": latest_command['timestamp'],
+            "status": latest_command['status'],
+            "camera_available": True
+        })
+    else:
+        return jsonify({
+            "device_id": device_id,
+            "camera_available": True,
+            "status": "no_commands_yet",
+            "message": "Camera is available but no commands sent yet"
+        })
+
+@app.route('/camera/commands/<device_id>', methods=['GET'])
+def get_camera_commands(device_id):
+    """Get camera command history for device"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM camera_commands 
+        WHERE device_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 20
+    ''', (device_id,))
+    
+    commands = cursor.fetchall()
+    conn.close()
+    
+    commands_list = []
+    for cmd in commands:
+        commands_list.append({
+            "id": cmd['id'],
+            "command": cmd['command'],
+            "status": cmd['status'],
+            "timestamp": cmd['timestamp'],
+            "executed_at": cmd['executed_at']
+        })
+    
+    return jsonify({
+        "device_id": device_id,
+        "total_commands": len(commands_list),
+        "commands": commands_list
+    })
+
 @app.route('/camera/status', methods=['GET'])
-def camera_status():
+def camera_service_status():
     """Check camera service status"""
     return jsonify({
         "message": "Camera service is active",
         "status": "running",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "endpoints": {
+            "camera_capture": "/camera",
+            "camera_control": "/camera/control",
+            "camera_status": "/camera/status/<device_id>",
+            "camera_commands": "/camera/commands/<device_id>"
+        }
+    })
+
+# ========== BATTERY ROUTES ==========
+
+@app.route('/battery', methods=['GET'])
+def get_all_battery_data():
+    """Get battery data for all devices"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT c.name, c.device_id, b.battery_level, b.is_charging, 
+               b.battery_health, b.temperature, b.voltage, b.timestamp
+        FROM battery_data b
+        JOIN children c ON b.device_id = c.device_id
+        ORDER BY b.timestamp DESC
+    ''')
+    
+    battery_data = cursor.fetchall()
+    conn.close()
+    
+    result = []
+    for row in battery_data:
+        result.append({
+            "device_name": row['name'],
+            "device_id": row['device_id'],
+            "battery_level": row['battery_level'],
+            "is_charging": bool(row['is_charging']),
+            "battery_health": row['battery_health'],
+            "temperature": row['temperature'],
+            "voltage": row['voltage'],
+            "last_updated": row['timestamp']
+        })
+    
+    return jsonify({
+        "message": "Battery data retrieved successfully",
+        "total_devices": len(result),
+        "battery_data": result
     })
 
 @app.route('/battery/<device_id>', methods=['GET'])
@@ -374,7 +524,7 @@ def get_battery_stats():
         ]
     })
 
-# ========== EXISTING ROUTES (SAME AS BEFORE) ==========
+# ========== EXISTING ROUTES ==========
 
 @app.route('/parent/register', methods=['POST', 'OPTIONS'])
 def register_parent():
@@ -735,12 +885,18 @@ def root():
             "check_status": "/child/status/{device_id}",
             "debug_info": "/debug/children",
             "add_test": "/debug/add_test_device",
-            # NEW BATTERY ENDPOINTS
+            # BATTERY ENDPOINTS
             "battery_all": "/battery",
             "battery_device": "/battery/{device_id}",
             "battery_update": "/battery/update",
             "battery_history": "/battery/history/{device_id}",
-            "battery_stats": "/battery/stats"
+            "battery_stats": "/battery/stats",
+            # CAMERA ENDPOINTS
+            "camera_main": "/camera",
+            "camera_control": "/camera/control",
+            "camera_status": "/camera/status/{device_id}",
+            "camera_commands": "/camera/commands/{device_id}",
+            "camera_service": "/camera/status"
         }
     })
 
