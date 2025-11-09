@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime
 import base64
 import os
-import json
 
 app = Flask(__name__)
 
@@ -71,7 +70,7 @@ def init_db():
         )
     ''')
     
-    # Camera images table
+    # NEW: Camera images table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS camera_images (
             id TEXT PRIMARY KEY,
@@ -104,246 +103,77 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# ========== DATA ROUTE (MAIN MOBILE DATA UPLOAD) ==========
+# ========== CAMERA ROUTES ==========
 
-@app.route('/data', methods=['POST', 'OPTIONS'])
-def handle_mobile_data():
-    """Main data upload endpoint for mobile app - handles all types of data"""
+@app.route('/camera', methods=['POST', 'OPTIONS'])
+def upload_camera_image():
+    """Upload camera image from mobile app"""
     if request.method == 'OPTIONS':
         return '', 200
         
     try:
         data = request.json
-        print(f"Mobile data received: {data}")
+        print(f"Camera image upload received from device: {data.get('device_id')}")
         
         device_id = data.get('device_id')
-        data_type = data.get('type', 'unknown')
+        image_data = data.get('image_data')
+        image_type = data.get('image_type', 'jpg')
         
-        if not device_id:
-            return jsonify({"error": "Device ID is required"}), 400
+        if not device_id or not image_data:
+            return jsonify({"error": "Device ID and image data are required"}), 400
         
-        # Handle different types of data
-        if data_type == 'camera_image':
-            return handle_camera_image(data)
-        elif data_type == 'battery':
-            return handle_battery_data(data)
-        elif data_type == 'usage':
-            return handle_usage_data(data)
-        elif data_type == 'device_info':
-            return handle_device_info(data)
-        else:
-            return jsonify({"error": "Unknown data type"}), 400
+        # Check if device exists
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+        device = cursor.fetchone()
+        
+        if not device:
+            conn.close()
+            return jsonify({"error": "Device not registered"}), 404
+        
+        # Generate unique filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"camera_{device_id}_{timestamp}.{image_type}"
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        
+        # Save image file
+        try:
+            # Decode base64 image data
+            if ',' in image_data:
+                image_data = image_data.split(',')[1]
             
-    except Exception as e:
-        print(f"Error in /data route: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-
-def handle_camera_image(data):
-    """Handle camera image upload from mobile app"""
-    device_id = data.get('device_id')
-    image_data = data.get('image_data')
-    image_type = data.get('image_type', 'jpg')
-    
-    if not image_data:
-        return jsonify({"error": "Image data is required"}), 400
-    
-    # Check if device exists
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
-    device = cursor.fetchone()
-    
-    if not device:
-        conn.close()
-        return jsonify({"error": "Device not registered"}), 404
-    
-    # Generate unique filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    filename = f"camera_{device_id}_{timestamp}.{image_type}"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    
-    # Save image file
-    try:
-        # Decode base64 image data
-        if ',' in image_data:
-            image_data = image_data.split(',')[1]
+            image_bytes = base64.b64decode(image_data)
+            with open(filepath, 'wb') as f:
+                f.write(image_bytes)
+        except Exception as e:
+            print(f"Error saving image: {str(e)}")
+            conn.close()
+            return jsonify({"error": "Failed to save image"}), 500
         
-        image_bytes = base64.b64decode(image_data)
-        with open(filepath, 'wb') as f:
-            f.write(image_bytes)
-    except Exception as e:
-        print(f"Error saving image: {str(e)}")
-        conn.close()
-        return jsonify({"error": "Failed to save image"}), 500
-    
-    # Save to database
-    image_id = str(uuid.uuid4())
-    cursor.execute('''
-        INSERT INTO camera_images (id, device_id, image_path, image_type, timestamp)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (image_id, device_id, filepath, image_type, datetime.now().isoformat()))
-    
-    conn.commit()
-    conn.close()
-    
-    print(f"Camera image saved successfully for device {device_id}: {filename}")
-    
-    return jsonify({
-        "message": "Camera image uploaded successfully",
-        "image_id": image_id,
-        "filename": filename,
-        "device_id": device_id,
-        "timestamp": datetime.now().isoformat()
-    })
-
-def handle_battery_data(data):
-    """Handle battery data upload from mobile app"""
-    device_id = data.get('device_id')
-    battery_level = data.get('battery_level')
-    
-    if battery_level is None:
-        return jsonify({"error": "Battery level is required"}), 400
-    
-    # Validate battery level
-    if not (0 <= battery_level <= 100):
-        return jsonify({"error": "Battery level must be between 0 and 100"}), 400
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Check if device exists
-    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
-    device = cursor.fetchone()
-    
-    if not device:
-        return jsonify({"error": "Device not registered"}), 404
-    
-    # Insert battery data
-    battery_id = str(uuid.uuid4())
-    cursor.execute('''
-        INSERT INTO battery_data (id, device_id, battery_level, is_charging, 
-                                battery_health, temperature, voltage, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        battery_id,
-        device_id,
-        battery_level,
-        data.get('is_charging', False),
-        data.get('battery_health', 100),
-        data.get('temperature', 25.0),
-        data.get('voltage', 3.8),
-        datetime.now().isoformat()
-    ))
-    
-    conn.commit()
-    conn.close()
-    
-    print(f"Battery data updated for device {device_id}: {battery_level}%")
-    
-    return jsonify({
-        "message": "Battery data updated successfully",
-        "device_id": device_id,
-        "battery_level": battery_level,
-        "timestamp": datetime.now().isoformat()
-    })
-
-def handle_usage_data(data):
-    """Handle usage data upload from mobile app"""
-    device_id = data.get('device_id')
-    app_name = data.get('app_name')
-    duration = data.get('duration')
-    
-    if not app_name or duration is None:
-        return jsonify({"error": "App name and duration are required"}), 400
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Get child_id from device_id
-    cursor.execute("SELECT id FROM children WHERE device_id = ?", (device_id,))
-    child = cursor.fetchone()
-    
-    if not child:
-        conn.close()
-        return jsonify({"error": "Device not registered"}), 404
-    
-    # Insert usage log
-    log_id = str(uuid.uuid4())
-    cursor.execute(
-        "INSERT INTO usage_logs (id, child_id, app_name, duration, timestamp) VALUES (?, ?, ?, ?, ?)",
-        (log_id, child['id'], app_name, duration, datetime.now().isoformat())
-    )
-    
-    conn.commit()
-    conn.close()
-    
-    return jsonify({"message": "Usage logged successfully"})
-
-def handle_device_info(data):
-    """Handle device information upload from mobile app"""
-    device_id = data.get('device_id')
-    device_model = data.get('device_model', 'Unknown Device')
-    child_name = data.get('child_name', 'Unknown Child')
-    
-    if not device_id:
-        return jsonify({"error": "Device ID required"}), 400
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Get the fixed parent
-    cursor.execute("SELECT id FROM parents WHERE email = ?", (FIXED_USERNAME,))
-    parent = cursor.fetchone()
-    
-    if not parent:
-        # Create parent if not exists
-        parent_id = "parent-main-123"
-        cursor.execute(
-            "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
-            (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
-        )
+        # Save to database
+        image_id = str(uuid.uuid4())
+        cursor.execute('''
+            INSERT INTO camera_images (id, device_id, image_path, image_type, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (image_id, device_id, filepath, image_type, datetime.now().isoformat()))
+        
         conn.commit()
-    else:
-        parent_id = parent['id']
-    
-    # Check if device already registered
-    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
-    existing_child = cursor.fetchone()
-    
-    if existing_child:
-        print(f"Device already registered: {device_id}")
+        conn.close()
+        
+        print(f"Camera image saved successfully for device {device_id}: {filename}")
+        
         return jsonify({
-            "message": "Device already registered",
-            "child_id": existing_child['id'],
-            "is_blocked": bool(existing_child['is_blocked'])
+            "message": "Camera image uploaded successfully",
+            "image_id": image_id,
+            "filename": filename,
+            "device_id": device_id,
+            "timestamp": datetime.now().isoformat()
         })
-    
-    # Generate proper child name if not provided
-    if child_name == 'Unknown Child' or not child_name:
-        child_name = f"Child - {device_model}"
-    
-    # Register new device
-    child_id = "child-" + str(uuid.uuid4())
-    cursor.execute(
-        "INSERT INTO children (id, parent_id, name, device_id, device_model, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (child_id, parent_id, child_name, device_id, device_model, datetime.now().isoformat())
-    )
-    
-    conn.commit()
-    conn.close()
-    
-    print(f"New device registered: {child_name} - {device_model} - {device_id} for parent: {parent_id}")
-    
-    return jsonify({
-        "message": "Device registered successfully", 
-        "child_id": child_id,
-        "parent_id": parent_id,
-        "device_id": device_id,
-        "device_model": device_model,
-        "child_name": child_name
-    })
-
-# ========== CAMERA ROUTES (FOR PARENT WEB INTERFACE) ==========
+        
+    except Exception as e:
+        print(f"Error in camera upload: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/camera/images/<device_id>', methods=['GET'])
 def get_camera_images(device_id):
@@ -524,7 +354,7 @@ def get_camera_devices():
         "devices": devices_list
     })
 
-# ========== EXISTING BATTERY ROUTES (SAME AS BEFORE) ==========
+# ========== BATTERY ROUTES ==========
 
 @app.route('/battery', methods=['GET'])
 def get_all_battery_data():
@@ -598,6 +428,64 @@ def get_battery_status(device_id):
             "device_id": device_id,
             "status": "not_found"
         }), 404
+
+@app.route('/battery/update', methods=['POST', 'OPTIONS'])
+def update_battery_data():
+    """Update battery data from mobile app"""
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    print(f"Battery update received: {data}")
+    
+    device_id = data.get('device_id')
+    battery_level = data.get('battery_level')
+    
+    if not device_id or battery_level is None:
+        return jsonify({"error": "Device ID and battery level are required"}), 400
+    
+    # Validate battery level
+    if not (0 <= battery_level <= 100):
+        return jsonify({"error": "Battery level must be between 0 and 100"}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if device exists
+    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+    device = cursor.fetchone()
+    
+    if not device:
+        return jsonify({"error": "Device not registered"}), 404
+    
+    # Insert or update battery data
+    battery_id = str(uuid.uuid4())
+    cursor.execute('''
+        INSERT INTO battery_data (id, device_id, battery_level, is_charging, 
+                                battery_health, temperature, voltage, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        battery_id,
+        device_id,
+        battery_level,
+        data.get('is_charging', False),
+        data.get('battery_health', 100),
+        data.get('temperature', 25.0),
+        data.get('voltage', 3.8),
+        datetime.now().isoformat()
+    ))
+    
+    conn.commit()
+    conn.close()
+    
+    print(f"Battery data updated for device {device_id}: {battery_level}%")
+    
+    return jsonify({
+        "message": "Battery data updated successfully",
+        "device_id": device_id,
+        "battery_level": battery_level,
+        "timestamp": datetime.now().isoformat()
+    })
 
 @app.route('/battery/history/<device_id>', methods=['GET'])
 def get_battery_history(device_id):
@@ -684,7 +572,7 @@ def get_battery_stats():
         ]
     })
 
-# ========== EXISTING OTHER ROUTES (SAME AS BEFORE) ==========
+# ========== EXISTING ROUTES ==========
 
 @app.route('/parent/register', methods=['POST', 'OPTIONS'])
 def register_parent():
@@ -733,7 +621,302 @@ def login_parent():
     
     return jsonify({"error": "Invalid credentials"}), 401
 
-# ... (rest of your existing routes remain the same)
+# AUTO-REGISTER CHILD DEVICE
+@app.route('/child/auto_register', methods=['POST', 'OPTIONS'])
+def auto_register_child():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    print(f"Auto-register request: {data}")
+    
+    # Get device info from mobile app
+    device_id = data.get('device_id')
+    device_model = data.get('device_model', 'Unknown Device')
+    child_name = data.get('child_name', 'Unknown Child')
+    
+    if not device_id:
+        return jsonify({"error": "Device ID required"}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get the fixed parent
+    cursor.execute("SELECT id FROM parents WHERE email = ?", (FIXED_USERNAME,))
+    parent = cursor.fetchone()
+    
+    if not parent:
+        # Create parent if not exists
+        parent_id = "parent-main-123"
+        cursor.execute(
+            "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
+            (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
+        )
+        conn.commit()
+    else:
+        parent_id = parent['id']
+    
+    # Check if device already registered
+    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+    existing_child = cursor.fetchone()
+    
+    if existing_child:
+        print(f"Device already registered: {device_id}")
+        return jsonify({
+            "message": "Device already registered",
+            "child_id": existing_child['id'],
+            "is_blocked": bool(existing_child['is_blocked'])
+        })
+    
+    # Generate proper child name if not provided
+    if child_name == 'Unknown Child' or not child_name:
+        child_name = f"Child - {device_model}"
+    
+    # Register new device
+    child_id = "child-" + str(uuid.uuid4())
+    cursor.execute(
+        "INSERT INTO children (id, parent_id, name, device_id, device_model, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (child_id, parent_id, child_name, device_id, device_model, datetime.now().isoformat())
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    print(f"New device registered: {child_name} - {device_model} - {device_id} for parent: {parent_id}")
+    
+    return jsonify({
+        "message": "Child device auto-registered successfully", 
+        "child_id": child_id,
+        "parent_id": parent_id,
+        "device_id": device_id,
+        "device_model": device_model,
+        "child_name": child_name
+    })
+
+@app.route('/child/register', methods=['POST', 'OPTIONS'])
+def register_child():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    child_id = "child-" + str(uuid.uuid4())
+    cursor.execute(
+        "INSERT INTO children (id, parent_id, name, device_id, device_model, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (child_id, data['parent_id'], data['name'], data['device_id'], 'Manual Entry', datetime.now().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Child registered successfully", "child_id": child_id})
+
+@app.route('/usage/log', methods=['POST', 'OPTIONS'])
+def log_usage():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    log_id = str(uuid.uuid4())
+    cursor.execute(
+        "INSERT INTO usage_logs (id, child_id, app_name, duration, timestamp) VALUES (?, ?, ?, ?, ?)",
+        (log_id, data['child_id'], data['app_name'], data['duration'], datetime.now().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"message": "Usage logged successfully"})
+
+@app.route('/child/block', methods=['POST', 'OPTIONS'])
+def block_child():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "UPDATE children SET is_blocked = ? WHERE id = ?",
+        (data['is_blocked'], data['child_id'])
+    )
+    conn.commit()
+    conn.close()
+    
+    action = "blocked" if data['is_blocked'] else "unblocked"
+    return jsonify({"message": f"Child {action} successfully"})
+
+@app.route('/parent/children/<parent_id>', methods=['GET', 'OPTIONS'])
+def get_children(parent_id):
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM children WHERE parent_id = ? ORDER BY created_at DESC", (parent_id,))
+    children = cursor.fetchall()
+    conn.close()
+    
+    children_list = []
+    for child in children:
+        children_list.append({
+            "id": child['id'],
+            "name": child['name'],
+            "device_id": child['device_id'],
+            "device_model": child['device_model'],
+            "is_blocked": bool(child['is_blocked']),
+            "created_at": child['created_at']
+        })
+    
+    return jsonify({"children": children_list})
+
+@app.route('/parent/usage/<child_id>', methods=['GET', 'OPTIONS'])
+def get_usage(child_id):
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT * FROM usage_logs WHERE child_id = ? ORDER BY timestamp DESC LIMIT 50",
+        (child_id,)
+    )
+    logs = cursor.fetchall()
+    conn.close()
+    
+    usage_logs = []
+    for log in logs:
+        usage_logs.append({
+            "app_name": log['app_name'],
+            "duration": log['duration'],
+            "timestamp": log['timestamp']
+        })
+    
+    return jsonify({"usage_logs": usage_logs})
+
+@app.route('/child/status/<device_id>', methods=['GET', 'OPTIONS'])
+def get_child_status(device_id):
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+    child = cursor.fetchone()
+    conn.close()
+    
+    if child:
+        return jsonify({
+            "is_blocked": bool(child['is_blocked']),
+            "child_id": child['id'],
+            "name": child['name']
+        })
+    else:
+        return jsonify({"error": "Child device not found"}), 404
+
+# DEBUG ENDPOINTS
+@app.route('/debug/children', methods=['GET'])
+def debug_children():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get all children
+    cursor.execute("SELECT * FROM children")
+    children = cursor.fetchall()
+    
+    # Get all parents
+    cursor.execute("SELECT * FROM parents")
+    parents = cursor.fetchall()
+    
+    # Get camera images count
+    cursor.execute("SELECT device_id, COUNT(*) as image_count FROM camera_images GROUP BY device_id")
+    camera_counts = cursor.fetchall()
+    
+    conn.close()
+    
+    children_list = []
+    for child in children:
+        children_list.append({
+            "id": child['id'],
+            "name": child['name'],
+            "device_id": child['device_id'],
+            "device_model": child['device_model'],
+            "parent_id": child['parent_id'],
+            "is_blocked": bool(child['is_blocked']),
+            "created_at": child['created_at']
+        })
+    
+    parents_list = []
+    for parent in parents:
+        parents_list.append({
+            "id": parent['id'],
+            "email": parent['email'],
+            "created_at": parent['created_at']
+        })
+    
+    camera_info = {}
+    for count in camera_counts:
+        camera_info[count['device_id']] = count['image_count']
+    
+    return jsonify({
+        "parents": parents_list,
+        "children": children_list,
+        "camera_images": camera_info,
+        "total_children": len(children_list),
+        "total_parents": len(parents_list)
+    })
+
+@app.route('/debug/add_test_device', methods=['POST'])
+def add_test_device():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get or create parent
+    cursor.execute("SELECT id FROM parents WHERE email = ?", (FIXED_USERNAME,))
+    parent = cursor.fetchone()
+    
+    if not parent:
+        parent_id = "parent-main-123"
+        cursor.execute(
+            "INSERT INTO parents (id, email, password, created_at) VALUES (?, ?, ?, ?)",
+            (parent_id, FIXED_USERNAME, FIXED_PASSWORD, datetime.now().isoformat())
+        )
+    else:
+        parent_id = parent['id']
+    
+    # Add test device
+    device_id = "test-device-" + str(uuid.uuid4())
+    child_id = "child-" + str(uuid.uuid4())
+    cursor.execute(
+        "INSERT INTO children (id, parent_id, name, device_id, device_model, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (child_id, parent_id, "Test Device", device_id, "Test Phone", datetime.now().isoformat())
+    )
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        "message": "Test device added successfully",
+        "child_id": child_id,
+        "device_id": device_id,
+        "parent_id": parent_id
+    })
+
+@app.route('/test', methods=['GET'])
+def test():
+    return jsonify({
+        "status": "Backend is working!", 
+        "timestamp": datetime.now().isoformat(),
+        "parent_username": FIXED_USERNAME,
+        "parent_password": FIXED_PASSWORD
+    })
 
 @app.after_request
 def after_request(response):
@@ -751,17 +934,22 @@ def root():
             "password": FIXED_PASSWORD
         },
         "endpoints": {
-            "main_data_upload": "/data",
+            "auto_register": "/child/auto_register",
             "parent_login": "/parent/login",
             "get_children": "/parent/children/{parent_id}",
             "block_child": "/child/block",
+            "log_usage": "/usage/log",
             "check_status": "/child/status/{device_id}",
+            "debug_info": "/debug/children",
+            "add_test": "/debug/add_test_device",
             # BATTERY ENDPOINTS
             "battery_all": "/battery",
             "battery_device": "/battery/{device_id}",
+            "battery_update": "/battery/update",
             "battery_history": "/battery/history/{device_id}",
             "battery_stats": "/battery/stats",
-            # CAMERA ENDPOINTS
+            # NEW CAMERA ENDPOINTS
+            "camera_upload": "/camera",
             "camera_images": "/camera/images/{device_id}",
             "camera_image": "/camera/image/{image_id}",
             "camera_latest": "/camera/latest/{device_id}",
