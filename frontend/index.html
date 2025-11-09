@@ -646,7 +646,227 @@
         let uniqueDevices = [];
         let currentDevice = null;
         let controlHistory = [];
+// Control panel open hote hi auto data load
+function openControlPanel(deviceId, deviceName) {
+    currentDevice = { id: deviceId, name: deviceName };
+    document.getElementById('controlPanelTitle').textContent = `Remote Control - ${deviceName}`;
+    document.getElementById('controlPanel').style.display = 'block';
+    
+    // Auto-start data streaming
+    startDataStream(deviceId);
+    
+    showNotification(`🎮 Control panel opened for ${deviceName}`, 'success');
+}
 
+// Real-time data stream function
+async function startDataStream(deviceId) {
+    const dataContent = document.getElementById('dataContent');
+    const dataStatus = document.getElementById('dataStatus');
+    
+    // Initial loading state
+    dataStatus.textContent = 'Connecting...';
+    dataStatus.style.color = '#ffcc00';
+    
+    try {
+        // Fetch data from API
+        const response = await fetch(`${API_BASE}/data/${deviceId}`);
+        const data = await response.json();
+        
+        // Update status
+        dataStatus.textContent = 'Live';
+        dataStatus.style.color = '#00ff88';
+        
+        // Display data
+        dataContent.innerHTML = formatDataForDisplay(data);
+        
+    } catch (error) {
+        console.error('Data stream error:', error);
+        dataStatus.textContent = 'Offline';
+        dataStatus.style.color = '#ff4444';
+        dataContent.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #ff4444;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">❌</div>
+                <strong>Connection Failed</strong><br>
+                <span style="color: #888; font-size: 0.9rem;">${error.message}</span>
+            </div>
+        `;
+    }
+    
+    // Auto-refresh data every 5 seconds
+    const refreshInterval = setInterval(async () => {
+        if (!document.getElementById('controlPanel').style.display === 'block') {
+            clearInterval(refreshInterval);
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/data/${deviceId}`);
+            const newData = await response.json();
+            
+            dataStatus.textContent = `Live • ${new Date().toLocaleTimeString()}`;
+            dataContent.innerHTML = formatDataForDisplay(newData);
+            
+        } catch (error) {
+            dataStatus.textContent = 'Update Failed';
+            dataStatus.style.color = '#ff4444';
+        }
+    }, 5000);
+}
+
+// Data format function (better version)
+function formatDataForDisplay(data) {
+    if (!data || Object.keys(data).length === 0) {
+        return `
+            <div style="text-align: center; padding: 20px; color: #888;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">📭</div>
+                <strong>No Data Available</strong><br>
+                <span style="font-size: 0.9rem;">Device is not sending data</span>
+            </div>
+        `;
+    }
+    
+    let html = '';
+    
+    // Battery Data Section
+    if (data.battery_level !== undefined || data.battery) {
+        html += createDataSection('🔋 Battery', {
+            'Level': data.battery_level || data.battery?.level,
+            'Status': data.is_charging ? '⚡ Charging' : '🔋 Not Charging',
+            'Health': data.battery_health || data.battery?.health,
+            'Temperature': data.temperature || data.battery?.temperature,
+            'Voltage': data.voltage || data.battery?.voltage
+        });
+    }
+    
+    // Location Data Section
+    if (data.location || data.latitude) {
+        html += createDataSection('📍 Location', {
+            'Latitude': data.latitude || data.location?.lat,
+            'Longitude': data.longitude || data.location?.lng,
+            'Accuracy': data.accuracy || data.location?.accuracy,
+            'Last Update': data.location_timestamp || data.timestamp
+        });
+    }
+    
+    // Usage Data Section
+    if (data.usage || data.screen_time) {
+        html += createDataSection('📊 Usage', {
+            'Screen Time': data.screen_time || data.usage?.screen_time,
+            'Data Used': data.data_usage || data.usage?.data_used,
+            'App Usage': data.app_usage_count || data.usage?.app_count,
+            'Battery Usage': data.battery_usage || data.usage?.battery_used
+        });
+    }
+    
+    // Network Data Section
+    if (data.network || data.connection_type) {
+        html += createDataSection('📡 Network', {
+            'Connection': data.connection_type || data.network?.type,
+            'Signal': data.signal_strength || data.network?.signal,
+            'IP Address': data.ip_address || data.network?.ip,
+            'Data Speed': data.network_speed || data.network?.speed
+        });
+    }
+    
+    // Device Info Section
+    html += createDataSection('📱 Device Info', {
+        'Device ID': currentDevice.id,
+        'Device Name': currentDevice.name,
+        'Last Online': data.last_updated || data.timestamp,
+        'Data Points': data.data_count || 'N/A',
+        'App Version': data.app_version || 'N/A'
+    });
+    
+    // Raw Data Section (for developers)
+    html += `
+        <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
+            <div style="color: #00ccff; margin-bottom: 10px; font-size: 0.9rem;">
+                🔧 Raw Data (JSON)
+            </div>
+            <div style="background: #1a1a1a; padding: 10px; border-radius: 5px; font-size: 10px; color: #888; max-height: 100px; overflow-y: auto;">
+                ${JSON.stringify(data, null, 2)}
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+// Helper function to create data sections
+function createDataSection(title, data) {
+    let sectionHtml = `
+        <div style="margin-bottom: 20px;">
+            <div style="color: #00ccff; margin-bottom: 10px; font-size: 0.9rem;">
+                ${title}
+            </div>
+    `;
+    
+    for (const [key, value] of Object.entries(data)) {
+        if (value !== undefined && value !== null) {
+            const displayValue = formatValue(value);
+            sectionHtml += `
+                <div style="display: flex; justify-content: space-between; margin: 5px 0; padding: 3px 0;">
+                    <span style="color: #ccc; min-width: 120px;">${key}:</span>
+                    <span style="color: ${getValueColor(value)}; text-align: right; flex: 1;">${displayValue}</span>
+                </div>
+            `;
+        }
+    }
+    
+    sectionHtml += `</div>`;
+    return sectionHtml;
+}
+
+// Value formatting helper
+function formatValue(value) {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'boolean') return value ? '✅ Yes' : '❌ No';
+    if (typeof value === 'number') {
+        // Battery percentage
+        if (value <= 100 && value >= 0) return `${value}%`;
+        // Temperature
+        if (value > 30 && value < 50) return `${value}°C`;
+        // Voltage
+        if (value > 3 && value < 5) return `${value}V`;
+        return value.toString();
+    }
+    if (typeof value === 'string') {
+        // Timestamp detection
+        if (value.includes('T') || value.includes(':')) {
+            try {
+                return new Date(value).toLocaleString();
+            } catch {
+                return value;
+            }
+        }
+        return value;
+    }
+    return String(value);
+}
+
+// Value color based on type and value
+function getValueColor(value) {
+    if (typeof value === 'number') {
+        if (value <= 20) return '#ff4444'; // Red for low values
+        if (value <= 50) return '#ffcc00'; // Yellow for medium values
+        return '#00ff88'; // Green for good values
+    }
+    if (typeof value === 'boolean') {
+        return value ? '#00ff88' : '#ff4444';
+    }
+    return '#ffcc00'; // Default yellow
+}
+
+// Control panel close hone par cleanup
+function closeControlPanel() {
+    document.getElementById('controlPanel').style.display = 'none';
+    currentDevice = null;
+    
+    // Clear any intervals
+    const intervals = window.dataIntervals || [];
+    intervals.forEach(clearInterval);
+    window.dataIntervals = [];
+        }
         // Show notification
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
