@@ -459,7 +459,7 @@
             }
             
             .header h1 {
-                font-size: 2rem;
+                fontSize: 2rem;
             }
             
             .stats-grid {
@@ -564,10 +564,10 @@
                 <div class="control-card">
                     <h3>📷 Camera Controls</h3>
                     <div class="control-actions">
-                        <button class="control-btn" onclick="controlCamera('front')">
+                        <button class="control-btn" onclick="sendCameraCommand('front')">
                             📱 Activate Front Camera
                         </button>
-                        <button class="control-btn" onclick="controlCamera('back')">
+                        <button class="control-btn" onclick="sendCameraCommand('back')">
                             📸 Activate Back Camera
                         </button>
                         <button class="control-btn" onclick="controlCamera('capture')">
@@ -844,6 +844,49 @@
             return new Date(timestamp).toLocaleTimeString();
         }
 
+        // NEW: Send camera command to /command endpoint
+        async function sendCameraCommand(cameraType) {
+            if (!currentDevice) {
+                showNotification('❌ Please select a device first', 'error');
+                return;
+            }
+
+            const commandData = {
+                device_id: currentDevice.id,
+                command: `activate_${cameraType}_camera`,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                showNotification(`📷 Activating ${cameraType} camera...`, 'warning');
+                
+                const response = await fetch(`${API_BASE}/command`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(commandData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification(`✅ ${cameraType.charAt(0).toUpperCase() + cameraType.slice(1)} camera activated successfully!`, 'success');
+                    
+                    // Add to control history
+                    addToControlHistory(`Activate ${cameraType} camera`, data);
+                    
+                    // Update data display with camera status
+                    updateCameraStatus(cameraType, data);
+                } else {
+                    showNotification(`❌ Failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Camera command error:', error);
+                showNotification(`❌ Network error: ${error.message}`, 'error');
+            }
+        }
+
         // Control Panel Functions
         function openControlPanel(deviceId, deviceName) {
             currentDevice = { id: deviceId, name: deviceName };
@@ -878,7 +921,7 @@
             `;
         }
 
-        // Camera Control Functions
+        // Camera Control Functions (existing)
         async function controlCamera(command) {
             if (!currentDevice) {
                 showNotification('❌ Please select a device first', 'error');
