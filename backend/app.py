@@ -417,6 +417,37 @@ def camera_control():
         "status": "success"
     })
 
+@app.route('/command/confirm', methods=['POST', 'OPTIONS'])
+def confirm_command():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    print(f"Command confirmation: {data}")
+    
+    device_id = data.get('device_id')
+    command = data.get('command')
+    status = data.get('status')
+    
+    # Update command status in database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE device_commands 
+        SET status = ?, executed_at = ?
+        WHERE device_id = ? AND command = ?
+        ORDER BY timestamp DESC LIMIT 1
+    ''', (status, datetime.now().isoformat(), device_id, command))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        "message": "Command confirmation received",
+        "status": "success"
+    })
+
 @app.route('/camera/status/<device_id>', methods=['GET'])
 def get_camera_status(device_id):
     """Get camera status for specific device"""
