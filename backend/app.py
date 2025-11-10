@@ -63,7 +63,7 @@ def init_db():
         )
     ''')
     
-    # NEW: Camera commands table
+    # Camera commands table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS camera_commands (
             id TEXT PRIMARY KEY,
@@ -72,6 +72,22 @@ def init_db():
             status TEXT,
             timestamp TEXT,
             executed_at TEXT,
+            FOREIGN KEY (device_id) REFERENCES children (device_id)
+        )
+    ''')
+    
+    # NEW: General commands table for all types of commands
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS device_commands (
+            id TEXT PRIMARY KEY,
+            device_id TEXT,
+            command_type TEXT,
+            command TEXT,
+            parameters TEXT,
+            status TEXT,
+            timestamp TEXT,
+            executed_at TEXT,
+            response TEXT,
             FOREIGN KEY (device_id) REFERENCES children (device_id)
         )
     ''')
@@ -96,6 +112,166 @@ def get_db_connection():
     conn = sqlite3.connect('parental.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+# ========== COMMAND ROUTE ==========
+
+@app.route('/command', methods=['POST', 'OPTIONS'])
+def handle_command():
+    """Main command endpoint for all device commands"""
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    data = request.json
+    print(f"Command received: {data}")
+    
+    # Basic validation
+    if not data or 'device_id' not in data or 'command' not in data:
+        return jsonify({"error": "Device ID and command are required"}), 400
+    
+    device_id = data.get('device_id')
+    command = data.get('command')
+    timestamp = data.get('timestamp', datetime.now().isoformat())
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if device exists
+    cursor.execute("SELECT * FROM children WHERE device_id = ?", (device_id,))
+    device = cursor.fetchone()
+    
+    if not device:
+        conn.close()
+        return jsonify({"error": "Device not registered"}), 404
+    
+    # Generate command ID
+    command_id = str(uuid.uuid4())
+    
+    # Determine command type
+    command_type = "general"
+    if "camera" in command.lower():
+        command_type = "camera"
+    elif "location" in command.lower():
+        command_type = "location"
+    elif "app" in command.lower():
+        command_type = "app_management"
+    elif "screen" in command.lower():
+        command_type = "screen_control"
+    elif "lock" in command.lower():
+        command_type = "device_control"
+    
+    # Save command to device_commands table
+    cursor.execute('''
+        INSERT INTO device_commands (id, device_id, command_type, command, parameters, status, timestamp, executed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        command_id,
+        device_id,
+        command_type,
+        command,
+        str(data),  # Store all parameters as string
+        'sent',
+        timestamp,
+        datetime.now().isoformat()
+    ))
+    
+    # Also save to camera_commands if it's a camera command
+    if command_type == "camera":
+        cursor.execute('''
+            INSERT INTO camera_commands (id, device_id, command, status, timestamp, executed_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            command_id,
+            device_id,
+            command,
+            'sent',
+            timestamp,
+            datetime.now().isoformat()
+        ))
+    
+    conn.commit()
+    conn.close()
+    
+    # Log the command
+    print(f"Command '{command}' received for device: {device_id}")
+    print(f"Command ID: {command_id}")
+    print(f"Command Type: {command_type}")
+    
+    return jsonify({
+        "message": f"Command '{command}' executed successfully",
+        "device_id": device_id,
+        "command": command,
+        "command_id": command_id,
+        "command_type": command_type,
+        "timestamp": timestamp,
+        "status": "success"
+    })
+
+@app.route('/command/status/<device_id>', methods=['GET'])
+def get_command_status(device_id):
+    """Get command status for specific device"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Get latest command
+    cursor.execute('''
+        SELECT * FROM device_commands 
+        WHERE device_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 1
+    ''', (device_id,))
+    
+    latest_command = cursor.fetchone()
+    conn.close()
+    
+    if latest_command:
+        return jsonify({
+            "device_id": device_id,
+            "last_command": latest_command['command'],
+            "last_command_type": latest_command['command_type'],
+            "last_command_time": latest_command['timestamp'],
+            "status": latest_command['status'],
+            "command_available": True
+        })
+    else:
+        return jsonify({
+            "device_id": device_id,
+            "command_available": False,
+            "status": "no_commands_yet",
+            "message": "No commands sent to this device yet"
+        })
+
+@app.route('/command/history/<device_id>', methods=['GET'])
+def get_command_history(device_id):
+    """Get command history for device"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT * FROM device_commands 
+        WHERE device_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT 20
+    ''', (device_id,))
+    
+    commands = cursor.fetchall()
+    conn.close()
+    
+    commands_list = []
+    for cmd in commands:
+        commands_list.append({
+            "id": cmd['id'],
+            "command_type": cmd['command_type'],
+            "command": cmd['command'],
+            "status": cmd['status'],
+            "timestamp": cmd['timestamp'],
+            "executed_at": cmd['executed_at']
+        })
+    
+    return jsonify({
+        "device_id": device_id,
+        "total_commands": len(commands_list),
+        "commands": commands_list
+    })
 
 # ========== CAMERA ROUTES ==========
 
@@ -204,6 +380,21 @@ def camera_control():
         command_id,
         device_id,
         command,
+        'sent',
+        timestamp,
+        datetime.now().isoformat()
+    ))
+    
+    # Also save to device_commands table
+    cursor.execute('''
+        INSERT INTO device_commands (id, device_id, command_type, command, parameters, status, timestamp, executed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        command_id,
+        device_id,
+        'camera',
+        command,
+        str(data),
         'sent',
         timestamp,
         datetime.now().isoformat()
@@ -896,7 +1087,11 @@ def root():
             "camera_control": "/camera/control",
             "camera_status": "/camera/status/{device_id}",
             "camera_commands": "/camera/commands/{device_id}",
-            "camera_service": "/camera/status"
+            "camera_service": "/camera/status",
+            # NEW COMMAND ENDPOINTS
+            "command_main": "/command",
+            "command_status": "/command/status/{device_id}",
+            "command_history": "/command/history/{device_id}"
         }
     })
 
