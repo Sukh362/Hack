@@ -342,6 +342,7 @@ body {
     margin: 15px 0;
     border-radius: 25px;
     background: #333;
+    height: 40px;
 }
 
 /* Photo Preview */
@@ -396,6 +397,11 @@ body {
         flex-direction: column;
         gap: 15px;
     }
+    
+    .server-info {
+        flex-direction: column;
+        gap: 10px;
+    }
 }
 
 /* Scrollbar */
@@ -407,7 +413,7 @@ body {
     background: #1a1a1a;
 }
 
-::-webkit-scrollbar-thumb {
+::-webkitwebkit-scrollbar-thumb {
     background: linear-gradient(45deg, #00ff88, #00ccff);
     border-radius: 4px;
 }
@@ -429,4 +435,38 @@ body {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* Text Selection */
+::selection {
+    background: #00ff88;
+    color: #000;
+}
+
+/* Focus Outline */
+button:focus {
+    outline: 2px solid #00ff88;
+    outline-offset: 2px;
+}
+
+/* No Devices/No Files Styling */
+.no-data {
+    text-align: center;
+    color: #888;
+    padding: 40px;
+}
+
+.no-data-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+/* Error Styling */
+.error-message {
+    color: #ff4444;
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 68, 68, 0.1);
+    border-radius: 10px;
+    border: 1px solid #ff4444;
 }
