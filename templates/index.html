@@ -1002,14 +1002,14 @@
         function checkAuth() {
             const isAuthenticated = localStorage.getItem('isAuthenticated');
             if (!isAuthenticated || isAuthenticated !== 'true') {
-                window.location.href = 'login';
+                window.location.href = 'login.html';
             }
         }
 
         // Logout function
         function logout() {
             localStorage.removeItem('isAuthenticated');
-            window.location.href = 'login';
+            window.location.href = 'login.html';
         }
 
         // Toast notification function
