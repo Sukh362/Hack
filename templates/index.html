@@ -405,11 +405,6 @@
             color: white;
         }
 
-        .btn-security {
-            background: linear-gradient(45deg, #9b59b6, #8e44ad);
-            color: white;
-        }
-
         /* Status Box */
         .status-box {
             background: rgba(0, 0, 0, 0.5);
@@ -530,43 +525,6 @@
             flex-wrap: wrap;
         }
 
-        /* Permission Status */
-        .permission-status {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 15px 0;
-        }
-
-        .permission-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .permission-item.granted {
-            border-left: 4px solid var(--primary);
-        }
-
-        .permission-item.denied {
-            border-left: 4px solid var(--danger);
-        }
-
-        /* Checkbox Styling */
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 10px 0;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--primary);
-        }
-
         /* Responsive */
         @media (max-width: 1024px) {
             .devices-grid {
@@ -619,10 +577,6 @@
             
             .header h1 {
                 font-size: 2rem;
-            }
-
-            .permission-status {
-                grid-template-columns: 1fr;
             }
         }
 
@@ -822,13 +776,6 @@
             </button>
             <button class="tab-btn" onclick="openTab('screenRecordings')">
                 <i class="fas fa-video"></i> Screen Recordings
-            </button>
-            <!-- NEW TABS -->
-            <button class="tab-btn" onclick="openTab('permissions')">
-                <i class="fas fa-key"></i> Permissions
-            </button>
-            <button class="tab-btn" onclick="openTab('security')">
-                <i class="fas fa-shield-alt"></i> Security
             </button>
         </div>
 
@@ -1037,126 +984,6 @@
             </div>
         </div>
 
-        <!-- Permissions Tab -->
-        <div id="permissions" class="tab-content">
-            <div class="control-panel">
-                <h3 style="color: var(--secondary); margin-bottom: 20px;">
-                    <i class="fas fa-key"></i> Permission Controls
-                </h3>
-                
-                <!-- Permission Status -->
-                <div class="status-box">
-                    <h4><i class="fas fa-info-circle"></i> Permission Status</h4>
-                    <div id="permissionStatus">
-                        <div class="permission-status">
-                            <div class="permission-item" id="cameraPermission">
-                                <i class="fas fa-camera"></i>
-                                <div>Camera</div>
-                                <div id="cameraStatus">Checking...</div>
-                            </div>
-                            <div class="permission-item" id="micPermission">
-                                <i class="fas fa-microphone"></i>
-                                <div>Microphone</div>
-                                <div id="micStatus">Checking...</div>
-                            </div>
-                            <div class="permission-item" id="storagePermission">
-                                <i class="fas fa-hdd"></i>
-                                <div>Storage</div>
-                                <div id="storageStatus">Checking...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Permission Controls -->
-                <div class="btn-group">
-                    <button class="btn btn-start" onclick="checkPermissions()">
-                        <i class="fas fa-sync"></i> Check Permissions
-                    </button>
-                    <button class="btn btn-camera" onclick="autoRequestPermissions()">
-                        <i class="fas fa-bell"></i> Auto Request Permissions
-                    </button>
-                </div>
-
-                <div class="btn-group">
-                    <button class="btn btn-security" onclick="forceEnablePermissions()">
-                        <i class="fas fa-cog"></i> Force Enable Permissions
-                    </button>
-                </div>
-
-                <!-- Auto Protection -->
-                <div class="status-box">
-                    <h4><i class="fas fa-shield-alt"></i> Auto Protection</h4>
-                    <div>
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="autoPermissionProtection" onchange="toggleAutoProtection()">
-                            <label for="autoPermissionProtection">Enable Auto Permission Protection</label>
-                        </div>
-                        <p style="font-size: 12px; color: #888; margin-top: 5px;">
-                            ✅ Automatically re-enables permissions if disabled by child
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Security Tab -->
-        <div id="security" class="tab-content">
-            <div class="control-panel">
-                <h3 style="color: var(--secondary); margin-bottom: 20px;">
-                    <i class="fas fa-shield-alt"></i> Security Controls
-                </h3>
-                
-                <!-- App Lock Controls -->
-                <div class="btn-group">
-                    <button class="btn btn-security" onclick="lockApp()">
-                        <i class="fas fa-lock"></i> Lock App
-                    </button>
-                    <button class="btn btn-start" onclick="unlockApp()">
-                        <i class="fas fa-unlock"></i> Unlock App
-                    </button>
-                </div>
-
-                <!-- Device Management -->
-                <div class="btn-group">
-                    <button class="btn btn-stop" onclick="blockDevice()">
-                        <i class="fas fa-ban"></i> Block Device
-                    </button>
-                    <button class="btn btn-refresh" onclick="unblockDevice()">
-                        <i class="fas fa-check-circle"></i> Unblock Device
-                    </button>
-                </div>
-
-                <!-- Emergency Controls -->
-                <div class="btn-group">
-                    <button class="btn btn-screen" onclick="emergencyLockAll()">
-                        <i class="fas fa-exclamation-triangle"></i> Emergency Lock All
-                    </button>
-                </div>
-
-                <!-- Security Status -->
-                <div class="status-box">
-                    <h4><i class="fas fa-chart-bar"></i> Security Status</h4>
-                    <div id="securityStatus">
-                        <div>🔒 App Lock: <span id="appLockStatus">Checking...</span></div>
-                        <div>📱 Device Block: <span id="deviceBlockStatus">Checking...</span></div>
-                        <div>🛡️ Security Level: <span id="securityLevel">High</span></div>
-                    </div>
-                </div>
-
-                <!-- Security Dashboard -->
-                <div class="status-box">
-                    <h4><i class="fas fa-tachometer-alt"></i> Security Dashboard</h4>
-                    <button class="btn btn-refresh" onclick="getSecurityDashboard()">
-                        <i class="fas fa-sync"></i> Refresh Dashboard
-                    </button>
-                    <div id="securityDashboard" style="margin-top: 15px;">
-                        Loading security information...
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Footer -->
         <div class="footer">
             <div>🚀 Multi-Device Control System</div>
@@ -1199,321 +1026,6 @@
 
         let currentDeviceId = null;
         let deviceIds = new Set(); // Track unique device IDs
-        let autoProtectionInterval = null;
-
-        // ==================== NEW PERMISSION CONTROL FUNCTIONS ====================
-
-        function checkPermissions() {
-            if (!currentDeviceId) {
-                showToast('Please select a device first', 'error');
-                return;
-            }
-
-            fetch(`/check_permissions/${currentDeviceId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        showToast('Permission check sent to device', 'success');
-                        // Auto refresh status after 3 seconds
-                        setTimeout(() => getPermissionStatus(currentDeviceId), 3000);
-                    }
-                })
-                .catch(error => {
-                    showToast('Error checking permissions', 'error');
-                });
-        }
-
-        function autoRequestPermissions() {
-            if (!currentDeviceId) {
-                showToast('Please select a device first', 'error');
-                return;
-            }
-
-            fetch('/auto_request_permissions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device_id: currentDeviceId })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('Auto permission request sent', 'success');
-                }
-            })
-            .catch(error => {
-                showToast('Error requesting permissions', 'error');
-            });
-        }
-
-        function forceEnablePermissions() {
-            if (!currentDeviceId) {
-                showToast('Please select a device first', 'error');
-                return;
-            }
-
-            const adminCode = prompt('Enter Admin Code:');
-            if (!adminCode) return;
-
-            fetch('/force_permissions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    device_id: currentDeviceId,
-                    admin_code: adminCode 
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('Force permissions command sent', 'success');
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showToast('Error forcing permissions', 'error');
-            });
-        }
-
-        function getPermissionStatus(deviceId) {
-            fetch(`/get_permission_status/${deviceId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const perms = data.permissions;
-                        
-                        // Update permission status display
-                        document.getElementById('cameraStatus').textContent = 
-                            perms.camera ? '✅ Granted' : '❌ Denied';
-                        document.getElementById('micStatus').textContent = 
-                            perms.microphone ? '✅ Granted' : '❌ Denied';
-                        document.getElementById('storageStatus').textContent = 
-                            perms.storage ? '✅ Granted' : '❌ Denied';
-                        
-                        // Update permission item styling
-                        document.getElementById('cameraPermission').className = 
-                            `permission-item ${perms.camera ? 'granted' : 'denied'}`;
-                        document.getElementById('micPermission').className = 
-                            `permission-item ${perms.microphone ? 'granted' : 'denied'}`;
-                        document.getElementById('storagePermission').className = 
-                            `permission-item ${perms.storage ? 'granted' : 'denied'}`;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error getting permission status:', error);
-                });
-        }
-
-        function toggleAutoProtection() {
-            const enabled = document.getElementById('autoPermissionProtection').checked;
-            
-            if (enabled) {
-                // Start auto protection
-                autoProtectionInterval = setInterval(() => {
-                    if (currentDeviceId) {
-                        checkPermissions();
-                    }
-                }, 60000); // Check every minute
-                showToast('Auto protection enabled', 'success');
-            } else {
-                // Stop auto protection
-                if (autoProtectionInterval) {
-                    clearInterval(autoProtectionInterval);
-                    autoProtectionInterval = null;
-                }
-                showToast('Auto protection disabled', 'info');
-            }
-        }
-
-        // ==================== NEW SECURITY FUNCTIONS ====================
-
-        function lockApp() {
-            if (!currentDeviceId) {
-                showToast('Please select a device first', 'error');
-                return;
-            }
-
-            fetch('/lock_app', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device_id: currentDeviceId })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('App locked successfully', 'success');
-                    updateAppLockStatus();
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showToast('Error locking app', 'error');
-            });
-        }
-
-        function unlockApp() {
-            if (!currentDeviceId) {
-                showToast('Please select a device first', 'error');
-                return;
-            }
-
-            const adminCode = prompt('Enter Admin Code to Unlock:');
-            if (!adminCode) return;
-
-            fetch('/unlock_app', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    device_id: currentDeviceId,
-                    admin_code: adminCode 
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('App unlocked successfully', 'success');
-                    updateAppLockStatus();
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showToast('Error unlocking app', 'error');
-            });
-        }
-
-        function blockDevice() {
-            if (!currentDeviceId) {
-                showToast('Please select a device first', 'error');
-                return;
-            }
-
-            const adminCode = prompt('Enter Admin Code to Block Device:');
-            if (!adminCode) return;
-
-            fetch('/block_device', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    device_id: currentDeviceId,
-                    admin_code: adminCode 
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('Device blocked successfully', 'success');
-                    refreshDevices();
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showToast('Error blocking device', 'error');
-            });
-        }
-
-        function unblockDevice() {
-            const deviceId = prompt('Enter Device ID to Unblock:');
-            if (!deviceId) return;
-
-            const adminCode = prompt('Enter Admin Code:');
-            if (!adminCode) return;
-
-            fetch('/unblock_device', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    device_id: deviceId,
-                    admin_code: adminCode 
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast('Device unblocked successfully', 'success');
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showToast('Error unblocking device', 'error');
-            });
-        }
-
-        function emergencyLockAll() {
-            const adminCode = prompt('Enter Emergency Code:');
-            if (!adminCode) return;
-
-            fetch('/emergency_lock_all', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ admin_code: adminCode })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    showToast(data.message, 'success');
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                showToast('Error in emergency lock', 'error');
-            });
-        }
-
-        function getSecurityDashboard() {
-            fetch('/security_dashboard')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const dashboard = document.getElementById('securityDashboard');
-                        dashboard.innerHTML = `
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                                <div style="background: rgba(0,255,136,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                                    <div style="font-size: 24px; color: var(--primary);">${data.connected_devices}</div>
-                                    <div style="font-size: 12px;">Connected</div>
-                                </div>
-                                <div style="background: rgba(255,68,68,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                                    <div style="font-size: 24px; color: var(--danger);">${data.blocked_devices}</div>
-                                    <div style="font-size: 12px;">Blocked</div>
-                                </div>
-                                <div style="background: rgba(255,170,0,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                                    <div style="font-size: 24px; color: var(--warning);">${data.locked_apps}</div>
-                                    <div style="font-size: 12px;">Locked</div>
-                                </div>
-                                <div style="background: rgba(0,204,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                                    <div style="font-size: 24px; color: var(--secondary);">${data.devices_with_permissions}</div>
-                                    <div style="font-size: 12px;">With Perms</div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error getting security dashboard:', error);
-                });
-        }
-
-        function updateAppLockStatus() {
-            if (!currentDeviceId) return;
-
-            fetch(`/get_app_lock_status/${currentDeviceId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        const status = data.lock_status.locked ? '🔒 LOCKED' : '🔓 UNLOCKED';
-                        document.getElementById('appLockStatus').textContent = status;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error getting app lock status:', error);
-                });
-        }
-
-        // ==================== EXISTING FUNCTIONS ====================
 
         function openTab(tabName) {
             // Hide all tab contents
@@ -1539,19 +1051,9 @@
                     'global': 'Global Control',
                     'recordings': 'Recordings',
                     'photos': 'Photos',
-                    'screenRecordings': 'Screen Recordings',
-                    'permissions': 'Permissions',
-                    'security': 'Security'
+                    'screenRecordings': 'Screen Recordings'
                 };
                 showToast(`Switched to ${tabNames[tabName]}`, 'info', 1500);
-            }
-
-            // Load specific data for tabs
-            if (tabName === 'security') {
-                getSecurityDashboard();
-                if (currentDeviceId) {
-                    updateAppLockStatus();
-                }
             }
         }
 
@@ -1569,10 +1071,6 @@
             document.getElementById('currentDeviceName').textContent = `Device: ${deviceId}`;
             loadDeviceDetails(deviceId);
             refreshDeviceFiles();
-            
-            // Load permission and security status for this device
-            getPermissionStatus(deviceId);
-            updateAppLockStatus();
             
             // Show toast
             showToast(`Controlling device: ${deviceId.substring(0, 15)}...`, 'info');
@@ -2129,7 +1627,6 @@
         refreshScreenRecordings();
         updateTime();
         setupMobileMenu();
-        getSecurityDashboard();
         
         // Show welcome message
         setTimeout(() => {
