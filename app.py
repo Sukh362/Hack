@@ -13,6 +13,7 @@ app = Flask(__name__)
 connected_devices = {}
 commands_queue = {}
 uploaded_files = []
+screenshot_commands = {}
 
 # Create uploads directory if not exists
 UPLOAD_FOLDER = 'uploads'
